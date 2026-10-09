@@ -1,8 +1,8 @@
-# Gunakan base image PHP-FPM versi 8.4
-FROM php:8.4-fpm
+# Gunakan base image PHP + Apache (bukan FPM)
+FROM php:8.4-apache
 
 # Set working directory
-WORKDIR /var/www
+WORKDIR /var/www/html
 
 # 1. Install system dependencies (GD + ZIP)
 RUN apt-get update && apt-get install -y \
@@ -16,28 +16,33 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Configure dan install ekstensi PHP (GD + ZIP + PDO MySQL)
+# 2. Install ekstensi PHP (GD + ZIP + PDO MySQL)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql zip
 
-# 3. Install Composer
+# 3. Aktifkan mod_rewrite Apache (wajib untuk Laravel)
+RUN a2enmod rewrite
+
+# 4. Ubah DocumentRoot Apache ke folder /public Laravel
+RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
+    /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!/var/www/html/public!g' \
+    /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# 5. Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# 4. Copy kode aplikasi ke dalam container
+# 6. Copy kode aplikasi
 COPY . .
 
-
-# 5. Install dependencies Composer
+# 7. Install dependencies Composer
 RUN composer install --optimize-autoloader --no-scripts --no-interaction
 
-# 6. Set permissions untuk storage dan cache Laravel
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage /var/www/bootstrap/cache
+# 8. Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Paksa PHP-FPM untuk mendengarkan semua antarmuka
-RUN sed -i 's/listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf
+# 9. Apache default listen di port 80
+EXPOSE 80
 
-# Expose port 9000 untuk PHP-FPM
-EXPOSE 9000
-
-CMD ["php-fpm"]
+CMD ["apache2-foreground"]
