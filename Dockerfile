@@ -1,4 +1,6 @@
+# ============================================
 # Gunakan base image PHP + Apache
+# ============================================
 FROM php:8.4-apache
 
 # ============================================
@@ -34,6 +36,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 RUN a2enmod rewrite
 
 # ============================================
+# SET SERVERNAME (hilangkan warning AH00558)
+# ============================================
+RUN echo "ServerName app.proyekdemo.site" >> /etc/apache2/apache2.conf
+
+# ============================================
 # UBAH DOCUMENTROOT KE /public LARAVEL
 # ============================================
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
@@ -55,8 +62,18 @@ COPY . .
 
 # ============================================
 # INSTALL DEPENDENCIES COMPOSER
+# (--no-scripts dihapus agar package discovery jalan)
 # ============================================
-RUN composer install --optimize-autoloader --no-scripts --no-interaction
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# ============================================
+# CLEAR & REBUILD CACHE LARAVEL
+# ============================================
+RUN php artisan package:discover --ansi || true \
+    && php artisan config:clear || true \
+    && php artisan cache:clear || true \
+    && php artisan route:clear || true \
+    && php artisan view:clear || true
 
 # ============================================
 # SET PERMISSIONS
@@ -65,10 +82,14 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # ============================================
-# EXPOSE PORT 80 (Apache default)
+# EXPOSE PORT 80
 # ============================================
 EXPOSE 80
 
+# ============================================
+# STARTUP: Fix MPM ulang saat runtime + Jalankan Apache
+# (Railway menyuntikkan mpm_event saat runtime)
+# ============================================
 CMD ["bash", "-lc", "\
 set -eux; \
 a2dismod mpm_event mpm_worker || true; \
