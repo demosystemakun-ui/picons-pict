@@ -26,12 +26,16 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # 4. Copy kode aplikasi ke dalam container
 COPY . .
 
+
 # 5. Install dependencies Composer
 RUN composer install --optimize-autoloader --no-scripts --no-interaction
 
 # 6. Set permissions untuk storage dan cache Laravel
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage /var/www/bootstrap/cache
+
+# Paksa PHP-FPM untuk mendengarkan semua antarmuka
+RUN sed -i 's/listen = 127.0.0.1:9000/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.d/www.conf
 
 # Expose port 9000 untuk PHP-FPM
 EXPOSE 9000
