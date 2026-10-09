@@ -36,3 +36,19 @@ RUN chown -R www-data:www-data /var/www \
 EXPOSE 9000
 
 CMD ["php-fpm"]
+
+# 1. Install system dependencies (tambahkan libzip-dev)
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Configure dan install ekstensi GD + ZIP
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo pdo_mysql zip
