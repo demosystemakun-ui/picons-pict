@@ -6,11 +6,12 @@
     "license": "MIT",
    "require": {
         "php": "^8.4",
+        "barryvdh/laravel-dompdf": "^3.1.2",
+        "guzzlehttp/guzzle": "^8.2.0",
         "laravel/framework": "^13.35.0",
         "maatwebsite/excel": "^4.0.3",
-        "barryvdh/laravel-dompdf": "^3.1.2",
         "nesbot/carbon": "^3.14.2",
-        "guzzlehttp/guzzle": "^8.2.0"
+        "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
         "nunomaduro/collision": "^8.9.5",
