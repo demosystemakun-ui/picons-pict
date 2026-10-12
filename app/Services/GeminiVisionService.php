@@ -13,8 +13,8 @@ class GeminiVisionService
 
     public function __construct()
     {
-        $this->apiKey  = config('services.gemini.api_key', env('GEMINI_API_KEY', ''));
-        $this->model   = config('services.gemini.model', 'gemini-2.5-flash');
+        $this->apiKey  = (string) (config('services.gemini.api_key') ?? env('GEMINI_API_KEY', ''));
+        $this->model   = (string) (config('services.gemini.model') ?? env('GEMINI_MODEL', 'gemini-3.5-flash'));
         $this->baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     }
 
