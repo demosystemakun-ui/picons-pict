@@ -1,5 +1,15 @@
 <?php
 
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 DEBUG LOGGER — Catat Setiap Request yang Masuk
+// Hapus blok ini setelah masalah selesai
+// ═══════════════════════════════════════════════════════════════════
+file_put_contents(
+    storage_path('logs/request-log.txt'),
+    date('[Y-m-d H:i:s] ') . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' ' . ($_SERVER['REQUEST_URI'] ?? '?') . "\n",
+    FILE_APPEND
+);
+
 use App\Http\Controllers\Api\ItemLookupController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CategoryController;
@@ -74,9 +84,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/inventory/stock', [InventoryStockController::class, 'store'])
             ->name('inventory.stock.store');
 
-        // ✅ Route Import Excel
+        // ✅ Route Import Excel via Modal
         Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])
             ->name('inventory.stock.import-process');
+
+        // ✅ Route Import Langsung (Debug bypass UI)
+        // Cara pakai: copy file Excel ke storage/app/data-stok.xlsx
+        // Lalu akses URL: /inventory/stock/import-langsung
+        Route::get('/inventory/stock/import-langsung', [InventoryStockController::class, 'importLangsung'])
+            ->name('inventory.stock.import-langsung');
     });
 
     // ⚠️ STATIC ROUTES — HARUS DI ATAS route dengan {id} agar tidak konflik
@@ -220,7 +236,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('reimbursement', ReimbursementController::class);
 
     /* ─────────────────────────────────────────────
-       DEBUG (Dipindah ke dalam auth — AMAN)
+       DEBUG (dalam auth — aman)
     ───────────────────────────────────────────── */
     Route::get('/debug-log', function () {
         return [
@@ -230,5 +246,18 @@ Route::middleware(['auth'])->group(function () {
             'table'    => (new \App\Models\StockLog)->getTable(),
             'now'      => now()->toDateTimeString(),
         ];
+    });
+
+    /* ─────────────────────────────────────────────
+       DEBUG REQUEST LOG — lihat isi log langsung dari browser
+    ───────────────────────────────────────────── */
+    Route::get('/debug-request-log', function () {
+        $requestLog = storage_path('logs/request-log.txt');
+        $importLog  = storage_path('logs/import-debug.txt');
+
+        return response()->json([
+            'request_log' => file_exists($requestLog) ? file_get_contents($requestLog) : 'Belum ada log',
+            'import_log'  => file_exists($importLog)  ? file_get_contents($importLog)  : 'Belum ada log',
+        ]);
     });
 });
