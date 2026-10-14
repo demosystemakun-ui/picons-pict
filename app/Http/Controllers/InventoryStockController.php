@@ -39,104 +39,133 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        IMPORT EXCEL — Custom Mapping (Super Admin only)
     ═══════════════════════════════════════════════════════════════ */
-    public function importProcess(Request $request)
-    {
-        // 1. Validasi Input
-        $request->validate([
-            'excel_file'         => 'required|mimes:xlsx,xls,csv|max:5120',
-            'mapping'            => 'required|array',
-            'mapping.item_code'  => 'required|string',
-            'mapping.item_name'  => 'required|string',
-            'mapping.stock'      => 'required|string',
-            'mapping.department' => 'required|string',
-        ]);
+  public function importProcess(Request $request)
+{
+    // 1. Validasi Input
+    $request->validate([
+        'excel_file'         => 'required|mimes:xlsx,xls,csv|max:5120',
+        'mapping'            => 'required|array',
+        'mapping.item_code'  => 'required|string',
+        'mapping.item_name'  => 'required|string',
+        'mapping.stock'      => 'required|string',
+        'mapping.department' => 'required|string',
+    ]);
 
-        $file    = $request->file('excel_file');
-        $mapping = $request->input('mapping');
+    $file    = $request->file('excel_file');
+    $mapping = $request->input('mapping');
 
-        // 2. Baca File Excel
-        try {
-            $spreadsheet = IOFactory::load($file->getRealPath());
-            $worksheet   = $spreadsheet->getActiveSheet();
-            $rows        = $worksheet->toArray(null, true, true, false);
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
-        }
-
-        // 3. Hapus Baris Header (baris pertama)
-        array_shift($rows);
-
-        // 4. Konversi huruf kolom (A, B, C, D) ke index array (0, 1, 2, 3)
-        $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
-        $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
-        $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
-        $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
-
-        $importedCount = 0;
-        $errors        = [];
-
-        // 5. Loop Setiap Baris Data
-        foreach ($rows as $rowIndex => $row) {
-            try {
-                $itemCode = trim($row[$codeIndex] ?? '');
-                $itemName = trim($row[$nameIndex] ?? '');
-                $stockQty = (int) ($row[$stockIndex] ?? 0);
-                $deptName = trim($row[$deptIndex] ?? '');
-
-                // Skip jika kode item kosong (baris kosong)
-                if (empty($itemCode)) {
-                    continue;
-                }
-
-                // 6. Cari atau Buat Item Baru
-                $item = Item::firstOrCreate(
-                    ['item_code' => $itemCode],
-                    ['item_name' => $itemName]
-                );
-
-                if (empty($item->item_name) && !empty($itemName)) {
-                    $item->update(['item_name' => $itemName]);
-                }
-
-                // 7. Cari Departemen berdasarkan nama (case-insensitive)
-                $department = Department::where('name', 'LIKE', '%' . $deptName . '%')->first();
-
-                if (!$department) {
-                    $errors[] = "Baris " . ($rowIndex + 2) . ": Departemen '{$deptName}' tidak ditemukan";
-                    continue;
-                }
-
-                // 8. Update atau Buat Stok
-                DepartmentStock::updateOrCreate(
-                    [
-                        'item_id'       => $item->id,
-                        'department_id' => $department->id,
-                    ],
-                    [
-                        'stock'      => $stockQty,
-                        'updated_at' => now(),
-                    ]
-                );
-
-                $importedCount++;
-
-            } catch (\Exception $e) {
-                $errors[] = "Baris " . ($rowIndex + 2) . ": " . $e->getMessage();
-            }
-        }
-
-        // 9. Redirect dengan notifikasi
-        if (count($errors) > 0) {
-            $errorMsg = implode(' | ', array_slice($errors, 0, 3));
-            if (count($errors) > 3) {
-                $errorMsg .= ' ... dan ' . (count($errors) - 3) . ' error lainnya.';
-            }
-            return redirect()->back()->with('warning', "Berhasil import {$importedCount} data. Error: {$errorMsg}");
-        }
-
-        return redirect()->back()->with('success', "Berhasil import {$importedCount} data stok!");
+    // 2. Baca File Excel
+    try {
+        $spreadsheet = IOFactory::load($file->getRealPath());
+        $worksheet   = $spreadsheet->getActiveSheet();
+        $rows        = $worksheet->toArray(null, true, true, false);
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
     }
 
+    // 3. Hapus Baris Header
+    array_shift($rows);
+
+    // 4. Konversi huruf kolom ke index
+    $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
+    $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
+    $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
+    $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
+
+    $importedCount   = 0;
+    $newItemsCount   = 0;
+    $newDeptsCount   = 0;
+    $errors          = [];
+
+    // 5. Loop Setiap Baris
+    foreach ($rows as $rowIndex => $row) {
+        try {
+            $itemCode = trim($row[$codeIndex] ?? '');
+            $itemName = trim($row[$nameIndex] ?? '');
+            $stockQty = (int) ($row[$stockIndex] ?? 0);
+            $deptName = trim($row[$deptIndex] ?? '');
+
+            // Skip baris kosong
+            if (empty($itemCode) || empty($itemName) || empty($deptName)) {
+                continue;
+            }
+
+            // ─────────────────────────────────────────────
+            // 6. Cari atau Buat Item Baru
+            // ─────────────────────────────────────────────
+            $item = Item::where('item_code', $itemCode)->first();
+            if (!$item) {
+                $item = Item::create([
+                    'item_code'      => $itemCode,
+                    'item_name'      => $itemName,
+                    'current_stock'  => 0,
+                    'minimum_stock'  => 0,
+                ]);
+                $newItemsCount++;
+            } else {
+                // Update nama kalau beda
+                if ($item->item_name !== $itemName && !empty($itemName)) {
+                    $item->update(['item_name' => $itemName]);
+                }
+            }
+
+            // ─────────────────────────────────────────────
+            // 7. Cari atau BUAT OTOMATIS Departemen Baru
+            // ─────────────────────────────────────────────
+            $department = Department::where('name', 'LIKE', $deptName)->first();
+
+            if (!$department) {
+                // 🎯 AUTO-CREATE DEPARTEMEN BARU
+                $department = Department::create([
+                    'name'        => $deptName,
+                    'code'        => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $deptName), 0, 3)),
+                    'cost_center' => 'CC-' . str_pad(Department::count() + 1, 3, '0', STR_PAD_LEFT),
+                    'is_active'   => true,
+                ]);
+                $newDeptsCount++;
+            }
+
+            // ─────────────────────────────────────────────
+            // 8. Update atau Buat Stok
+            // ─────────────────────────────────────────────
+            DepartmentStock::updateOrCreate(
+                [
+                    'item_id'       => $item->id,
+                    'department_id' => $department->id,
+                ],
+                [
+                    'stock'      => $stockQty,
+                    'updated_at' => now(),
+                ]
+            );
+
+            $importedCount++;
+
+        } catch (\Exception $e) {
+            $errors[] = "Baris " . ($rowIndex + 2) . ": " . $e->getMessage();
+        }
+    }
+
+    // 9. Susun pesan sukses
+    $successMsg = "✅ Berhasil import {$importedCount} data stok!";
+    if ($newItemsCount > 0) {
+        $successMsg .= " ({$newItemsCount} item baru ditambahkan)";
+    }
+    if ($newDeptsCount > 0) {
+        $successMsg .= " ({$newDeptsCount} departemen baru otomatis dibuat)";
+    }
+
+    // 10. Redirect dengan notifikasi
+    if (count($errors) > 0) {
+        $errorMsg = implode(' | ', array_slice($errors, 0, 3));
+        if (count($errors) > 3) {
+            $errorMsg .= ' ... dan ' . (count($errors) - 3) . ' error lainnya.';
+        }
+        return redirect()->back()->with('warning', $successMsg . " Error: {$errorMsg}");
+    }
+
+    return redirect()->back()->with('success', $successMsg);
+}
     /* ═══════════════════════════════════════════════════════════════
        CREATE — Form tambah stok (Super Admin only)
     ═══════════════════════════════════════════════════════════════ */
