@@ -38,6 +38,7 @@ class InventoryStockController extends Controller
 
     /* ═══════════════════════════════════════════════════════════════
        IMPORT EXCEL — Custom Mapping (Super Admin only)
+       🔍 VERSI DEBUG
     ═══════════════════════════════════════════════════════════════ */
     public function importProcess(Request $request)
     {
@@ -45,23 +46,56 @@ class InventoryStockController extends Controller
         $request->validate([
             'excel_file'         => 'required|mimes:xlsx,xls,csv|max:5120',
             'mapping'            => 'required|array',
-            'mapping.item_code'  => 'required|string',
-            'mapping.item_name'  => 'required|string',
-            'mapping.stock'      => 'required|string',
-            'mapping.department' => 'required|string',
         ]);
 
         $file    = $request->file('excel_file');
         $mapping = $request->input('mapping');
 
-        // 2. Baca File Excel menggunakan PhpSpreadsheet (lebih stabil dari Excel::toArray)
+        // 2. Baca File Excel
         try {
             $spreadsheet = IOFactory::load($file->getRealPath());
             $worksheet   = $spreadsheet->getActiveSheet();
-            $rows        = $worksheet->toArray(null, true, true, false); // false = index numerik (0,1,2)
+            $rows        = $worksheet->toArray(null, true, true, false);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔍 DEBUG SECTION — TAMPILKAN ISI FILE & MAPPING
+        // ═══════════════════════════════════════════════════════════════
+        $codeIndex  = ord(strtoupper($mapping['item_code'] ?? 'A')) - 65;
+        $nameIndex  = ord(strtoupper($mapping['item_name'] ?? 'B')) - 65;
+        $stockIndex = ord(strtoupper($mapping['stock'] ?? 'C')) - 65;
+        $deptIndex  = ord(strtoupper($mapping['department'] ?? 'D')) - 65;
+
+        // Susun preview data yang akan di-import (10 baris pertama)
+        $preview = [];
+        foreach (array_slice($rows, 0, 10) as $i => $row) {
+            $preview[] = [
+                'baris'      => $i + 1,
+                'raw_row'    => $row,
+                'item_code'  => $row[$codeIndex] ?? '(kosong)',
+                'item_name'  => $row[$nameIndex] ?? '(kosong)',
+                'stock'      => $row[$stockIndex] ?? '(kosong)',
+                'department' => $row[$deptIndex] ?? '(kosong)',
+            ];
+        }
+
+        dd([
+            '📋 MAPPING DARI FRONTEND' => $mapping,
+            '🔢 INDEX YANG DIBACA' => [
+                'item_code'  => "Huruf '{$mapping['item_code']}' → index array [{$codeIndex}]",
+                'item_name'  => "Huruf '{$mapping['item_name']}' → index array [{$nameIndex}]",
+                'stock'      => "Huruf '{$mapping['stock']}' → index array [{$stockIndex}]",
+                'department' => "Huruf '{$mapping['department']}' → index array [{$deptIndex}]",
+            ],
+            '📊 TOTAL BARIS' => count($rows),
+            '📄 10 BARIS PERTAMA FILE EXCEL' => $preview,
+            '💾 DAFTAR DEPARTEMEN DI DATABASE' => Department::pluck('name', 'id')->toArray(),
+        ]);
+        // ═══════════════════════════════════════════════════════════════
+        // 🔍 END DEBUG — Kode di bawah ini TIDAK AKAN DIJALANKAN saat debug
+        // ═══════════════════════════════════════════════════════════════
 
         // 3. Hapus Baris Header (baris pertama)
         array_shift($rows);
@@ -69,13 +103,7 @@ class InventoryStockController extends Controller
         $importedCount = 0;
         $errors        = [];
 
-        // 4. Konversi huruf kolom (A, B, C, D) ke index array (0, 1, 2, 3)
-        $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
-        $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
-        $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
-        $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
-
-        // 5. Loop Setiap Baris Data
+        // 4. Loop Setiap Baris Data
         foreach ($rows as $rowIndex => $row) {
             try {
                 $itemCode = trim($row[$codeIndex] ?? '');
@@ -88,18 +116,17 @@ class InventoryStockController extends Controller
                     continue;
                 }
 
-                // 6. Cari atau Buat Item Baru
+                // 5. Cari atau Buat Item Baru
                 $item = Item::firstOrCreate(
                     ['item_code' => $itemCode],
                     ['item_name' => $itemName]
                 );
 
-                // Update nama item jika kosong di database tapi ada di Excel
                 if (empty($item->item_name) && !empty($itemName)) {
                     $item->update(['item_name' => $itemName]);
                 }
 
-                // 7. Cari Departemen berdasarkan nama (case-insensitive)
+                // 6. Cari Departemen berdasarkan nama (case-insensitive)
                 $department = Department::where('name', 'LIKE', '%' . $deptName . '%')->first();
 
                 if (!$department) {
@@ -107,7 +134,7 @@ class InventoryStockController extends Controller
                     continue;
                 }
 
-                // 8. Update atau Buat Stok (pakai DepartmentStock)
+                // 7. Update atau Buat Stok
                 DepartmentStock::updateOrCreate(
                     [
                         'item_id'       => $item->id,
@@ -126,7 +153,7 @@ class InventoryStockController extends Controller
             }
         }
 
-        // 9. Redirect dengan notifikasi
+        // 8. Redirect dengan notifikasi
         if (count($errors) > 0) {
             $errorMsg = implode(' | ', array_slice($errors, 0, 3));
             if (count($errors) > 3) {
@@ -185,7 +212,6 @@ class InventoryStockController extends Controller
     {
         $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
 
-        // User biasa hanya bisa akses stok departemennya sendiri
         if (!auth()->user()->hasRole('Super Admin') && $stock->department_id !== auth()->user()->department_id) {
             abort(403, 'Unauthorized action.');
         }
@@ -207,11 +233,9 @@ class InventoryStockController extends Controller
                 ->withInput();
         }
 
-        // Kurangi stok utama
         $stock->stock -= $validated['used_stock'];
         $stock->save();
 
-        // Catat riwayat pemakaian
         StockLog::create([
             'department_id' => $stock->department_id,
             'item_id'       => $stock->item_id,
@@ -224,7 +248,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       EXPORT USAGE — Export Excel pemakaian stok harian
+       EXPORT USAGE
     ═══════════════════════════════════════════════════════════════ */
     public function exportUsage(Request $request)
     {
@@ -234,11 +258,9 @@ class InventoryStockController extends Controller
             'department_id' => 'nullable|exists:departments,id',
         ]);
 
-        // Default range: awal bulan ini → hari ini
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
 
-        // Non Super Admin → paksa filter departemennya sendiri
         $departmentId = auth()->user()->hasRole('Super Admin')
             ? $request->input('department_id')
             : auth()->user()->department_id;
