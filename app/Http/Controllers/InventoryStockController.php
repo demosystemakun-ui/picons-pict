@@ -5,14 +5,43 @@ namespace App\Http\Controllers;
 use App\Exports\StockUsageExport;
 use App\Models\Department;
 use App\Models\DepartmentStock;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Item;
 use App\Models\StockLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class InventoryStockController extends Controller
 {
+    /* Skor minimum agar sebuah header dianggap cocok dengan field sistem */
+    private const MIN_SCORE = 60;
+
+    /*
+     * Kamus alias nama kolom (sudah dalam bentuk ternormalisasi:
+     * huruf kecil, tanpa simbol, spasi tunggal). Tambah sendiri kalau perlu.
+     */
+    private const FIELD_ALIASES = [
+        'department' => [
+            'departemen', 'department', 'dept', 'dep', 'unit kerja', 'divisi', 'division',
+            'bagian', 'seksi', 'section', 'nama departemen', 'nama dept',
+        ],
+        'item_name' => [
+            'nama barang item', 'nama barang', 'nama item', 'nama produk', 'nama material',
+            'item name', 'item description', 'description', 'deskripsi', 'barang', 'brg',
+            'item', 'produk', 'product', 'material',
+        ],
+        'item_code' => [
+            'kode item', 'kode barang', 'kd item', 'kd brg', 'kode', 'sku', 'item code',
+            'part number', 'part no', 'no barang', 'id barang', 'kode material', 'material code',
+        ],
+        'stock' => [
+            'sisa stok', 'stok akhir', 'stok', 'stock', 'jumlah', 'qty on hand', 'qty',
+            'quantity', 'on hand', 'saldo', 'sisa',
+        ],
+    ];
+
     /* ═══════════════════════════════════════════════════════════════
        INDEX — Tampilan Tabel Stok
     ═══════════════════════════════════════════════════════════════ */
@@ -37,253 +66,406 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT PROCESS — Import via Modal dengan Custom Mapping
-       (Auto-create departemen & item jika belum ada)
+       IMPORT STEP 1 — Analisa file (AJAX)
+       Mengembalikan: daftar sheet, baris header, daftar kolom,
+       tebakan mapping otomatis, dan preview beberapa baris data.
     ═══════════════════════════════════════════════════════════════ */
-    public function importProcess(Request $request)
+    public function importAnalyze(Request $request)
     {
-        // 1. Validasi Input
         $request->validate([
-            'excel_file'         => 'required|mimes:xlsx,xls,csv|max:5120',
-            'mapping'            => 'required|array',
-            'mapping.item_code'  => 'required|string',
-            'mapping.item_name'  => 'required|string',
-            'mapping.stock'      => 'required|string',
-            'mapping.department' => 'required|string',
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+            'sheet'      => 'nullable|integer|min:0',
+            'header_row' => 'nullable|integer|min:1',
         ]);
 
-        $file    = $request->file('excel_file');
-        $mapping = $request->input('mapping');
-
-        // 2. Baca File Excel
         try {
-            $spreadsheet = IOFactory::load($file->getRealPath());
-            $worksheet   = $spreadsheet->getActiveSheet();
-            $rows        = $worksheet->toArray(null, true, true, false);
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+            [$sheetNames, $sheetIndex, $rows] = $this->loadSheet(
+                $request->file('excel_file')->getRealPath(),
+                (int) $request->input('sheet', 0)
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Gagal membaca file: ' . $e->getMessage()], 422);
         }
 
-        // 3. Hapus Baris Header
-        array_shift($rows);
+        $rows = array_values($rows);
+        if (count($rows) === 0) {
+            return response()->json(['message' => 'Sheet ini kosong.'], 422);
+        }
 
-        // 4. Konversi huruf kolom ke index (A=0, B=1, C=2, dst)
-        $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
-        $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
-        $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
-        $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
+        $headerIdx = $request->filled('header_row')
+            ? (int) $request->input('header_row') - 1
+            : $this->detectHeaderRow($rows);
+        $headerIdx = max(0, min($headerIdx, count($rows) - 1));
 
-        $importedCount = 0;
-        $newItemsCount = 0;
-        $newDeptsCount = 0;
-        $errors        = [];
-
-        // 5. Loop Setiap Baris
-        foreach ($rows as $rowIndex => $row) {
-            $lineNum = $rowIndex + 2;
-
-            try {
-                $itemCode = trim($row[$codeIndex] ?? '');
-                $itemName = trim($row[$nameIndex] ?? '');
-                $stockQty = (int) ($row[$stockIndex] ?? 0);
-                $deptName = trim($row[$deptIndex] ?? '');
-
-                // Skip baris kosong
-                if (empty($itemCode) || empty($itemName) || empty($deptName)) {
-                    continue;
-                }
-
-                // ─────────────────────────────────────────
-                // 6. Cari atau Buat Item
-                // ─────────────────────────────────────────
-                $item = Item::where('item_code', $itemCode)->first();
-                if (!$item) {
-                    $item = Item::create([
-                        'item_code'     => $itemCode,
-                        'item_name'     => $itemName,
-                        'current_stock' => 0,
-                        'minimum_stock' => 0,
-                    ]);
-                    $newItemsCount++;
-                } else {
-                    if (!empty($itemName) && $item->item_name !== $itemName) {
-                        $item->update(['item_name' => $itemName]);
-                    }
-                }
-
-                // ─────────────────────────────────────────
-                // 7. Cari atau Buat Departemen (AUTO-CREATE)
-                // ─────────────────────────────────────────
-                $department = Department::where('name', 'LIKE', $deptName)->first();
-
-                if (!$department) {
-                    $department = Department::create([
-                        'name'        => $deptName,
-                        'code'        => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $deptName), 0, 3)),
-                        'cost_center' => 'CC-' . str_pad(Department::count() + 1, 3, '0', STR_PAD_LEFT),
-                        'is_active'   => true,
-                    ]);
-                    $newDeptsCount++;
-                }
-
-                // ─────────────────────────────────────────
-                // 8. Update atau Buat Stok
-                // ─────────────────────────────────────────
-                DepartmentStock::updateOrCreate(
-                    [
-                        'item_id'       => $item->id,
-                        'department_id' => $department->id,
-                    ],
-                    [
-                        'stock'      => $stockQty,
-                        'updated_at' => now(),
-                    ]
-                );
-
-                $importedCount++;
-
-            } catch (\Exception $e) {
-                $errors[] = "Baris {$lineNum}: " . $e->getMessage();
+        $columns = [];
+        $labels  = [];
+        foreach ($rows[$headerIdx] as $i => $cell) {
+            $label = $this->cleanText($cell);
+            if ($label === '') {
+                continue;
             }
+            $labels[$i] = $label;
+            $columns[]  = [
+                'index'  => $i,
+                'letter' => Coordinate::stringFromColumnIndex($i + 1),
+                'label'  => $label,
+            ];
         }
 
-        // 9. Susun pesan sukses
-        $successMsg = "Berhasil import {$importedCount} data stok!";
-        if ($newItemsCount > 0) {
-            $successMsg .= " ({$newItemsCount} item baru)";
-        }
-        if ($newDeptsCount > 0) {
-            $successMsg .= " ({$newDeptsCount} departemen baru otomatis dibuat)";
-        }
-
-        // 10. Redirect dengan notifikasi
-        if (count($errors) > 0) {
-            $errorMsg = implode(' | ', array_slice($errors, 0, 3));
-            if (count($errors) > 3) {
-                $errorMsg .= ' ... dan ' . (count($errors) - 3) . ' error lainnya.';
+        $preview = [];
+        foreach (array_slice($rows, $headerIdx + 1, 5) as $r) {
+            $line = [];
+            foreach ($labels as $i => $_) {
+                $line[] = mb_strimwidth($this->cleanText($r[$i] ?? null), 0, 40, '…');
             }
-            return redirect()->back()->with('warning', $successMsg . " Error: {$errorMsg}");
-        }
-
-        return redirect()->back()->with('success', $successMsg);
-    }
-
-    /* ═══════════════════════════════════════════════════════════════
-       IMPORT LANGSUNG — Bypass UI untuk Debugging
-       Cara pakai:
-       1. Copy file Excel ke: storage/app/data-stok.xlsx
-       2. Akses: /inventory/stock/import-langsung
-       3. Akan muncul response JSON berisi hasil import
-    ═══════════════════════════════════════════════════════════════ */
-    public function importLangsung()
-    {
-        // Path file Excel yang akan dibaca
-        $filePath = storage_path('app/data-stok.xlsx');
-
-        // Cek file ada atau tidak
-        if (!file_exists($filePath)) {
-            return response()->json([
-                '❌ ERROR' => 'File Excel tidak ditemukan!',
-                'path_yang_dicari' => $filePath,
-                'solusi' => 'Copy file Excel kamu ke path di atas, rename menjadi "data-stok.xlsx"',
-            ], 404);
-        }
-
-        // Baca Excel
-        try {
-            $spreadsheet = IOFactory::load($filePath);
-            $worksheet   = $spreadsheet->getActiveSheet();
-            $rows        = $worksheet->toArray(null, true, true, false);
-        } catch (\Exception $e) {
-            return response()->json([
-                '❌ ERROR BACA EXCEL' => $e->getMessage(),
-            ], 500);
-        }
-
-        // Hapus header
-        array_shift($rows);
-
-        // FIXED MAPPING: A=departemen, B=nama, C=kode, D=stock
-        $deptIndex  = 0; // Kolom A
-        $nameIndex  = 1; // Kolom B
-        $codeIndex  = 2; // Kolom C
-        $stockIndex = 3; // Kolom D
-
-        $importedCount = 0;
-        $log           = [];
-
-        foreach ($rows as $rowIndex => $row) {
-            $lineNum = $rowIndex + 2;
-
-            try {
-                $deptName = trim($row[$deptIndex] ?? '');
-                $itemName = trim($row[$nameIndex] ?? '');
-                $itemCode = trim($row[$codeIndex] ?? '');
-                $stockQty = (int) ($row[$stockIndex] ?? 0);
-
-                // Skip jika kosong
-                if (empty($itemCode) || empty($deptName) || empty($itemName)) {
-                    $log[] = "Baris {$lineNum}: ⏭️ DILEWATI (kolom kosong)";
-                    continue;
-                }
-
-                // Cari/Buat Item
-                $item = Item::where('item_code', $itemCode)->first();
-                if (!$item) {
-                    $item = Item::create([
-                        'item_code'     => $itemCode,
-                        'item_name'     => $itemName,
-                        'current_stock' => 0,
-                        'minimum_stock' => 0,
-                    ]);
-                    $log[] = "Baris {$lineNum}: 🆕 Item dibuat - {$itemCode}";
-                } else {
-                    $log[] = "Baris {$lineNum}: ✅ Item ada - {$itemCode}";
-                }
-
-                // Cari/Buat Departemen
-                $department = Department::where('name', $deptName)->first();
-                if (!$department) {
-                    $department = Department::create([
-                        'name'        => $deptName,
-                        'code'        => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $deptName), 0, 3)),
-                        'cost_center' => 'CC-' . str_pad(Department::count() + 1, 3, '0', STR_PAD_LEFT),
-                        'is_active'   => true,
-                    ]);
-                    $log[] = "Baris {$lineNum}: 🆕 Departemen dibuat - {$deptName}";
-                } else {
-                    $log[] = "Baris {$lineNum}: ✅ Departemen ada - {$deptName}";
-                }
-
-                // Simpan Stok
-                DepartmentStock::updateOrCreate(
-                    [
-                        'item_id'       => $item->id,
-                        'department_id' => $department->id,
-                    ],
-                    [
-                        'stock'      => $stockQty,
-                        'updated_at' => now(),
-                    ]
-                );
-
-                $log[] = "Baris {$lineNum}: 💾 STOK DISIMPAN - {$itemCode} di {$deptName} = {$stockQty}";
-                $importedCount++;
-
-            } catch (\Exception $e) {
-                $log[] = "Baris {$lineNum}: ❌ ERROR - " . $e->getMessage();
-            }
+            $preview[] = $line;
         }
 
         return response()->json([
-            '✅ STATUS'              => 'IMPORT SELESAI',
-            '📊 TOTAL BARIS'         => count($rows),
-            '✅ BERHASIL'            => $importedCount,
-            '📋 LOG DETAIL'          => $log,
-            '💾 DEPARTEMEN DI DB'    => Department::pluck('name')->toArray(),
-            '📦 TOTAL ITEM DI DB'    => Item::count(),
-            '📦 TOTAL STOK DI DB'    => DepartmentStock::count(),
+            'sheets'        => $sheetNames,
+            'sheet'         => $sheetIndex,
+            'header_row'    => $headerIdx + 1,
+            'columns'       => $columns,
+            'suggested'     => (object) $this->suggestMapping($labels),
+            'preview_heads' => array_values($labels),
+            'preview'       => $preview,
+            'total_rows'    => max(0, count($rows) - $headerIdx - 1),
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       IMPORT STEP 2 — Proses import berdasarkan mapping
+    ═══════════════════════════════════════════════════════════════ */
+    public function importProcess(Request $request)
+    {
+        $request->validate([
+            'excel_file'         => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+            'sheet'              => 'nullable|integer|min:0',
+            'header_row'         => 'required|integer|min:1',
+            'mapping'            => 'required|array',
+            'mapping.department' => 'required|integer|min:0',
+            'mapping.item_name'  => 'required|integer|min:0',
+            'mapping.stock'      => 'required|integer|min:0',
+            'mapping.item_code'  => 'nullable|integer|min:0',
+        ], [
+            'excel_file.required'         => 'File Excel belum dipilih.',
+            'excel_file.mimes'            => 'Format file harus .xlsx, .xls, atau .csv.',
+            'excel_file.max'              => 'Ukuran file maksimal 5MB.',
+            'excel_file.uploaded'         => 'Upload gagal (kemungkinan melebihi batas upload_max_filesize di PHP).',
+            'mapping.department.required' => 'Kolom Departemen belum dipilih.',
+            'mapping.item_name.required'  => 'Kolom Nama Barang belum dipilih.',
+            'mapping.stock.required'      => 'Kolom Sisa Stok belum dipilih.',
+        ]);
+
+        try {
+            [, , $rows] = $this->loadSheet(
+                $request->file('excel_file')->getRealPath(),
+                (int) $request->input('sheet', 0)
+            );
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+        }
+
+        $map       = $request->input('mapping');
+        $deptCol   = (int) $map['department'];
+        $nameCol   = (int) $map['item_name'];
+        $stockCol  = (int) $map['stock'];
+        $codeCol   = (isset($map['item_code']) && $map['item_code'] !== '') ? (int) $map['item_code'] : null;
+        $headerRow = (int) $request->input('header_row'); // 1-based
+
+        $rows     = array_values($rows);
+        $dataRows = array_slice($rows, $headerRow); // semua baris setelah header
+
+        $imported = 0;
+        $newItems = 0;
+        $newDepts = 0;
+        $filled   = 0;
+        $skipped  = [];
+        $deptCache = [];
+        $lastDept  = null;
+
+        foreach ($dataRows as $offset => $row) {
+            $lineNum  = $headerRow + $offset + 1; // nomor baris asli di Excel
+            $deptName = $this->cleanText($row[$deptCol] ?? null);
+            $itemName = $this->cleanText($row[$nameCol] ?? null);
+            $itemCode = $codeCol !== null ? $this->cleanText($row[$codeCol] ?? null) : '';
+            $rawStock = $row[$stockCol] ?? null;
+
+            // Baris benar-benar kosong → abaikan tanpa laporan
+            if ($deptName === '' && $itemName === '' && $itemCode === ''
+                && ($rawStock === null || trim((string) $rawStock) === '')) {
+                continue;
+            }
+
+            // Departemen kosong → ikuti baris di atasnya (kasus sel di-merge)
+            if ($deptName === '') {
+                if ($lastDept === null) {
+                    $skipped[] = "Baris {$lineNum}: departemen kosong";
+                    continue;
+                }
+                $deptName = $lastDept;
+                $filled++;
+            } else {
+                $lastDept = $deptName;
+            }
+
+            if ($itemName === '' && $itemCode === '') {
+                $skipped[] = "Baris {$lineNum}: nama dan kode barang kosong";
+                continue;
+            }
+
+            $qty = $this->parseQty($rawStock);
+            if ($qty === null) {
+                $skipped[] = "Baris {$lineNum}: stok tidak valid (\"" . $this->cleanText($rawStock) . "\")";
+                continue;
+            }
+            if ($qty < 0) {
+                $skipped[] = "Baris {$lineNum}: stok negatif ({$qty})";
+                continue;
+            }
+
+            try {
+                // ── Item ──
+                $item = null;
+                if ($itemCode !== '') {
+                    $item = Item::where('item_code', $itemCode)->first();
+                } elseif ($itemName !== '') {
+                    $item = Item::where('item_name', $itemName)->first();
+                }
+
+                if (!$item) {
+                    if ($itemCode === '') {
+                        $skipped[] = "Baris {$lineNum}: kode kosong dan barang \"{$itemName}\" belum terdaftar";
+                        continue;
+                    }
+                    $item = new Item();
+                    $item->forceFill([
+                        'item_code'     => $itemCode,
+                        'item_name'     => $itemName !== '' ? $itemName : $itemCode,
+                        'current_stock' => 0,
+                        'minimum_stock' => 0,
+                    ])->save();
+                    $newItems++;
+                } elseif ($itemName !== '' && $item->item_name !== $itemName) {
+                    $item->update(['item_name' => $itemName]);
+                }
+
+                // ── Departemen ──
+                $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
+
+                // ── Stok (atribut di-set langsung, tidak tergantung $fillable) ──
+                $ds = DepartmentStock::where('item_id', $item->id)
+                    ->where('department_id', $department->id)
+                    ->first() ?? new DepartmentStock();
+
+                $ds->item_id       = $item->id;
+                $ds->department_id = $department->id;
+                $ds->stock         = $qty;
+                $ds->updated_at    = now();
+                $ds->save();
+
+                $imported++;
+            } catch (\Throwable $e) {
+                $skipped[] = "Baris {$lineNum}: error - " . $e->getMessage();
+            }
+        }
+
+        Log::info('Stock import selesai', [
+            'user_id'  => auth()->id(),
+            'imported' => $imported,
+            'skipped'  => count($skipped),
+            'detail'   => $skipped,
+        ]);
+
+        // ── Pesan hasil ──
+        $msg = "Berhasil import {$imported} data stok.";
+        if ($newItems > 0) $msg .= " {$newItems} item baru dibuat.";
+        if ($newDepts > 0) $msg .= " {$newDepts} departemen baru dibuat.";
+        if ($filled > 0)   $msg .= " {$filled} baris memakai departemen dari baris di atasnya.";
+
+        $redirect = redirect()->back()->with('import_report', array_slice($skipped, 0, 30));
+
+        if ($imported === 0) {
+            return $redirect->with('warning', 'Tidak ada data yang masuk. Cek kolom mapping dan alasan di bawah.');
+        }
+        if (count($skipped) > 0) {
+            $msg .= ' ' . count($skipped) . ' baris dilewati.';
+            return $redirect->with('warning', $msg);
+        }
+
+        return $redirect->with('success', $msg);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HELPER IMPORT
+    ═══════════════════════════════════════════════════════════════ */
+
+    /** Baca satu sheet → [namaSheet[], indexSheet, rows[][]] */
+    private function loadSheet(string $path, int $sheetIndex = 0): array
+    {
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($path);
+
+        $names = $spreadsheet->getSheetNames();
+        if ($sheetIndex < 0 || $sheetIndex >= count($names)) {
+            $sheetIndex = 0;
+        }
+
+        // calculateFormulas=true, formatData=false (nilai mentah, angka tetap angka)
+        $rows = $spreadsheet->getSheet($sheetIndex)->toArray(null, true, false, false);
+        $spreadsheet->disconnectWorksheets();
+
+        return [$names, $sheetIndex, $rows];
+    }
+
+    /** Cari baris header: baris (dari 20 teratas) yang paling banyak cocok dengan alias */
+    private function detectHeaderRow(array $rows): int
+    {
+        $best      = 0;
+        $bestScore = -1;
+
+        foreach (array_slice($rows, 0, 20, true) as $i => $row) {
+            $matches = 0;
+            $strings = 0;
+            foreach ($row as $cell) {
+                if (!is_string($cell) || trim($cell) === '') {
+                    continue;
+                }
+                $strings++;
+                $norm = $this->normalize($cell);
+                foreach (self::FIELD_ALIASES as $aliases) {
+                    if ($this->scoreHeader($norm, $aliases) >= self::MIN_SCORE) {
+                        $matches++;
+                        break;
+                    }
+                }
+            }
+            $score = $matches * 10 + min($strings, 10);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best      = $i;
+            }
+        }
+
+        return $best;
+    }
+
+    /** Tebak mapping: field => ['column' => index, 'score' => skor] (1 kolom hanya untuk 1 field) */
+    private function suggestMapping(array $labels): array
+    {
+        $candidates = [];
+        foreach ($labels as $col => $label) {
+            $norm = $this->normalize($label);
+            if ($norm === '') {
+                continue;
+            }
+            foreach (self::FIELD_ALIASES as $field => $aliases) {
+                $score = $this->scoreHeader($norm, $aliases);
+                if ($score >= self::MIN_SCORE) {
+                    $candidates[] = [$score, $col, $field];
+                }
+            }
+        }
+
+        usort($candidates, fn ($a, $b) => $b[0] <=> $a[0]);
+
+        $map  = [];
+        $used = [];
+        foreach ($candidates as [$score, $col, $field]) {
+            if (isset($map[$field]) || isset($used[$col])) {
+                continue;
+            }
+            $map[$field] = ['column' => $col, 'score' => $score];
+            $used[$col]  = true;
+        }
+
+        return $map;
+    }
+
+    /** 100 = sama persis; 63-80 = mengandung alias; <=85 = mirip (typo) */
+    private function scoreHeader(string $norm, array $aliases): int
+    {
+        if ($norm === '') {
+            return 0;
+        }
+        $best = 0;
+        foreach ($aliases as $alias) {
+            if ($norm === $alias) {
+                return 100;
+            }
+            if (preg_match('/\b' . preg_quote($alias, '/') . '\b/u', $norm)) {
+                $best = max($best, 60 + min(mb_strlen($alias), 20));
+            }
+            similar_text($norm, $alias, $pct);
+            if ($pct >= 80) {
+                $best = max($best, (int) ($pct * 0.85));
+            }
+        }
+        return $best;
+    }
+
+    private function normalize(?string $v): string
+    {
+        $v = mb_strtolower((string) $v);
+        $v = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $v);
+        return trim(preg_replace('/\s+/', ' ', $v));
+    }
+
+    private function cleanText($v): string
+    {
+        if ($v === null || !is_scalar($v)) {
+            return '';
+        }
+        return trim(preg_replace('/\s+/u', ' ', (string) $v));
+    }
+
+    /** "12", 12.0, "12 Unit", "1.250" → int. Tidak ada angka → null */
+    private function parseQty($v): ?int
+    {
+        if ($v === null) {
+            return null;
+        }
+        if (is_int($v) || is_float($v)) {
+            return (int) round($v);
+        }
+        $s = trim((string) $v);
+        if ($s === '' || !preg_match('/-?\d+(?:[.,]\d+)*/', $s, $m)) {
+            return null;
+        }
+        $num = $m[0];
+        if (preg_match('/^-?\d{1,3}([.,]\d{3})+$/', $num)) {
+            $num = str_replace(['.', ','], '', $num);   // pemisah ribuan
+        } else {
+            $num = str_replace(',', '.', $num);         // desimal
+        }
+        return (int) round((float) $num);
+    }
+
+    /** Cari departemen by nama atau kode (tidak sensitif huruf), buat baru jika belum ada */
+    private function resolveDepartment(string $name, array &$cache, int &$created): Department
+    {
+        $key = mb_strtolower($name);
+        if (isset($cache[$key])) {
+            return $cache[$key];
+        }
+
+        $dept = Department::whereRaw('LOWER(name) = ?', [$key])
+            ->orWhereRaw('LOWER(code) = ?', [$key])
+            ->first();
+
+        if (!$dept) {
+            $dept = new Department();
+            $dept->forceFill([
+                'name'        => $name,
+                'code'        => strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $name), 0, 3)),
+                'cost_center' => 'CC-' . str_pad(Department::count() + 1, 3, '0', STR_PAD_LEFT),
+                'is_active'   => true,
+            ])->save();
+            $created++;
+        }
+
+        return $cache[$key] = $dept;
     }
 
     /* ═══════════════════════════════════════════════════════════════
