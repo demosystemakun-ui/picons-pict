@@ -38,7 +38,6 @@ class InventoryStockController extends Controller
 
     /* ═══════════════════════════════════════════════════════════════
        IMPORT EXCEL — Custom Mapping (Super Admin only)
-       🔍 VERSI DEBUG
     ═══════════════════════════════════════════════════════════════ */
     public function importProcess(Request $request)
     {
@@ -46,6 +45,10 @@ class InventoryStockController extends Controller
         $request->validate([
             'excel_file'         => 'required|mimes:xlsx,xls,csv|max:5120',
             'mapping'            => 'required|array',
+            'mapping.item_code'  => 'required|string',
+            'mapping.item_name'  => 'required|string',
+            'mapping.stock'      => 'required|string',
+            'mapping.department' => 'required|string',
         ]);
 
         $file    = $request->file('excel_file');
@@ -60,50 +63,19 @@ class InventoryStockController extends Controller
             return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // 🔍 DEBUG SECTION — TAMPILKAN ISI FILE & MAPPING
-        // ═══════════════════════════════════════════════════════════════
-        $codeIndex  = ord(strtoupper($mapping['item_code'] ?? 'A')) - 65;
-        $nameIndex  = ord(strtoupper($mapping['item_name'] ?? 'B')) - 65;
-        $stockIndex = ord(strtoupper($mapping['stock'] ?? 'C')) - 65;
-        $deptIndex  = ord(strtoupper($mapping['department'] ?? 'D')) - 65;
-
-        // Susun preview data yang akan di-import (10 baris pertama)
-        $preview = [];
-        foreach (array_slice($rows, 0, 10) as $i => $row) {
-            $preview[] = [
-                'baris'      => $i + 1,
-                'raw_row'    => $row,
-                'item_code'  => $row[$codeIndex] ?? '(kosong)',
-                'item_name'  => $row[$nameIndex] ?? '(kosong)',
-                'stock'      => $row[$stockIndex] ?? '(kosong)',
-                'department' => $row[$deptIndex] ?? '(kosong)',
-            ];
-        }
-
-        dd([
-            '📋 MAPPING DARI FRONTEND' => $mapping,
-            '🔢 INDEX YANG DIBACA' => [
-                'item_code'  => "Huruf '{$mapping['item_code']}' → index array [{$codeIndex}]",
-                'item_name'  => "Huruf '{$mapping['item_name']}' → index array [{$nameIndex}]",
-                'stock'      => "Huruf '{$mapping['stock']}' → index array [{$stockIndex}]",
-                'department' => "Huruf '{$mapping['department']}' → index array [{$deptIndex}]",
-            ],
-            '📊 TOTAL BARIS' => count($rows),
-            '📄 10 BARIS PERTAMA FILE EXCEL' => $preview,
-            '💾 DAFTAR DEPARTEMEN DI DATABASE' => Department::pluck('name', 'id')->toArray(),
-        ]);
-        // ═══════════════════════════════════════════════════════════════
-        // 🔍 END DEBUG — Kode di bawah ini TIDAK AKAN DIJALANKAN saat debug
-        // ═══════════════════════════════════════════════════════════════
-
         // 3. Hapus Baris Header (baris pertama)
         array_shift($rows);
+
+        // 4. Konversi huruf kolom (A, B, C, D) ke index array (0, 1, 2, 3)
+        $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
+        $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
+        $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
+        $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
 
         $importedCount = 0;
         $errors        = [];
 
-        // 4. Loop Setiap Baris Data
+        // 5. Loop Setiap Baris Data
         foreach ($rows as $rowIndex => $row) {
             try {
                 $itemCode = trim($row[$codeIndex] ?? '');
@@ -116,7 +88,7 @@ class InventoryStockController extends Controller
                     continue;
                 }
 
-                // 5. Cari atau Buat Item Baru
+                // 6. Cari atau Buat Item Baru
                 $item = Item::firstOrCreate(
                     ['item_code' => $itemCode],
                     ['item_name' => $itemName]
@@ -126,7 +98,7 @@ class InventoryStockController extends Controller
                     $item->update(['item_name' => $itemName]);
                 }
 
-                // 6. Cari Departemen berdasarkan nama (case-insensitive)
+                // 7. Cari Departemen berdasarkan nama (case-insensitive)
                 $department = Department::where('name', 'LIKE', '%' . $deptName . '%')->first();
 
                 if (!$department) {
@@ -134,7 +106,7 @@ class InventoryStockController extends Controller
                     continue;
                 }
 
-                // 7. Update atau Buat Stok
+                // 8. Update atau Buat Stok
                 DepartmentStock::updateOrCreate(
                     [
                         'item_id'       => $item->id,
@@ -153,7 +125,7 @@ class InventoryStockController extends Controller
             }
         }
 
-        // 8. Redirect dengan notifikasi
+        // 9. Redirect dengan notifikasi
         if (count($errors) > 0) {
             $errorMsg = implode(' | ', array_slice($errors, 0, 3));
             if (count($errors) > 3) {
