@@ -70,7 +70,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])->name('inventory.stock.create');
         Route::post('/inventory/stock',       [InventoryStockController::class, 'store'])->name('inventory.stock.store');
-    });
+    Route::post('/inventory/stock/import-process', [App\Http\Controllers\InventoryStockController::class, 'importProcess'])->name('inventory.stock.import-process');
+        });
 
     // ⚠️ STATIC ROUTES — HARUS DI ATAS route dengan {id} agar tidak konflik
     Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])->name('inventory.stock.export-usage');

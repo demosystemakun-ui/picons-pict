@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\StockUsageExport;
 use App\Models\Department;
 use App\Models\DepartmentStock;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Item;
 use App\Models\StockLog;
 use Illuminate\Http\Request;
@@ -34,6 +35,77 @@ class InventoryStockController extends Controller
 
         return view('inventory.stock.index', compact('stocks', 'departments'));
     }
+
+    public function importProcess(Request $request)
+{
+    $request->validate([
+        'excel_file' => 'required|mimes:xlsx,xls,csv|max:5120',
+        'mapping' => 'required|array',
+    ]);
+
+    $file = $request->file('excel_file');
+    $mapping = $request->input('mapping'); // Array mapping dari frontend
+
+    // Baca file Excel menggunakan Maatwebsite Excel
+    $data = Excel::toArray(new \stdClass, $file)[0]; // Ambil sheet pertama
+
+    // Hapus baris header (baris pertama)
+    $header = array_shift($data);
+
+    $importedCount = 0;
+    $errors = [];
+
+    foreach ($data as $rowIndex => $row) {
+        try {
+            // Ambil data berdasarkan mapping yang dipilih user
+            // Contoh: $mapping['item_code'] bernilai 'A', maka ambil index 0 (A=0, B=1, dst)
+            $itemCode = $row[ord($mapping['item_code']) - 65] ?? null;
+            $itemName = $row[ord($mapping['item_name']) - 65] ?? null;
+            $stockQty = $row[ord($mapping['stock']) - 65] ?? 0;
+            $deptName = $row[ord($mapping['department']) - 65] ?? null;
+
+            // Skip jika kode item kosong
+            if (empty($itemCode)) continue;
+
+            // Cari atau buat Item baru
+            $item = Item::firstOrCreate(
+                ['item_code' => $itemCode],
+                ['item_name' => $itemName]
+            );
+
+            // Cari Departemen berdasarkan nama
+            $department = Department::where('name', 'LIKE', '%' . $deptName . '%')->first();
+            if (!$department) {
+                $errors[] = "Baris " . ($rowIndex + 2) . ": Departemen '$deptName' tidak ditemukan.";
+                continue;
+            }
+
+            // Update atau Buat Stok
+            Stock::updateOrCreate(
+                [
+                    'item_id' => $item->id,
+                    'department_id' => $department->id,
+                ],
+                [
+                    'stock' => $stockQty,
+                    'updated_at' => now(),
+                ]
+            );
+
+            $importedCount++;
+
+        } catch (\Exception $e) {
+            $errors[] = "Baris " . ($rowIndex + 2) . ": " . $e->getMessage();
+        }
+    }
+
+    // Redirect dengan pesan sukses/gagal
+    if (count($errors) > 0) {
+        return redirect()->back()->with('warning', "Berhasil import $importedCount data, tapi ada beberapa error: " . implode(', ', array_slice($errors, 0, 3)) . "...");
+    }
+
+    return redirect()->back()->with('success', "Berhasil import $importedCount data stok!");
+}
 
     /* ═══════════════════════════════════════════════════════════════
        CREATE — Form tambah stok (Super Admin only)
