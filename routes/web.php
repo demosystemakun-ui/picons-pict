@@ -1,116 +1,234 @@
 <?php
 
-namespace App\Http\Controllers;
-
+use App\Http\Controllers\Api\ItemLookupController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ConsumableRequestController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\InventoryStockController;
+use App\Http\Controllers\ProcurementRequestController;
+use App\Http\Controllers\ReimbursementController;
+use App\Http\Controllers\SignerController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorComparisonController;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Models\Item;
-use App\Models\Stock;
-use App\Models\Department;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
 
-class InventoryStockController extends Controller
-{
-    // ... (Method lain kamu yang sudah ada: index, create, store, dll)
+/* ═══════════════════════════════════════════════════════════════════
+   AUTHENTICATION
+═══════════════════════════════════════════════════════════════════ */
+Route::middleware('guest')->group(function () {
+    Route::get('/login',  [LoginController::class, 'create'])->name('login');
+    Route::post('/login', [LoginController::class, 'store']);
+});
 
-    /**
-     * ═══════════════════════════════════════════════════════════
-     * PROCESS IMPORT EXCEL DENGAN CUSTOM MAPPING
-     * ═══════════════════════════════════════════════════════════
-     */
-    public function importProcess(Request $request)
-    {
-        // 1. Validasi Input
-        $request->validate([
-            'excel_file'          => 'required|mimes:xlsx,xls,csv|max:5120',
-            'mapping'             => 'required|array',
-            'mapping.item_code'   => 'required|string',
-            'mapping.item_name'   => 'required|string',
-            'mapping.stock'       => 'required|string',
-            'mapping.department'  => 'required|string',
-        ]);
+Route::post('/logout', [LoginController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
 
-        $file    = $request->file('excel_file');
-        $mapping = $request->input('mapping');
+/* ═══════════════════════════════════════════════════════════════════
+   AUTHENTICATED ROUTES
+═══════════════════════════════════════════════════════════════════ */
+Route::middleware(['auth'])->group(function () {
 
-        // 2. Baca File Excel (Sheet Pertama)
-        try {
-            $data = Excel::toArray([], $file)[0];
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
-        }
+    /* ─────────────────────────────────────────────
+       DASHBOARD
+    ───────────────────────────────────────────── */
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-        // 3. Hapus Baris Header (baris pertama)
-        array_shift($data);
+    /* ─────────────────────────────────────────────
+       MASTER DATA
+    ───────────────────────────────────────────── */
+    Route::resource('items', ItemController::class);
 
-        $importedCount = 0;
-        $errors        = [];
+    Route::resource('categories', CategoryController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
-        // 4. Loop Setiap Baris Data
-        foreach ($data as $rowIndex => $row) {
-            try {
-                // Konversi huruf kolom (A, B, C, D) ke index array (0, 1, 2, 3)
-                $codeIndex  = ord(strtoupper($mapping['item_code'])) - 65;
-                $nameIndex  = ord(strtoupper($mapping['item_name'])) - 65;
-                $stockIndex = ord(strtoupper($mapping['stock'])) - 65;
-                $deptIndex  = ord(strtoupper($mapping['department'])) - 65;
+    Route::resource('units', UnitController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
-                $itemCode = trim($row[$codeIndex] ?? '');
-                $itemName = trim($row[$nameIndex] ?? '');
-                $stockQty = (int) ($row[$stockIndex] ?? 0);
-                $deptName = trim($row[$deptIndex] ?? '');
+    Route::resource('vendors', VendorController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
-                // Skip jika kode item kosong (baris kosong)
-                if (empty($itemCode)) {
-                    continue;
-                }
+    Route::resource('departments', DepartmentController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
-                // 5. Cari atau Buat Item Baru
-                $item = Item::firstOrCreate(
-                    ['item_code' => $itemCode],
-                    ['item_name' => $itemName]
-                );
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::resource('signers', SignerController::class)
+            ->except(['show', 'create']);
 
-                // Update nama item jika kosong di database tapi ada di Excel
-                if (empty($item->item_name) && !empty($itemName)) {
-                    $item->update(['item_name' => $itemName]);
-                }
+        Route::resource('users', UserController::class)->except(['show']);
+    });
 
-                // 6. Cari Departemen berdasarkan nama (case-insensitive)
-                $department = Department::where('name', 'LIKE', '%' . $deptName . '%')->first();
+    /* ─────────────────────────────────────────────
+       INVENTORY STOCK
+    ───────────────────────────────────────────── */
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])
+            ->name('inventory.stock.create');
 
-                if (!$department) {
-                    $errors[] = "Baris " . ($rowIndex + 2) . ": Departemen '{$deptName}' tidak ditemukan";
-                    continue;
-                }
+        Route::post('/inventory/stock', [InventoryStockController::class, 'store'])
+            ->name('inventory.stock.store');
 
-                // 7. Update atau Buat Stok
-                Stock::updateOrCreate(
-                    [
-                        'item_id'       => $item->id,
-                        'department_id' => $department->id,
-                    ],
-                    [
-                        'stock'      => $stockQty,
-                        'updated_at' => now(),
-                    ]
-                );
+        // ✅ Route Import Excel
+        Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])
+            ->name('inventory.stock.import-process');
+    });
 
-                $importedCount++;
+    // ⚠️ STATIC ROUTES — HARUS DI ATAS route dengan {id} agar tidak konflik
+    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])
+        ->name('inventory.stock.export-usage');
 
-            } catch (\Exception $e) {
-                $errors[] = "Baris " . ($rowIndex + 2) . ": " . $e->getMessage();
-            }
-        }
+    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
+        ->name('inventory.stock.use');
 
-        // 8. Redirect dengan notifikasi
-        if (count($errors) > 0) {
-            $errorMsg = implode(' | ', array_slice($errors, 0, 3));
-            if (count($errors) > 3) {
-                $errorMsg .= ' ... dan ' . (count($errors) - 3) . ' error lainnya.';
-            }
-            return redirect()->back()->with('warning', "Berhasil import {$importedCount} data. Error: {$errorMsg}");
-        }
+    // Dynamic routes (dengan {id})
+    Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])
+        ->name('inventory.stock.use.item');
 
-        return redirect()->back()->with('success', "Berhasil import {$importedCount} data stok!");
-    }
-}
+    Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])
+        ->name('inventory.stock.process-use');
+
+    // ✅ Index (paling bawah)
+    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
+        ->name('inventory.stock.index');
+
+    /* ─────────────────────────────────────────────
+       CONSUMABLE REQUEST
+    ───────────────────────────────────────────── */
+    Route::get('/my-consumable-requests', [ConsumableRequestController::class, 'myRequests'])
+        ->name('consumable-requests.my-index');
+
+    Route::get('/consumable-requests/create-form', [ConsumableRequestController::class, 'createForm'])
+        ->name('consumable-requests.create-form');
+
+    Route::get('/consumable-requests/create', [ConsumableRequestController::class, 'create'])
+        ->name('consumable-requests.create');
+
+    Route::post('/consumable-requests', [ConsumableRequestController::class, 'store'])
+        ->name('consumable-requests.store');
+
+    Route::get('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'show'])
+        ->name('consumable-requests.show');
+
+    Route::get('/consumable-requests/{consumableRequest}/edit', [ConsumableRequestController::class, 'edit'])
+        ->name('consumable-requests.edit');
+
+    Route::put('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'update'])
+        ->name('consumable-requests.update');
+
+    Route::get('/consumable-requests/{consumableRequest}/print', [ConsumableRequestController::class, 'print'])
+        ->name('consumable-requests.print');
+
+    Route::get('/consumable-requests/{consumableRequest}/pdf', [ConsumableRequestController::class, 'pdf'])
+        ->name('consumable-requests.pdf');
+
+    // Super Admin only
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::get('/consumable-requests', [ConsumableRequestController::class, 'index'])
+            ->name('consumable-requests.index');
+
+        Route::get('consumable-requests/consolidation', [ConsumableRequestController::class, 'consolidationIndex'])
+            ->name('consumable-requests.consolidation');
+
+        Route::post('consumable-requests/consolidation/process', [ConsumableRequestController::class, 'processConsolidation'])
+            ->name('consumable-requests.consolidation.process');
+
+        Route::patch('consumable-requests/{consumableRequest}/status', [ConsumableRequestController::class, 'updateStatus'])
+            ->name('consumable-requests.update-status');
+
+        Route::delete('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'destroy'])
+            ->name('consumable-requests.destroy');
+
+        Route::post('/consumable-requests/{consumableRequest}/approve', [ConsumableRequestController::class, 'approve'])
+            ->name('consumable-requests.approve');
+
+        Route::post('/consumable-requests/{consumableRequest}/reject', [ConsumableRequestController::class, 'reject'])
+            ->name('consumable-requests.reject');
+    });
+
+    /* ─────────────────────────────────────────────
+       API — Item Lookup & Search
+    ───────────────────────────────────────────── */
+    Route::get('/api/items/lookup/{barcode}', [ItemLookupController::class, 'byBarcode'])
+        ->name('items.lookup');
+
+    Route::get('/api/items/search', function (Request $request) {
+        $q = $request->query('q');
+
+        return \App\Models\Item::with('unit')
+            ->where(function ($w) use ($q) {
+                $w->where('item_name', 'like', "%{$q}%")
+                  ->orWhere('item_code', 'like', "%{$q}%");
+            })
+            ->limit(10)
+            ->get()
+            ->map(fn ($item) => [
+                'id'            => $item->id,
+                'name'          => $item->item_name,
+                'unit'          => $item->unit->code ?? '-',
+                'current_stock' => $item->current_stock,
+            ]);
+    })->name('items.search');
+
+    /* ═══════════════════════════════════════════════════════════════
+       PROCUREMENT & VENDOR COMPARISON
+    ═══════════════════════════════════════════════════════════════ */
+    Route::prefix('procurement')->name('procurement.')->group(function () {
+
+        Route::middleware('role:Super Admin')->group(function () {
+            Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
+            Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
+        });
+
+        Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
+        Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
+
+        Route::get('/{procurement}/comparisons', [VendorComparisonController::class, 'index'])->name('comparisons.index');
+        Route::post('/{procurement}/comparisons', [VendorComparisonController::class, 'store'])->name('comparisons.store');
+
+        Route::post('/{procurement}/comparisons/scan', [VendorComparisonController::class, 'scanImage'])->name('comparisons.scan');
+        Route::post('/{procurement}/comparisons/scan-monotaro', [VendorComparisonController::class, 'scanMonotaro'])->name('comparisons.scan.monotaro');
+        Route::post('/{procurement}/comparisons/scan-others', [VendorComparisonController::class, 'scanOthers'])->name('comparisons.scan.others');
+
+        Route::patch('/{procurement}/comparisons/{comparison}/select', [VendorComparisonController::class, 'selectVendor'])->name('comparisons.select');
+        Route::delete('/comparisons/{comparison}', [VendorComparisonController::class, 'destroy'])->name('comparisons.destroy');
+
+        Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
+
+        Route::get('/{procurementRequest}', [ProcurementRequestController::class, 'show'])->name('show');
+        Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');
+        Route::put('/{procurementRequest}', [ProcurementRequestController::class, 'update'])->name('update');
+        Route::delete('/{procurementRequest}', [ProcurementRequestController::class, 'destroy'])->name('destroy');
+        Route::get('/{procurementRequest}/print', [ProcurementRequestController::class, 'print'])->name('print');
+        Route::get('/{procurementRequest}/pdf', [ProcurementRequestController::class, 'pdf'])->name('pdf');
+
+        Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
+            ->name('status')
+            ->middleware('role:Super Admin');
+    });
+
+    /* ─────────────────────────────────────────────
+       REIMBURSEMENT
+    ───────────────────────────────────────────── */
+    Route::get('reimbursement/{reimbursement}/print', [ReimbursementController::class, 'print'])->name('reimbursement.print');
+    Route::get('reimbursement/{reimbursement}/pdf', [ReimbursementController::class, 'pdf'])->name('reimbursement.pdf');
+    Route::resource('reimbursement', ReimbursementController::class);
+
+    /* ─────────────────────────────────────────────
+       DEBUG (Dipindah ke dalam auth — AMAN)
+    ───────────────────────────────────────────── */
+    Route::get('/debug-log', function () {
+        return [
+            'count'    => \App\Models\StockLog::count(),
+            'last'     => \App\Models\StockLog::latest()->first(),
+            'fillable' => (new \App\Models\StockLog)->getFillable(),
+            'table'    => (new \App\Models\StockLog)->getTable(),
+            'now'      => now()->toDateTimeString(),
+        ];
+    });
+});
