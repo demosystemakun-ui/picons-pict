@@ -17,7 +17,7 @@
                 @endif
                 @if ($errors->any())
                     <ul class="list-disc pl-5 text-red-700 dark:text-red-400">
-                        @foreach ($errors->all() as $err)
+                        @foreach ($errors->all() as$err)
                             <li>{{ $err }}</li>
                         @endforeach
                     </ul>
@@ -89,17 +89,32 @@
 
                 {{-- Mapping --}}
                 <div id="step-mapping" class="hidden mt-6">
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div id="sheet-wrap">
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Sheet</label>
-                            <select name="sheet" id="import-sheet" onchange="analyzeImportFile(false, true)"
-                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm"></select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Baris header (nomor baris di Excel)</label>
-                            <input type="number" min="1" name="header_row" id="import-header-row"
-                                   onchange="analyzeImportFile(false)"
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
+                    <div class="grid grid-cols-2 gap-3 mb-4">    
+                        <div id="month-wrap">        
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Bulan <span class="text-red-500">*</span></label>        
+                            <select name="period_month" id="import-month" onchange="onMonthChange()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm"></select>    
+                        </div>    
+                        <div>        
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Tahun <span class="text-red-500">*</span></label>        
+                            <input type="number" name="period_year" id="import-year" min="2000" max="2100" onchange="checkImportReady()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">    
+                        </div>    
+                        <div id="sheet-wrap">        
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Sheet</label>        
+                            <select name="sheet" id="import-sheet" onchange="analyzeImportFile(false, true)" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm"></select>    
+                        </div>    
+                        <div>        
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Baris header (nomor baris di Excel)</label>        
+                            <input type="number" min="1" name="header_row" id="import-header-row" onchange="analyzeImportFile(false)" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">    
+                        </div>    
+                        <div class="col-span-2">        
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Departemen tujuan <span class="text-red-500">*</span></label>        
+                            <select name="department_id" id="import-department" onchange="checkImportReady()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">            
+                                <option value="">-- Pilih departemen --</option>            
+                                @foreach (($departments ?? []) as $d)                
+                                    <option value="{{ $d->id }}">{{ $d->name }}</option>            
+                                @endforeach        
+                            </select>        
+                            <p class="text-xs text-gray-500 mt-1">Dipakai untuk semua baris jika kolom Departemen tidak dipetakan.</p>    
                         </div>
                     </div>
 
@@ -126,7 +141,7 @@
                             </select>
                         </div>
                     </div>
-                    @if (empty($categories) || count($categories) === 0)
+                    @if (empty($categories) \vert{}\vert{} count($categories) === 0)
                         <p class="mt-2 text-xs text-amber-600">Belum ada kategori. Buat dulu di menu Categories agar item baru bisa diimport.</p>
                     @endif
 
@@ -160,8 +175,34 @@
         { key: 'item_code',  label: 'Kode Item',   required: false },
         { key: 'item_name',  label: 'Nama Barang', required: true  },
         { key: 'stock',      label: 'Sisa Stok',   required: true  },
-        { key: 'department', label: 'Departemen',  required: true  },
+        { key: 'department', label: 'Departemen (opsional)', required: false },
     ];
+
+    const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const MONTH_ALIASES = {
+        1:['january','januari','jan'],   2:['february','februari','feb'],
+        3:['march','maret','mar'],       4:['april','apr'],
+        5:['may','mei'],                 6:['june','juni','jun'],
+        7:['july','juli','jul'],         8:['august','agustus','agu','aug'],
+        9:['september','sep','sept'],   10:['october','oktober','okt','oct'],
+        11:['november','nov'],           12:['december','desember','des','dec'],
+    };
+
+    function monthOfSheet(name) {
+        const n = String(name).trim().toLowerCase().split(/[\s_\-]+/)[0];
+        for (const [m, list] of Object.entries(MONTH_ALIASES)) {
+            if (list.includes(n)) return +m;
+        }
+        return null;
+    }
+
+    // user pilih bulan -> pindah ke sheet bulan itu
+    function onMonthChange() {
+        const opt = $imp('import-month').selectedOptions[0];
+        if (!opt || opt.dataset.sheet === undefined) { checkImportReady(); return; }
+        $imp('import-sheet').value = opt.dataset.sheet;
+        analyzeImportFile(false, true);
+    }
 
     const $imp = (id) => document.getElementById(id);
     const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -178,12 +219,9 @@
     }
 
     function resetUpload() {
-        $imp('excel_file').value = '';
-        $imp('file-info').classList.add('hidden');
-        $imp('step-mapping').classList.add('hidden');
-        $imp('import-error').classList.add('hidden');
-        $imp('import-loading').classList.add('hidden');
-        $imp('btn-submit-import').disabled = true;
+        $imp('excel_file').value = '';$imp('file-info').classList.add('hidden');
+        $imp('step-mapping').classList.add('hidden');$imp('import-error').classList.add('hidden');
+        $imp('import-loading').classList.add('hidden');$imp('btn-submit-import').disabled = true;
         $imp('file-name').textContent = '';
     }
 
@@ -197,8 +235,7 @@
 
         $imp('file-name').textContent = file.name;
         $imp('file-info').classList.remove('hidden');
-        $imp('import-error').classList.add('hidden');
-        $imp('import-loading').classList.remove('hidden');
+        $imp('import-error').classList.add('hidden');$imp('import-loading').classList.remove('hidden');
 
         const fd = new FormData();
         fd.append('excel_file', file);
@@ -233,16 +270,26 @@
         const el = $imp('import-error');
         el.textContent = msg;
         el.classList.remove('hidden');
-        $imp('step-mapping').classList.add('hidden');
-        $imp('btn-submit-import').disabled = true;
+        $imp('step-mapping').classList.add('hidden');$imp('btn-submit-import').disabled = true;
     }
 
     function renderImportMapping(data) {
         // Sheet & header
         $imp('import-sheet').innerHTML = data.sheets
             .map((n, i) => `<option value="${i}" ${i === data.sheet ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
-        $imp('sheet-wrap').classList.toggle('hidden', data.sheets.length < 2);
-        $imp('import-header-row').value = data.header_row;
+        $imp('sheet-wrap').classList.toggle('hidden', data.sheets.length < 2);$imp('import-header-row').value = data.header_row;
+
+        // Filter bulan: hanya sheet yang namanya nama bulan, urut kalender
+        const months = data.sheets
+            .map((n, i) => ({ i, m: monthOfSheet(n) }))
+            .filter(x => x.m)
+            .sort((a, b) => a.m - b.m);
+        const currentIsMonth = months.some(x => x.i === data.sheet);
+        $imp('import-month').innerHTML =
+            (currentIsMonth ? '' : '<option value="">-- Pilih bulan --</option>') +
+            months.map(x => `<option value="${x.m}" data-sheet="${x.i}" ${x.i === data.sheet ? 'selected' : ''}>${MONTH_NAMES_ID[x.m - 1]}</option>`).join('');
+        $imp('month-wrap').classList.toggle('hidden', months.length === 0);
+        if (!$imp('import-year').value)$imp('import-year').value = new Date().getFullYear();
 
         // Baris mapping
         const colOptions = data.columns
@@ -251,10 +298,10 @@
         $imp('mapping-rows').innerHTML = IMPORT_FIELDS.map(f => {
             const s = data.suggested[f.key];
             let badge;
-            if (s && s.score >= 90)      badge = '<span class="text-xs text-emerald-600">✓ terdeteksi otomatis</span>';
-            else if (s)                  badge = '<span class="text-xs text-amber-600">⚠ perkiraan, mohon dicek</span>';
-            else if (f.required)         badge = '<span class="text-xs text-red-600">tidak terdeteksi, pilih manual</span>';
-            else                         badge = '<span class="text-xs text-gray-400">opsional</span>';
+            if (s && s.score >= 90)     badge = '<span class="text-xs text-emerald-600">✓ terdeteksi otomatis</span>';
+            else if (s)                 badge = '<span class="text-xs text-amber-600">⚠ perkiraan, mohon dicek</span>';
+            else if (f.required)        badge = '<span class="text-xs text-red-600">tidak terdeteksi, pilih manual</span>';
+            else                        badge = '<span class="text-xs text-gray-400">opsional</span>';
 
             return `
               <div class="grid grid-cols-2 gap-3 items-center">
@@ -272,7 +319,10 @@
 
         IMPORT_FIELDS.forEach(f => {
             const s = data.suggested[f.key];
-            if (s) document.querySelector(`#mapping-rows select[data-field="${f.key}"]`).value = s.column;
+            if (s) {
+                const selectEl = document.querySelector(`#mapping-rows select[data-field="${f.key}"]`);
+                if (selectEl) selectEl.value = s.column;
+            }
         });
 
         // Preview
@@ -293,7 +343,10 @@
             const sel = document.querySelector(`#mapping-rows select[data-field="${f.key}"]`);
             return sel && sel.value !== '';
         });
-        $imp('btn-submit-import').disabled = !ok;
+        const mappedDept = document.querySelector('#mapping-rows select[data-field="department"]')?.value;
+        const deptOk  = $imp('import-department').value !== '' || (mappedDept && mappedDept !== '');
+        const monthOk = $imp('import-month').value !== '' \vert{}\vert{}$imp('month-wrap').classList.contains('hidden');
+        const yearOk  = $imp('import-year').value !== '';$imp('btn-submit-import').disabled = !(ok && deptOk && monthOk && yearOk);
     }
 
     $imp('importForm').addEventListener('submit', () => {
