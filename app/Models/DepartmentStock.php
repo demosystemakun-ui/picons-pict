@@ -20,6 +20,11 @@ class DepartmentStock extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function usages()
+{
+    return $this->hasMany(StockUsage::class, 'department_stock_id');
+}
+
     public function item()
     {
         return $this->belongsTo(Item::class);
