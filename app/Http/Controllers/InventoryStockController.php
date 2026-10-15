@@ -136,8 +136,8 @@ class InventoryStockController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
-$request->validate([
-            'excel_file' => 'required|file|extensions:xlsx,xls,csv|max:5120',
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
             'sheet'      => 'nullable|integer|min:0',
             'header_row' => 'nullable|integer|min:1',
         ]);
@@ -203,58 +203,46 @@ $request->validate([
     public function importProcess(Request $request)
     {
         $request->validate([
-            'excel_file'          => 'required|file|extensions:xlsx,xls,csv|max:5120',
+            'excel_file'          => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
             'sheet'               => 'nullable|integer|min:0',
             'header_row'          => 'required|integer|min:1',
-            'period_month'        => 'required|integer|min:1|max:12',
-            'period_year'         => 'required|integer|min:2000|max:2100',
-            'department_id'       => 'nullable|exists:departments,id',
             'mapping'             => 'required|array',
+            'mapping.department'  => 'required|integer|min:0',
             'mapping.item_name'   => 'required|integer|min:0',
             'mapping.stock'       => 'required|integer|min:0',
             'mapping.item_code'   => 'nullable|integer|min:0',
-            'mapping.department'  => 'nullable|integer|min:0',
             'default_category_id' => 'nullable|integer|exists:categories,id',
             'default_unit_id'     => 'nullable|integer|exists:units,id',
         ], [
             'excel_file.required'         => 'File Excel belum dipilih.',
             'excel_file.mimes'            => 'Format file harus .xlsx, .xls, atau .csv.',
             'excel_file.max'              => 'Ukuran file maksimal 5MB.',
-            'period_month.required'       => 'Bulan periode wajib diisi.',
-            'period_year.required'        => 'Tahun periode wajib diisi.',
+            'excel_file.uploaded'         => 'Upload gagal (kemungkinan melebihi batas upload_max_filesize di PHP).',
+            'mapping.department.required' => 'Kolom Departemen belum dipilih.',
             'mapping.item_name.required'  => 'Kolom Nama Barang belum dipilih.',
             'mapping.stock.required'      => 'Kolom Sisa Stok belum dipilih.',
         ]);
 
         try {
-            // Membaca file Excel dengan opsi kalkulasi formula agar mengambil hasil hitung rumus, bukan teks rumusnya
-            $path = $request->file('excel_file')->getRealPath();
-            $reader = IOFactory::createReaderForFile($path);
-            $reader->setReadDataOnly(false); // Diubah false agar PhpSpreadsheet membaca hasil kalkulasi rumus (Cached Value)
-            $spreadsheet = $reader->load($path);
-
-            $sheetIndex = (int) $request->input('sheet', 0);
-            $sheet = $spreadsheet->getSheet($sheetIndex);
-            $rows = $sheet->toArray(null, true, true, true); // Mengambil format baris array asosiatif/numerik
-            $spreadsheet->disconnectWorksheets();
+            [, , $rows] = $this->loadSheet(
+                $request->file('excel_file')->getRealPath(),
+                (int) $request->input('sheet', 0)
+            );
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
         }
 
         $map       = $request->input('mapping');
-        $deptCol   = isset($map['department']) && $map['department'] !== '' ? (int) $map['department'] : null;
+        $deptCol   = (int) $map['department'];
         $nameCol   = (int) $map['item_name'];
         $stockCol  = (int) $map['stock'];
         $codeCol   = (isset($map['item_code']) && $map['item_code'] !== '') ? (int) $map['item_code'] : null;
-        $headerRow = (int) $request->input('header_row');
-
-        $defaultDeptId = $request->input('department_id');
-        $periodMonth   = (int) $request->input('period_month');
-        $periodYear    = (int) $request->input('period_year');
+        $headerRow = (int) $request->input('header_row'); // 1-based
 
         $rows     = array_values($rows);
-        $dataRows = array_slice($rows, $headerRow); // baris setelah header
+        $dataRows = array_slice($rows, $headerRow); // semua baris setelah header
 
+        // Default untuk item baru (hanya dipakai jika kolomnya ada di tabel items)
         $defaultCategoryId = $request->input('default_category_id');
         $defaultUnitId     = $request->input('default_unit_id');
         $needCategory      = Schema::hasColumn('items', 'category_id');
@@ -269,36 +257,28 @@ $request->validate([
         $lastDept  = null;
 
         foreach ($dataRows as $offset => $row) {
-            $lineNum  = $headerRow + $offset + 1;
-            
-            // Konversi index kolom (0-based atau sesuaikan dengan struktur array PHPSpreadsheet toArray)
-            // Catatan: Jika toArray menggunakan index angka 0-based:
-            $rowValues = array_values($row);
-            
-            $deptName = $deptCol !== null ? $this->cleanText($rowValues[$deptCol] ?? null) : '';
-            $itemName = $this->cleanText($rowValues[$nameCol] ?? null);
-            $itemCode = $codeCol !== null ? $this->cleanText($rowValues[$codeCol] ?? null) : '';
-            $rawStock = $rowValues[$stockCol] ?? null;
+            $lineNum  = $headerRow + $offset + 1; // nomor baris asli di Excel
+            $deptName = $this->cleanText($row[$deptCol] ?? null);
+            $itemName = $this->cleanText($row[$nameCol] ?? null);
+            $itemCode = $codeCol !== null ? $this->cleanText($row[$codeCol] ?? null) : '';
+            $rawStock = $row[$stockCol] ?? null;
 
-            if ($deptName === '' && $itemName === '' && $itemCode === '' && ($rawStock === null || trim((string) $rawStock) === '')) {
+            // Baris benar-benar kosong → abaikan tanpa laporan
+            if ($deptName === '' && $itemName === '' && $itemCode === ''
+                && ($rawStock === null || trim((string) $rawStock) === '')) {
                 continue;
             }
 
-            // Jika kolom departemen kosong / tidak dipetakan, fallback ke departemen default dari dropdown form
-            if ($deptCol === null || $deptName === '') {
-                if ($defaultDeptId) {
-                    $department = Department::find($defaultDeptId);
-                } else {
-                    if ($lastDept === null) {
-                        $skipped[] = "Baris {$lineNum}: departemen kosong dan belum memilih departemen tujuan.";
-                        continue;
-                    }
-                    $deptName = $lastDept;
-                    $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
+            // Departemen kosong → ikuti baris di atasnya (kasus sel di-merge)
+            if ($deptName === '') {
+                if ($lastDept === null) {
+                    $skipped[] = "Baris {$lineNum}: departemen kosong";
+                    continue;
                 }
+                $deptName = $lastDept;
+                $filled++;
             } else {
                 $lastDept = $deptName;
-                $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
             }
 
             if ($itemName === '' && $itemCode === '') {
@@ -327,14 +307,15 @@ $request->validate([
 
                 if (!$item) {
                     if ($itemCode === '') {
-                        $itemCode = 'ITM-' . strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $itemName), 0, 6)) . '-' . rand(100, 999);
+                        $skipped[] = "Baris {$lineNum}: kode kosong dan barang \"{$itemName}\" belum terdaftar";
+                        continue;
                     }
                     if ($needCategory && !$defaultCategoryId) {
-                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemName}\" butuh kategori, pilih \"Kategori default\"";
+                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh kategori, pilih \"Kategori default\" di form import";
                         continue;
                     }
                     if ($needUnit && !$defaultUnitId) {
-                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemName}\" butuh satuan, pilih \"Satuan default\"";
+                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh satuan, pilih \"Satuan default\" di form import";
                         continue;
                     }
 
@@ -354,21 +335,19 @@ $request->validate([
                     $item->update(['item_name' => $itemName]);
                 }
 
-                // ── UpdateOrCreate Stok berdasarkan item, departemen, bulan, dan tahun (Anti-dobel) ──
-                // Sesuaikan nama kolom periode di tabel department_stocks (misal: period_month / period_year atau kolom tanggal)
-                // Jika struktur tabel Anda menggunakan kolom tanggal/bulan tahun spesifik:
-                $ds = DepartmentStock::updateOrCreate(
-                    [
-                        'item_id'       => $item->id,
-                        'department_id' => $department->id,
-                        'period_month'  => $periodMonth, // Pastikan kolom ini ada di database atau sesuaikan
-                        'period_year'   => $periodYear,   // Pastikan kolom ini ada di database atau sesuaikan
-                    ],
-                    [
-                        'stock'      => $qty,
-                        'updated_at' => now(),
-                    ]
-                );
+                // ── Departemen ──
+                $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
+
+                // ── Stok ──
+                $ds = DepartmentStock::where('item_id', $item->id)
+                    ->where('department_id', $department->id)
+                    ->first() ?? new DepartmentStock();
+
+                $ds->item_id       = $item->id;
+                $ds->department_id = $department->id;
+                $ds->stock         = $qty;
+                $ds->updated_at    = now();
+                $ds->save();
 
                 $imported++;
             } catch (\Throwable $e) {
@@ -376,9 +355,18 @@ $request->validate([
             }
         }
 
-        $msg = "Berhasil import {$imported} data stok untuk periode " . $periodMonth . "/" . $periodYear . ".";
+        Log::info('Stock import selesai', [
+            'user_id'  => auth()->id(),
+            'imported' => $imported,
+            'skipped'  => count($skipped),
+            'detail'   => $skipped,
+        ]);
+
+        // ── Pesan hasil ──
+        $msg = "Berhasil import {$imported} data stok.";
         if ($newItems > 0) $msg .= " {$newItems} item baru dibuat.";
         if ($newDepts > 0) $msg .= " {$newDepts} departemen baru dibuat.";
+        if ($filled > 0)   $msg .= " {$filled} baris memakai departemen dari baris di atasnya.";
 
         $redirect = redirect()->back()->with('import_report', array_slice($skipped, 0, 30));
 
