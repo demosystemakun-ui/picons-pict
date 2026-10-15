@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Exports\StockUsageExport;
+use App\Models\Category;
 use App\Models\Department;
 use App\Models\DepartmentStock;
 use App\Models\Item;
 use App\Models\StockLog;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -62,7 +65,11 @@ class InventoryStockController extends Controller
 
         $stocks = $query->orderBy('updated_at', 'desc')->paginate(15);
 
-        return view('inventory.stock.index', compact('stocks', 'departments'));
+        // Dipakai modal import untuk memilih kategori & satuan default item baru
+        $categories = Category::all();
+        $units      = Unit::all();
+
+        return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -139,14 +146,16 @@ class InventoryStockController extends Controller
     public function importProcess(Request $request)
     {
         $request->validate([
-            'excel_file'         => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
-            'sheet'              => 'nullable|integer|min:0',
-            'header_row'         => 'required|integer|min:1',
-            'mapping'            => 'required|array',
-            'mapping.department' => 'required|integer|min:0',
-            'mapping.item_name'  => 'required|integer|min:0',
-            'mapping.stock'      => 'required|integer|min:0',
-            'mapping.item_code'  => 'nullable|integer|min:0',
+            'excel_file'          => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+            'sheet'               => 'nullable|integer|min:0',
+            'header_row'          => 'required|integer|min:1',
+            'mapping'             => 'required|array',
+            'mapping.department'  => 'required|integer|min:0',
+            'mapping.item_name'   => 'required|integer|min:0',
+            'mapping.stock'       => 'required|integer|min:0',
+            'mapping.item_code'   => 'nullable|integer|min:0',
+            'default_category_id' => 'nullable|integer|exists:categories,id',
+            'default_unit_id'     => 'nullable|integer|exists:units,id',
         ], [
             'excel_file.required'         => 'File Excel belum dipilih.',
             'excel_file.mimes'            => 'Format file harus .xlsx, .xls, atau .csv.',
@@ -176,11 +185,17 @@ class InventoryStockController extends Controller
         $rows     = array_values($rows);
         $dataRows = array_slice($rows, $headerRow); // semua baris setelah header
 
-        $imported = 0;
-        $newItems = 0;
-        $newDepts = 0;
-        $filled   = 0;
-        $skipped  = [];
+        // Default untuk item baru (hanya dipakai jika kolomnya ada di tabel items)
+        $defaultCategoryId = $request->input('default_category_id');
+        $defaultUnitId     = $request->input('default_unit_id');
+        $needCategory      = Schema::hasColumn('items', 'category_id');
+        $needUnit          = Schema::hasColumn('items', 'unit_id');
+
+        $imported  = 0;
+        $newItems  = 0;
+        $newDepts  = 0;
+        $filled    = 0;
+        $skipped   = [];
         $deptCache = [];
         $lastDept  = null;
 
@@ -238,13 +253,26 @@ class InventoryStockController extends Controller
                         $skipped[] = "Baris {$lineNum}: kode kosong dan barang \"{$itemName}\" belum terdaftar";
                         continue;
                     }
-                    $item = new Item();
-                    $item->forceFill([
+                    if ($needCategory && !$defaultCategoryId) {
+                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh kategori, pilih \"Kategori default\" di form import";
+                        continue;
+                    }
+                    if ($needUnit && !$defaultUnitId) {
+                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh satuan, pilih \"Satuan default\" di form import";
+                        continue;
+                    }
+
+                    $attrs = [
                         'item_code'     => $itemCode,
                         'item_name'     => $itemName !== '' ? $itemName : $itemCode,
                         'current_stock' => 0,
                         'minimum_stock' => 0,
-                    ])->save();
+                    ];
+                    if ($needCategory) $attrs['category_id'] = $defaultCategoryId;
+                    if ($needUnit)     $attrs['unit_id']     = $defaultUnitId;
+
+                    $item = new Item();
+                    $item->forceFill($attrs)->save();
                     $newItems++;
                 } elseif ($itemName !== '' && $item->item_name !== $itemName) {
                     $item->update(['item_name' => $itemName]);

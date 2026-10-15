@@ -108,6 +108,28 @@
 
                     <div id="mapping-rows" class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700"></div>
 
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Kategori default (untuk item baru)</label>
+                            <select name="default_category_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
+                                @foreach (($categories ?? []) as $c)
+                                    <option value="{{ $c->id }}">{{ $c->name ?? $c->category_name ?? ('#' . $c->id) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Satuan default (untuk item baru)</label>
+                            <select name="default_unit_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
+                                @foreach (($units ?? []) as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name ?? $u->code ?? ('#' . $u->id) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    @if (empty($categories) || count($categories) === 0)
+                        <p class="mt-2 text-xs text-amber-600">Belum ada kategori. Buat dulu di menu Categories agar item baru bisa diimport.</p>
+                    @endif
+
                     <h4 class="text-sm font-semibold text-gray-900 dark:text-white mt-5 mb-2">
                         Preview <span id="import-total" class="text-xs font-normal text-gray-500"></span>
                     </h4>
