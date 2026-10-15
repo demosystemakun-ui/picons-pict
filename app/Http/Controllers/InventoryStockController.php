@@ -73,8 +73,6 @@ class InventoryStockController extends Controller
 
         $rawValue = (string) $request->get('period_value', now()->format('Y-m-d'));
 
-        // Saat user ganti tipe periode, period_value lama (mis. 2026-10-15)
-        // masih terkirim. Potong sesuai tipe supaya filter tidak salah.
         switch ($periodType) {
             case 'yearly':
                 $periodValue = preg_match('/^\d{4}/', $rawValue) ? substr($rawValue, 0, 4) : now()->format('Y');
@@ -88,7 +86,7 @@ class InventoryStockController extends Controller
                     : (preg_match('/^\d{4}-\d{2}$/', $rawValue) ? $rawValue . '-01' : now()->format('Y-m-d'));
         }
 
-        // ── Query dasar (sama untuk semua role, bedanya hanya filter departemen) ──
+        // ── Query dasar ──
         $query = DepartmentStock::with(['department', 'item']);
 
         if (!$isPrivileged) {
@@ -101,7 +99,7 @@ class InventoryStockController extends Controller
             $departments = Department::all();
         }
 
-        // ── Total pemakaian sesuai periode (subquery eksplisit, sama untuk semua role) ──
+        // ── Total pemakaian sesuai periode ──
         $usedSub = StockUsage::query()
             ->selectRaw('COALESCE(SUM(quantity_used), 0)')
             ->whereColumn('stock_usages.department_stock_id', 'department_stocks.id');
@@ -237,12 +235,11 @@ class InventoryStockController extends Controller
         $nameCol   = (int) $map['item_name'];
         $stockCol  = (int) $map['stock'];
         $codeCol   = (isset($map['item_code']) && $map['item_code'] !== '') ? (int) $map['item_code'] : null;
-        $headerRow = (int) $request->input('header_row'); // 1-based
+        $headerRow = (int) $request->input('header_row');
 
         $rows     = array_values($rows);
-        $dataRows = array_slice($rows, $headerRow); // semua baris setelah header
+        $dataRows = array_slice($rows, $headerRow);
 
-        // Default untuk item baru (hanya dipakai jika kolomnya ada di tabel items)
         $defaultCategoryId = $request->input('default_category_id');
         $defaultUnitId     = $request->input('default_unit_id');
         $needCategory      = Schema::hasColumn('items', 'category_id');
@@ -257,19 +254,19 @@ class InventoryStockController extends Controller
         $lastDept  = null;
 
         foreach ($dataRows as $offset => $row) {
-            $lineNum  = $headerRow + $offset + 1; // nomor baris asli di Excel
+            $lineNum  = $headerRow + $offset + 1;
             $deptName = $this->cleanText($row[$deptCol] ?? null);
             $itemName = $this->cleanText($row[$nameCol] ?? null);
             $itemCode = $codeCol !== null ? $this->cleanText($row[$codeCol] ?? null) : '';
             $rawStock = $row[$stockCol] ?? null;
 
-            // Baris benar-benar kosong → abaikan tanpa laporan
+            // Baris benar-benar kosong → abaikan
             if ($deptName === '' && $itemName === '' && $itemCode === ''
                 && ($rawStock === null || trim((string) $rawStock) === '')) {
                 continue;
             }
 
-            // Departemen kosong → ikuti baris di atasnya (kasus sel di-merge)
+            // Departemen kosong → ikuti baris di atasnya (merge cell)
             if ($deptName === '') {
                 if ($lastDept === null) {
                     $skipped[] = "Baris {$lineNum}: departemen kosong";
@@ -297,19 +294,22 @@ class InventoryStockController extends Controller
             }
 
             try {
-                // ── Item ──
+                // ── Cari item: prioritas kode, lalu nama ──
                 $item = null;
                 if ($itemCode !== '') {
                     $item = Item::where('item_code', $itemCode)->first();
-                } elseif ($itemName !== '') {
+                }
+                if (!$item && $itemName !== '') {
                     $item = Item::where('item_name', $itemName)->first();
                 }
 
+                // ── Kalau belum ada, buat item baru ──
                 if (!$item) {
+                    // Auto-generate kode kalau kosong
                     if ($itemCode === '') {
-                        $skipped[] = "Baris {$lineNum}: kode kosong dan barang \"{$itemName}\" belum terdaftar";
-                        continue;
+                        $itemCode = $this->generateAutoCode();
                     }
+
                     if ($needCategory && !$defaultCategoryId) {
                         $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh kategori, pilih \"Kategori default\" di form import";
                         continue;
@@ -332,6 +332,7 @@ class InventoryStockController extends Controller
                     $item->forceFill($attrs)->save();
                     $newItems++;
                 } elseif ($itemName !== '' && $item->item_name !== $itemName) {
+                    // Update nama kalau beda (mis. typo diperbaiki)
                     $item->update(['item_name' => $itemName]);
                 }
 
@@ -519,11 +520,38 @@ class InventoryStockController extends Controller
         }
         $num = $m[0];
         if (preg_match('/^-?\d{1,3}([.,]\d{3})+$/', $num)) {
-            $num = str_replace(['.', ','], '', $num);   // pemisah ribuan
+            $num = str_replace(['.', ','], '', $num);
         } else {
-            $num = str_replace(',', '.', $num);         // desimal
+            $num = str_replace(',', '.', $num);
         }
         return (int) round((float) $num);
+    }
+
+    /**
+     * Generate kode item otomatis untuk item tanpa kode.
+     * Format: AUTO-001, AUTO-002, dst.
+     */
+    private function generateAutoCode(): string
+    {
+        $last = Item::where('item_code', 'like', 'AUTO-%')
+            ->orderByRaw('CAST(SUBSTRING(item_code, 6) AS UNSIGNED) DESC')
+            ->value('item_code');
+
+        $next = 1;
+        if ($last && preg_match('/AUTO-(\d+)/', $last, $m)) {
+            $next = (int) $m[1] + 1;
+        }
+
+        // Pastikan tidak bentrok
+        do {
+            $code   = 'AUTO-' . str_pad($next, 3, '0', STR_PAD_LEFT);
+            $exists = Item::where('item_code', $code)->exists();
+            if ($exists) {
+                $next++;
+            }
+        } while ($exists);
+
+        return $code;
     }
 
     /** Cari departemen by nama atau kode (tidak sensitif huruf), buat baru jika belum ada */
@@ -616,7 +644,6 @@ class InventoryStockController extends Controller
         $error = null;
 
         DB::transaction(function () use ($id, $validated, &$error) {
-            // lockForUpdate mencegah dua pemakaian bersamaan membuat stok minus
             $stock = DepartmentStock::lockForUpdate()->findOrFail($id);
 
             $this->authorizeDepartment($stock);
