@@ -319,7 +319,7 @@
         $imp('import-total').textContent = `(${data.total_rows} baris data)`;
         $imp('import-preview').innerHTML =
             '<thead class="bg-gray-50 dark:bg-gray-900/40"><tr>' +
-            data.preview_heads.h.map(h => `<th class="px-3 py-2 font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">${escHtml(h)}</th>`).join('') +
+            data.preview_heads.map(h => `<th class="px-3 py-2 font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">${escHtml(h)}</th>`).join('') +
             '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-700">' +
             data.preview.map(r => '<tr>' + r.map(c => `<td class="px-3 py-1.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">${escHtml(c)}</td>`).join('') + '</tr>').join('') +
             '</tbody>';
