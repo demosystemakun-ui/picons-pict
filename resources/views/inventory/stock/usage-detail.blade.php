@@ -32,7 +32,7 @@
         </a>
     </div>
 
-    {{-- STAT CARDS --}}
+    {{-- STAT --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
             <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sisa Stok Saat Ini</p>
@@ -53,7 +53,7 @@
         <form method="GET" class="flex flex-wrap items-center gap-2">
             <div class="relative">
                 <select name="period_type" onchange="this.form.submit()"
-                        class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm cursor-pointer">
+                        class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs cursor-pointer">
                     <option value="daily"   {{ $periodType == 'daily'   ? 'selected' : '' }}>Harian</option>
                     <option value="monthly" {{ $periodType == 'monthly' ? 'selected' : '' }}>Bulanan</option>
                     <option value="yearly"  {{ $periodType == 'yearly'  ? 'selected' : '' }}>Tahunan</option>
@@ -83,7 +83,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {{-- TABEL RIWAYAT --}}
+        {{-- RIWAYAT --}}
         <section class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Riwayat Pemakaian</h2>
@@ -94,36 +94,28 @@
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
-                            <th class="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Tanggal</th>
-                            <th class="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pemakai</th>
-                            <th class="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Departemen</th>
-                            <th class="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Jumlah</th>
+                            <th class="px-6 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Tanggal</th>
+                            <th class="px-6 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Pemakai</th>
+                            <th class="px-6 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Departemen</th>
+                            <th class="px-6 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-center">Jumlah</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                         @forelse($usages as $usage)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
                                 <td class="px-6 py-3">
-                                    <div class="text-xs font-medium text-gray-900 dark:text-white">
-                                        {{ $usage->created_at->format('d M Y') }}
-                                    </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $usage->created_at->format('H:i') }} WIB
-                                    </div>
+                                    <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $usage->created_at->format('d M Y') }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $usage->created_at->format('H:i') }} WIB</div>
                                 </td>
                                 <td class="px-6 py-3">
                                     <div class="flex items-center gap-2">
                                         <div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 text-xs font-bold">
                                             {{ strtoupper(substr($usage->user->name ?? '?', 0, 1)) }}
                                         </div>
-                                        <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                            {{ $usage->user->name ?? 'User dihapus' }}
-                                        </span>
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $usage->user->name ?? 'User dihapus' }}</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $usage->user->department->name ?? '-' }}
-                                </td>
+                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $usage->user->department->name ?? '-' }}</td>
                                 <td class="px-6 py-3 text-center">
                                     <span class="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
                                         -{{ $usage->quantity_used }} Unit
@@ -142,9 +134,7 @@
             </div>
 
             @if($usages->hasPages())
-                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
-                    {{ $usages->links() }}
-                </div>
+                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">{{ $usages->links() }}</div>
             @endif
         </section>
 
@@ -162,17 +152,11 @@
                                 {{ strtoupper(substr($row->user->name ?? '?', 0, 1)) }}
                             </div>
                             <div class="min-w-0">
-                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                    {{ $row->user->name ?? 'User dihapus' }}
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {{ $row->user->department->name ?? '-' }}
-                                </p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ $row->user->name ?? 'User dihapus' }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $row->user->department->name ?? '-' }}</p>
                             </div>
                         </div>
-                        <span class="text-sm font-semibold text-amber-600 dark:text-amber-400 shrink-0">
-                            {{ $row->total }} Unit
-                        </span>
+                        <span class="text-sm font-semibold text-amber-600 dark:text-amber-400 shrink-0">{{ $row->total }} Unit</span>
                     </div>
                 @empty
                     <p class="text-xs text-gray-500 dark:text-gray-400 text-center py-4">Belum ada data.</p>

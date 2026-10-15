@@ -20,13 +20,8 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class InventoryStockController extends Controller
 {
-    /* Skor minimum agar sebuah header dianggap cocok dengan field sistem */
     private const MIN_SCORE = 60;
 
-    /*
-     * Kamus alias nama kolom (sudah dalam bentuk ternormalisasi:
-     * huruf kecil, tanpa simbol, spasi tunggal). Tambah sendiri kalau perlu.
-     */
     private const FIELD_ALIASES = [
         'department' => [
             'departemen', 'department', 'dept', 'dep', 'unit kerja', 'divisi', 'division',
@@ -47,25 +42,31 @@ class InventoryStockController extends Controller
         ],
     ];
 
-    /* ═══════════════════════════════════════════════════════════════
-       HELPER ROLE
-       Satu sumber kebenaran: Super Admin & Admin = akses penuh.
-    ═══════════════════════════════════════════════════════════════ */
     private function isPrivileged(): bool
     {
         $user = auth()->user();
         return $user->hasRole('Super Admin') || $user->hasRole('Admin');
     }
 
+    /**
+     * Cek apakah sebuah stok berasal dari departemen "Office".
+     * Office = stok yang bisa dipakai semua user.
+     */
+    private function isOfficeStock(DepartmentStock $stock): bool
+    {
+        return Department::where('id', $stock->department_id)
+            ->whereRaw('LOWER(name) = ?', ['office'])
+            ->exists();
+    }
+
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Tampilan Tabel Stok
+       INDEX
     ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
-        $user       = auth()->user();
+        $user         = auth()->user();
         $isPrivileged = $this->isPrivileged();
 
-        // ── Normalisasi filter periode ──
         $periodType = $request->get('period_type', 'daily');
         if (!in_array($periodType, ['daily', 'monthly', 'yearly'], true)) {
             $periodType = 'daily';
@@ -86,12 +87,21 @@ class InventoryStockController extends Controller
                     : (preg_match('/^\d{4}-\d{2}$/', $rawValue) ? $rawValue . '-01' : now()->format('Y-m-d'));
         }
 
-        // ── Query dasar ──
         $query = DepartmentStock::with(['department', 'item']);
 
+        // ── Cari ID departemen "Office" ──
+        $officeDeptId = Department::whereRaw('LOWER(name) = ?', ['office'])->value('id');
+
         if (!$isPrivileged) {
-            $query->where('department_id', $user->department_id);
-            $departments = collect([$user->department])->filter();
+            // Non-privileged: lihat stok departemennya sendiri + Office
+            $query->where(function ($q) use ($user, $officeDeptId) {
+                $q->where('department_id', $user->department_id);
+                if ($officeDeptId) {
+                    $q->orWhere('department_id', $officeDeptId);
+                }
+            });
+
+            $departments = Department::whereIn('id', array_filter([$user->department_id, $officeDeptId]))->get();
         } else {
             if ($request->filled('department_id')) {
                 $query->where('department_id', $request->department_id);
@@ -99,7 +109,7 @@ class InventoryStockController extends Controller
             $departments = Department::all();
         }
 
-        // ── Total pemakaian sesuai periode ──
+        // Subquery total pemakaian
         $usedSub = StockUsage::query()
             ->selectRaw('COALESCE(SUM(quantity_used), 0)')
             ->whereColumn('stock_usages.department_stock_id', 'department_stocks.id');
@@ -130,7 +140,71 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 1 — Analisa file (AJAX)
+       USAGE DETAIL — Riwayat pemakaian per item-departemen
+    ═══════════════════════════════════════════════════════════════ */
+    public function usageDetail(Request $request, $id)
+    {
+        $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
+
+        $this->authorizeDepartment($stock);
+
+        // Filter periode
+        $periodType = $request->get('period_type', 'monthly');
+        if (!in_array($periodType, ['daily', 'monthly', 'yearly', 'all'], true)) {
+            $periodType = 'monthly';
+        }
+
+        $rawValue = (string) $request->get('period_value', now()->format('Y-m'));
+
+        switch ($periodType) {
+            case 'yearly':
+                $periodValue = preg_match('/^\d{4}/', $rawValue) ? substr($rawValue, 0, 4) : now()->format('Y');
+                break;
+            case 'monthly':
+                $periodValue = preg_match('/^\d{4}-\d{2}/', $rawValue) ? substr($rawValue, 0, 7) : now()->format('Y-m');
+                break;
+            case 'all':
+                $periodValue = null;
+                break;
+            default:
+                $periodValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValue)
+                    ? $rawValue
+                    : now()->format('Y-m-d');
+        }
+
+        $query = StockUsage::with(['user', 'user.department'])
+            ->where('department_stock_id', $stock->id);
+
+        if ($periodType === 'monthly' && $periodValue) {
+            $d = Carbon::createFromFormat('Y-m', $periodValue);
+            $query->whereYear('created_at', $d->year)
+                  ->whereMonth('created_at', $d->month);
+        } elseif ($periodType === 'yearly' && $periodValue) {
+            $query->whereYear('created_at', (int) $periodValue);
+        } elseif ($periodType === 'daily' && $periodValue) {
+            $query->whereDate('created_at', $periodValue);
+        }
+
+        $usages = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->all());
+
+        $totalUsed        = (clone $query)->sum('quantity_used');
+        $totalUsedAllTime = StockUsage::where('department_stock_id', $stock->id)->sum('quantity_used');
+
+        $perUser = StockUsage::select('user_id', DB::raw('SUM(quantity_used) as total'))
+            ->with('user', 'user.department')
+            ->where('department_stock_id', $stock->id)
+            ->groupBy('user_id')
+            ->orderByDesc('total')
+            ->get();
+
+        return view('inventory.stock.usage-detail', compact(
+            'stock', 'usages', 'totalUsed', 'totalUsedAllTime',
+            'perUser', 'periodType', 'periodValue'
+        ));
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       IMPORT STEP 1 — Analisa file
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
@@ -196,7 +270,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 2 — Proses import berdasarkan mapping
+       IMPORT STEP 2 — Proses import
     ═══════════════════════════════════════════════════════════════ */
     public function importProcess(Request $request)
     {
@@ -260,13 +334,11 @@ class InventoryStockController extends Controller
             $itemCode = $codeCol !== null ? $this->cleanText($row[$codeCol] ?? null) : '';
             $rawStock = $row[$stockCol] ?? null;
 
-            // Baris benar-benar kosong → abaikan
             if ($deptName === '' && $itemName === '' && $itemCode === ''
                 && ($rawStock === null || trim((string) $rawStock) === '')) {
                 continue;
             }
 
-            // Departemen kosong → ikuti baris di atasnya (merge cell)
             if ($deptName === '') {
                 if ($lastDept === null) {
                     $skipped[] = "Baris {$lineNum}: departemen kosong";
@@ -294,7 +366,7 @@ class InventoryStockController extends Controller
             }
 
             try {
-                // ── Cari item: prioritas kode, lalu nama ──
+                // Cari item
                 $item = null;
                 if ($itemCode !== '') {
                     $item = Item::where('item_code', $itemCode)->first();
@@ -303,9 +375,8 @@ class InventoryStockController extends Controller
                     $item = Item::where('item_name', $itemName)->first();
                 }
 
-                // ── Kalau belum ada, buat item baru ──
+                // Buat item baru jika belum ada
                 if (!$item) {
-                    // Auto-generate kode kalau kosong
                     if ($itemCode === '') {
                         $itemCode = $this->generateAutoCode();
                     }
@@ -332,14 +403,11 @@ class InventoryStockController extends Controller
                     $item->forceFill($attrs)->save();
                     $newItems++;
                 } elseif ($itemName !== '' && $item->item_name !== $itemName) {
-                    // Update nama kalau beda (mis. typo diperbaiki)
                     $item->update(['item_name' => $itemName]);
                 }
 
-                // ── Departemen ──
                 $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
 
-                // ── Stok ──
                 $ds = DepartmentStock::where('item_id', $item->id)
                     ->where('department_id', $department->id)
                     ->first() ?? new DepartmentStock();
@@ -363,7 +431,6 @@ class InventoryStockController extends Controller
             'detail'   => $skipped,
         ]);
 
-        // ── Pesan hasil ──
         $msg = "Berhasil import {$imported} data stok.";
         if ($newItems > 0) $msg .= " {$newItems} item baru dibuat.";
         if ($newDepts > 0) $msg .= " {$newDepts} departemen baru dibuat.";
@@ -385,8 +452,6 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        HELPER IMPORT
     ═══════════════════════════════════════════════════════════════ */
-
-    /** Baca satu sheet → [namaSheet[], indexSheet, rows[][]] */
     private function loadSheet(string $path, int $sheetIndex = 0): array
     {
         $reader = IOFactory::createReaderForFile($path);
@@ -404,7 +469,6 @@ class InventoryStockController extends Controller
         return [$names, $sheetIndex, $rows];
     }
 
-    /** Cari baris header: baris (dari 20 teratas) yang paling banyak cocok dengan alias */
     private function detectHeaderRow(array $rows): int
     {
         $best      = 0;
@@ -436,7 +500,6 @@ class InventoryStockController extends Controller
         return $best;
     }
 
-    /** Tebak mapping: field => ['column' => index, 'score' => skor] */
     private function suggestMapping(array $labels): array
     {
         $candidates = [];
@@ -468,7 +531,6 @@ class InventoryStockController extends Controller
         return $map;
     }
 
-    /** 100 = sama persis; 60-80 = mengandung alias; mirip (typo) = skala persen */
     private function scoreHeader(string $norm, array $aliases): int
     {
         if ($norm === '') {
@@ -505,7 +567,6 @@ class InventoryStockController extends Controller
         return trim(preg_replace('/\s+/u', ' ', (string) $v));
     }
 
-    /** "12", 12.0, "12 Unit", "1.250" → int. Tidak ada angka → null */
     private function parseQty($v): ?int
     {
         if ($v === null) {
@@ -527,10 +588,6 @@ class InventoryStockController extends Controller
         return (int) round((float) $num);
     }
 
-    /**
-     * Generate kode item otomatis untuk item tanpa kode.
-     * Format: AUTO-001, AUTO-002, dst.
-     */
     private function generateAutoCode(): string
     {
         $last = Item::where('item_code', 'like', 'AUTO-%')
@@ -542,7 +599,6 @@ class InventoryStockController extends Controller
             $next = (int) $m[1] + 1;
         }
 
-        // Pastikan tidak bentrok
         do {
             $code   = 'AUTO-' . str_pad($next, 3, '0', STR_PAD_LEFT);
             $exists = Item::where('item_code', $code)->exists();
@@ -554,7 +610,6 @@ class InventoryStockController extends Controller
         return $code;
     }
 
-    /** Cari departemen by nama atau kode (tidak sensitif huruf), buat baru jika belum ada */
     private function resolveDepartment(string $name, array &$cache, int &$created): Department
     {
         $key = mb_strtolower($name);
@@ -581,7 +636,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE — Form tambah stok manual
+       CREATE, STORE, USE
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
@@ -590,9 +645,6 @@ class InventoryStockController extends Controller
         return view('inventory.stock.create', compact('departments', 'items'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       STORE — Simpan stok manual
-    ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -620,9 +672,6 @@ class InventoryStockController extends Controller
             ->with('success', 'Stok departemen berhasil ditambahkan.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       USE — Form pemakaian barang
-    ═══════════════════════════════════════════════════════════════ */
     public function useItemForm($id)
     {
         $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
@@ -632,9 +681,6 @@ class InventoryStockController extends Controller
         return view('inventory.stock.use', compact('stock'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       USE — Proses pemakaian barang
-    ═══════════════════════════════════════════════════════════════ */
     public function processUseItem(Request $request, $id)
     {
         $validated = $request->validate([
@@ -671,16 +717,24 @@ class InventoryStockController extends Controller
             ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
     }
 
-    /** Non-admin hanya boleh mengakses stok departemennya sendiri */
+    /**
+     * Non-admin: boleh akses stok departemennya sendiri ATAU stok Office.
+     */
     private function authorizeDepartment(DepartmentStock $stock): void
     {
-        if (!$this->isPrivileged() && (int) $stock->department_id !== (int) auth()->user()->department_id) {
+        if ($this->isPrivileged()) {
+            return;
+        }
+
+        $isOwnDept = (int) $stock->department_id === (int) auth()->user()->department_id;
+
+        if (!$isOwnDept && !$this->isOfficeStock($stock)) {
             abort(403, 'Unauthorized action.');
         }
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       EXPORT USAGE — Export Excel pemakaian stok
+       EXPORT USAGE
     ═══════════════════════════════════════════════════════════════ */
     public function exportUsage(Request $request)
     {
@@ -704,73 +758,4 @@ class InventoryStockController extends Controller
             $filename
         );
     }
-
-    /* ═══════════════════════════════════════════════════════════════
-   USAGE DETAIL — Riwayat pemakaian per item-departemen
-═══════════════════════════════════════════════════════════════ */
-public function usageDetail(Request $request, $id)
-{
-    $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
-
-    $this->authorizeDepartment($stock);
-
-    // Filter periode
-    $periodType = $request->get('period_type', 'monthly');
-    if (!in_array($periodType, ['daily', 'monthly', 'yearly', 'all'], true)) {
-        $periodType = 'monthly';
-    }
-
-    $rawValue = (string) $request->get('period_value', now()->format('Y-m'));
-
-    switch ($periodType) {
-        case 'yearly':
-            $periodValue = preg_match('/^\d{4}/', $rawValue) ? substr($rawValue, 0, 4) : now()->format('Y');
-            break;
-        case 'monthly':
-            $periodValue = preg_match('/^\d{4}-\d{2}/', $rawValue) ? substr($rawValue, 0, 7) : now()->format('Y-m');
-            break;
-        case 'all':
-            $periodValue = null;
-            break;
-        default:
-            $periodValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValue)
-                ? $rawValue
-                : now()->format('Y-m-d');
-    }
-
-    // Query pemakaian
-    $query = StockUsage::with(['user', 'user.department'])
-        ->where('department_stock_id', $stock->id);
-
-    if ($periodType === 'monthly' && $periodValue) {
-        $d = Carbon::createFromFormat('Y-m', $periodValue);
-        $query->whereYear('created_at', $d->year)
-              ->whereMonth('created_at', $d->month);
-    } elseif ($periodType === 'yearly' && $periodValue) {
-        $query->whereYear('created_at', (int) $periodValue);
-    } elseif ($periodType === 'daily' && $periodValue) {
-        $query->whereDate('created_at', $periodValue);
-    }
-
-    $usages = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->all());
-
-    // Total pemakaian di periode ini
-    $totalUsed = (clone $query)->sum('quantity_used');
-
-    // Total pemakaian sepanjang waktu
-    $totalUsedAllTime = StockUsage::where('department_stock_id', $stock->id)->sum('quantity_used');
-
-    // Rekap per user
-    $perUser = StockUsage::select('user_id', DB::raw('SUM(quantity_used) as total'))
-        ->with('user')
-        ->where('department_stock_id', $stock->id)
-        ->groupBy('user_id')
-        ->orderByDesc('total')
-        ->get();
-
-    return view('inventory.stock.usage-detail', compact(
-        'stock', 'usages', 'totalUsed', 'totalUsedAllTime',
-        'perUser', 'periodType', 'periodValue'
-    ));
-}
 }

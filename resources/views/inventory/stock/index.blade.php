@@ -6,9 +6,7 @@
 @section('content')
 <div class="space-y-6 pb-12">
 
-    {{-- ============================================================
-         PAGE HEADER
-    ============================================================ --}}
+    {{-- HEADER --}}
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
@@ -18,17 +16,17 @@
                 @if(auth()->user()->hasRole('Super Admin'))
                     Monitor physical stock availability across all departments.
                 @else
-                    List of stock items for department
-                    <span class="font-medium text-primary-600 dark:text-primary-400">{{ auth()->user()->department->name ?? 'My Department' }}</span>.
+                    Menampilkan stok departemen
+                    <span class="font-medium text-primary-600 dark:text-primary-400">{{ auth()->user()->department->name ?? 'My Department' }}</span>
+                    dan
+                    <span class="font-medium text-amber-600 dark:text-amber-400">Office</span> (dapat dipakai semua user).
                 @endif
             </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-start">
-            {{-- TOMBOL IMPORT EXCEL — hanya Super Admin --}}
             @if(auth()->user()->hasRole('Super Admin'))
-                <button type="button"
-                        onclick="openImportModal()"
+                <button type="button" onclick="openImportModal()"
                         class="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -37,9 +35,7 @@
                 </button>
             @endif
 
-            {{-- TOMBOL EXPORT EXCEL — semua role --}}
-            <button type="button"
-                    onclick="openExportModal()"
+            <button type="button" onclick="openExportModal()"
                     class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -49,7 +45,7 @@
 
             @if(auth()->user()->hasRole('Super Admin'))
                 <a href="{{ route('inventory.stock.create') }}"
-                   class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
+                   class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
@@ -59,12 +55,9 @@
         </div>
     </div>
 
-    {{-- ============================================================
-         MAIN CARD (FILTER & TABEL STOK)
-    ============================================================ --}}
+    {{-- CARD --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
-        {{-- Toolbar / Filter Bar --}}
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
@@ -86,42 +79,38 @@
                 </div>
             </div>
 
-            {{-- Form Filter --}}
             <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
-                {{-- Filter Periode Mode --}}
                 <div class="relative">
-                    <select name="period_type" id="period_type" onchange="this.form.submit()"
-                            class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 transition cursor-pointer">
-                        <option value="daily" {{ request('period_type', 'daily') == 'daily' ? 'selected' : '' }}>Harian (Tanggal)</option>
+                    <select name="period_type" onchange="this.form.submit()"
+                            class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm cursor-pointer">
+                        <option value="daily"   {{ request('period_type', 'daily') == 'daily'   ? 'selected' : '' }}>Harian (Tanggal)</option>
                         <option value="monthly" {{ request('period_type') == 'monthly' ? 'selected' : '' }}>Bulanan</option>
-                        <option value="yearly" {{ request('period_type') == 'yearly' ? 'selected' : '' }}>Tahunan</option>
+                        <option value="yearly"  {{ request('period_type') == 'yearly'  ? 'selected' : '' }}>Tahunan</option>
                     </select>
                     <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                 </div>
 
-                {{-- Input Nilai Periode --}}
                 @if(request('period_type') == 'monthly')
                     <input type="month" name="period_value" value="{{ request('period_value', now()->format('Y-m')) }}" onchange="this.form.submit()"
-                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs">
                 @elseif(request('period_type') == 'yearly')
                     <select name="period_value" onchange="this.form.submit()"
-                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-xs">
                         @for($y = date('Y'); $y >= date('Y') - 5; $y--)
                             <option value="{{ $y }}" {{ request('period_value', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endfor
                     </select>
                 @else
                     <input type="date" name="period_value" value="{{ request('period_value', now()->format('Y-m-d')) }}" onchange="this.form.submit()"
-                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs">
                 @endif
 
-                {{-- Filter Departemen (Super Admin) --}}
                 @if(auth()->user()->hasRole('Super Admin'))
                     <div class="relative">
-                        <select name="department_id" id="department_id" onchange="this.form.submit()"
-                                class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition cursor-pointer">
+                        <select name="department_id" onchange="this.form.submit()"
+                                class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs cursor-pointer">
                             <option value="">All Departments</option>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
@@ -137,7 +126,7 @@
 
                 @if(request('department_id') || request('period_value') || request('period_type'))
                     <a href="{{ route('inventory.stock.index') }}"
-                       class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                       class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                        title="Reset filter">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -147,7 +136,6 @@
             </form>
         </header>
 
-        {{-- Table --}}
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
@@ -158,9 +146,7 @@
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Stok Terpakai</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Sisa Stok</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Terakhir Diperbarui</th>
-                        @if(!auth()->user()->hasRole('Super Admin'))
-                            <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Aksi</th>
-                        @endif
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
@@ -172,6 +158,10 @@
 
                             $isLow = $currentStock <= 5;
                             $isCritical = $currentStock <= 2;
+
+                            $isOfficeStock = strtolower($stock->department->name ?? '') === 'office';
+                            $isOwnDept     = (int) $stock->department_id === (int) auth()->user()->department_id;
+                            $canUse        = !auth()->user()->hasRole('Super Admin') && ($isOwnDept || $isOfficeStock);
                         @endphp
                         <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <td class="px-6 py-4">
@@ -181,7 +171,12 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                     </div>
-                                    <span class="font-medium text-gray-900 dark:text-white">{{ $stock->department->name ?? '-' }}</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">
+                                        {{ $stock->department->name ?? '-' }}
+                                        @if($isOfficeStock)
+                                            <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">PUBLIC</span>
+                                        @endif
+                                    </span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
@@ -195,80 +190,62 @@
                                 @endif
                             </td>
 
-                            {{-- Stok Awal --}}
-                            <td class="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
-                                {{ $initialStock }}
-                            </td>
+                            <td class="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-300">{{ $initialStock }}</td>
+                            <td class="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">{{ $usedStock }}</td>
 
-                            {{-- Stok Terpakai --}}
-                            <td class="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">
-                                {{ $usedStock }}
-                            </td>
-
-                            {{-- Sisa Stok --}}
                             <td class="px-6 py-4 text-center">
                                 @if($isCritical)
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-200 dark:ring-red-900/60">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
                                         {{ $currentStock }} Unit
                                     </span>
                                 @elseif($isLow)
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
                                         <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                         {{ $currentStock }} Unit
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                         {{ $currentStock }} Unit
                                     </span>
                                 @endif
                             </td>
 
-                            <td class="px-6 py-4 text-center">
-    <a href="{{ route('inventory.stock.usage-detail', $stock->id) }}"
-       class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
-        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-        </svg>
-        Detail
-    </a>
-</td>
-
                             <td class="px-6 py-4 text-right">
-                                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                                    {{ $stock->updated_at->format('d M Y') }}
-                                </div>
-                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                    {{ $stock->updated_at->format('H:i') }} WIB
+                                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">{{ $stock->updated_at->format('d M Y') }}</div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $stock->updated_at->format('H:i') }} WIB</div>
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    @if($canUse)
+                                        <a href="{{ route('inventory.stock.use.item', $stock->id) }}"
+                                           class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                                            </svg>
+                                            Pakai
+                                        </a>
+                                    @endif
+
+                                    <a href="{{ route('inventory.stock.usage-detail', $stock->id) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        Detail
+                                    </a>
                                 </div>
                             </td>
-                            @if(!auth()->user()->hasRole('Super Admin'))
-                                <td class="px-6 py-4 text-center">
-                                    <a href="{{ route('inventory.stock.use.item', $stock->id) }}"
-                                       class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                                        </svg>
-                                        Pakai
-                                    </a>
-                                </td>
-                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->hasRole('Super Admin') ? '6' : '7' }}" class="px-6 py-16">
+                            <td colspan="7" class="px-6 py-16">
                                 <div class="flex flex-col items-center justify-center text-center">
-                                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 mb-4">
-                                        <svg class="h-7 w-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                        </svg>
-                                    </div>
                                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada data stok</p>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-                                        Data stok untuk departemen ini belum tercatat dalam sistem.
-                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Data stok belum tercatat dalam sistem.</p>
                                 </div>
                             </td>
                         </tr>
@@ -277,33 +254,22 @@
             </table>
         </div>
 
-        {{-- Pagination --}}
         @if($stocks->hasPages())
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
                 {{ $stocks->links() }}
             </div>
         @endif
     </section>
 </div>
 
-{{-- ============================================================
-     MODAL: IMPORT EXCEL — hanya render untuk Super Admin
-============================================================ --}}
+{{-- MODAL IMPORT — hanya Super Admin --}}
 @if(auth()->user()->hasRole('Super Admin'))
     @include('inventory.stock._import-modal')
 @endif
 
-{{-- ============================================================
-     MODAL: EXPORT EXCEL
-============================================================ --}}
-<div id="exportModal"
-     class="fixed inset-0 z-50 hidden"
-     role="dialog"
-     aria-modal="true">
-
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
-         onclick="closeExportModal()"></div>
-
+{{-- MODAL EXPORT --}}
+<div id="exportModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeExportModal()"></div>
     <div class="relative z-10 flex items-center justify-center min-h-full p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
 
@@ -314,45 +280,29 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                        Export Stock Usage
-                    </h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Pilih rentang tanggal untuk export laporan pemakaian.
-                    </p>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Export Stock Usage</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Pilih rentang tanggal untuk export laporan pemakaian.</p>
                 </div>
             </div>
 
             <form action="{{ route('inventory.stock.export-usage') }}" method="GET" class="space-y-4">
-
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-                            Dari Tanggal
-                        </label>
-                        <input type="date" name="start_date"
-                               value="{{ now()->startOfMonth()->format('Y-m-d') }}"
-                               required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1.5">Dari Tanggal</label>
+                        <input type="date" name="start_date" value="{{ now()->startOfMonth()->format('Y-m-d') }}" required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-                            Sampai Tanggal
-                        </label>
-                        <input type="date" name="end_date"
-                               value="{{ now()->format('Y-m-d') }}"
-                               required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1.5">Sampai Tanggal</label>
+                        <input type="date" name="end_date" value="{{ now()->format('Y-m-d') }}" required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm">
                     </div>
                 </div>
 
                 @if(auth()->user()->hasRole('Super Admin'))
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-                            Departemen
-                        </label>
-                        <select name="department_id"
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1.5">Departemen</label>
+                        <select name="department_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm">
                             <option value="">Semua Departemen</option>
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}">{{ $dept->name }}</option>
@@ -361,27 +311,13 @@
                     </div>
                 @endif
 
-                <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 px-4 py-3">
-                    <div class="flex gap-2.5">
-                        <svg class="h-4 w-4 flex-shrink-0 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                            File Excel akan berisi rekapitulasi Stok Awal, Stok Terpakai, dan Sisa Stok sesuai periode yang dipilih.
-                        </p>
-                    </div>
-                </div>
-
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeExportModal()"
                             class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         Batal
                     </button>
                     <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                        </svg>
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
                         Download Excel
                     </button>
                 </div>
@@ -396,17 +332,11 @@
         document.getElementById('exportModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
-
     function closeExportModal() {
         document.getElementById('exportModal').classList.add('hidden');
         document.body.style.overflow = '';
     }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeExportModal();
-        }
-    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeExportModal(); });
 </script>
 @endpush
 @endsection

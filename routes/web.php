@@ -64,9 +64,24 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
     });
 
-    /* ─────────────────────────────────────────────
+    /* ═════════════════════════════════════════════
        INVENTORY STOCK
-    ───────────────────────────────────────────── */
+       ⚠️ URUTAN SANGAT PENTING:
+       - Route STATIS (tanpa {id}) di atas
+       - Route DINAMIS (dengan {id}) di bawah
+    ═════════════════════════════════════════════ */
+
+    // ── STATIC ROUTES ──
+    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
+        ->name('inventory.stock.index');
+
+    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])
+        ->name('inventory.stock.export-usage');
+
+    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
+        ->name('inventory.stock.use');
+
+    // ── Super Admin only ──
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])
             ->name('inventory.stock.create');
@@ -74,35 +89,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/inventory/stock', [InventoryStockController::class, 'store'])
             ->name('inventory.stock.store');
 
-        // ✅ Import Excel — Step 1: analisa file & deteksi kolom otomatis (AJAX)
         Route::post('/inventory/stock/import-analyze', [InventoryStockController::class, 'importAnalyze'])
             ->name('inventory.stock.import-analyze');
 
-        // ✅ Import Excel — Step 2: proses import sesuai mapping
         Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])
             ->name('inventory.stock.import-process');
     });
 
-    // ⚠️ STATIC ROUTES — HARUS DI ATAS route dengan {id}
-    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])
-        ->name('inventory.stock.export-usage');
+    // ── DYNAMIC ROUTES (dengan {id}) ──
+    Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
+        ->name('inventory.stock.usage-detail');
 
-    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
-        ->name('inventory.stock.use');
-
-    // Dynamic routes (dengan {id})
     Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])
         ->name('inventory.stock.use.item');
 
     Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])
         ->name('inventory.stock.process-use');
-
-    // ✅ Index (paling bawah)
-    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
-        ->name('inventory.stock.index');
-
-        Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
-    ->name('inventory.stock.usage-detail');
 
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
@@ -156,7 +158,6 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/consumable-requests/{consumableRequest}/reject', [ConsumableRequestController::class, 'reject'])
             ->name('consumable-requests.reject');
-
     });
 
     /* ─────────────────────────────────────────────
