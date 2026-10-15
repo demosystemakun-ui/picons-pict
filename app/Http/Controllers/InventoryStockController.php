@@ -136,8 +136,8 @@ class InventoryStockController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
-        $request->validate([
-            'excel_file' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+$request->validate([
+            'excel_file' => 'required|file|extensions:xlsx,xls,csv|max:5120',
             'sheet'      => 'nullable|integer|min:0',
             'header_row' => 'nullable|integer|min:1',
         ]);
@@ -203,7 +203,7 @@ class InventoryStockController extends Controller
     public function importProcess(Request $request)
     {
         $request->validate([
-            'excel_file'          => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+            'excel_file'          => 'required|file|extensions:xlsx,xls,csv|max:5120',
             'sheet'               => 'nullable|integer|min:0',
             'header_row'          => 'required|integer|min:1',
             'period_month'        => 'required|integer|min:1|max:12',
