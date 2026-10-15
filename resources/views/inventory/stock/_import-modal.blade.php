@@ -1,166 +1,371 @@
-{{-- ═══════════════════════════════════════════════════════════════
-     TOAST HASIL IMPORT / ERROR (fixed, pojok kanan atas)
-     Hapus bagian 'success' kalau layout kamu sudah menampilkannya.
-═══════════════════════════════════════════════════════════════ --}}
-@if ($errors->any() || session('warning') || session('error') || session('success') || session('import_report'))
-    <div id="importToast" class="fixed top-4 right-4 z-[60] w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl p-4 text-sm">
-        <div class="flex items-start justify-between gap-3">
-            <div class="space-y-1.5 min-w-0">
-                @if (session('success'))
-                    <p class="font-semibold text-emerald-700 dark:text-emerald-400">{{ session('success') }}</p>
+@extends('layouts.app')
+
+@section('title', 'Inventory Stock per Departemen')
+@section('page-title', 'Department Stock Items')
+
+@section('content')
+<div class="space-y-6 pb-12">
+
+    {{-- ============================================================
+         PAGE HEADER
+    ============================================================ --}}
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                Department Stock Items
+            </h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                @if(auth()->user()->hasRole('Super Admin'))
+                    Monitor physical stock availability across all departments.
+                @else
+                    List of stock items for department
+                    <span class="font-medium text-primary-600 dark:text-primary-400">{{ auth()->user()->department->name ?? 'My Department' }}</span>.
                 @endif
-                @if (session('warning'))
-                    <p class="font-semibold text-amber-700 dark:text-amber-400">{{ session('warning') }}</p>
-                @endif
-                @if (session('error'))
-                    <p class="font-semibold text-red-700 dark:text-red-400">{{ session('error') }}</p>
-                @endif
-                @if ($errors->any())
-                    <ul class="list-disc pl-5 text-red-700 dark:text-red-400">
-                        @foreach ($errors->all() as$err)
-                            <li>{{ $err }}</li>
-                        @endforeach
-                    </ul>
-                @endif
-                @if (session('import_report'))
-                    <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 pt-1">Baris yang dilewati:</p>
-                    <ul class="max-h-48 overflow-y-auto list-disc pl-5 text-xs text-gray-600 dark:text-gray-400">
-                        @foreach (session('import_report') as $line)
-                            <li>{{ $line }}</li>
-                        @endforeach
-                    </ul>
-                @endif
-            </div>
-            <button type="button" onclick="document.getElementById('importToast').remove()"
-                    class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 self-start">
+            {{-- TOMBOL IMPORT EXCEL --}}
+            <button type="button"
+                    onclick="openImportModal()"
+                    class="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Import Excel
+            </button>
+
+            {{-- TOMBOL EXPORT EXCEL --}}
+            <button type="button"
+                    onclick="openExportModal()"
+                    class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Export Excel
+            </button>
+
+            @if(auth()->user()->hasRole('Super Admin'))
+                <a href="{{ route('inventory.stock.create') }}"
+                   class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Tambah Stok
+                </a>
+            @endif
         </div>
     </div>
-@endif
 
-{{-- ═══════════════════════════════════════════════════════════════
-     MODAL: IMPORT EXCEL DENGAN AUTO-DETECT KOLOM
-═══════════════════════════════════════════════════════════════ --}}
-<div id="importModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeImportModal()"></div>
+    {{-- ============================================================
+         MAIN CARD (FILTER & TABEL STOK)
+    ============================================================ --}}
+    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
-    <div class="relative z-10 flex items-center justify-center min-h-full p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
-
-            <div class="flex items-start gap-3 mb-5">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shrink-0">
+        {{-- Toolbar / Filter Bar --}}
+        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Import Excel Stok</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Upload file apa saja. Sistem akan mendeteksi kolomnya otomatis, kamu tinggal cek.
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        @if(auth()->user()->hasRole('Super Admin'))
+                            Physical Stock List
+                        @else
+                            Stok Departemen
+                        @endif
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Total {{ $stocks->total() ?? $stocks->count() }} entri stok tercatat
                     </p>
                 </div>
             </div>
 
-            <form action="{{ route('inventory.stock.import-process') }}" method="POST" enctype="multipart/form-data" id="importForm">
-                @csrf
+            {{-- Form Filter (Periode & Departemen) --}}
+            <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
+                
+                {{-- Filter Periode Mode --}}
+                <div class="relative">
+                    <select name="period_type" id="period_type" onchange="this.form.submit()"
+                            class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 transition cursor-pointer">
+                        <option value="daily" {{ request('period_type', 'daily') == 'daily' ? 'selected' : '' }}>Harian (Tanggal)</option>
+                        <option value="monthly" {{ request('period_type') == 'monthly' ? 'selected' : '' }}>Bulanan</option>
+                        <option value="yearly" {{ request('period_type') == 'yearly' ? 'selected' : '' }}>Tahunan</option>
+                    </select>
+                    <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
 
-                {{-- Upload Section --}}
-                <div id="step-upload">
-                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:bg-gray-50 dark:hover:bg-gray-700/30 transition cursor-pointer"
-                         onclick="document.getElementById('excel_file').click()">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                {{-- Input Nilai Periode --}}
+                @if(request('period_type') == 'monthly')
+                    <input type="month" name="period_value" value="{{ request('period_value', now()->format('Y-m')) }}" onchange="this.form.submit()"
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                @elseif(request('period_type') == 'yearly')
+                    <select name="period_value" onchange="this.form.submit()"
+                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                        @for($y = date('Y'); $y >= date('Y') - 5; $y--)
+                            <option value="{{ $y }}" {{ request('period_value', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endfor
+                    </select>
+                @else
+                    <input type="date" name="period_value" value="{{ request('period_value', now()->format('Y-m-d')) }}" onchange="this.form.submit()"
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                @endif
+
+                {{-- Filter Departemen (Super Admin) --}}
+                @if(auth()->user()->hasRole('Super Admin'))
+                    <div class="relative">
+                        <select name="department_id" id="department_id" onchange="this.form.submit()"
+                                class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition cursor-pointer">
+                            <option value="">All Departments</option>
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>
+                                    {{ $dept->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                            <span class="font-semibold text-blue-600">Klik untuk upload</span> file Excel
+                    </div>
+                @endif
+
+                @if(request('department_id') || request('period_value') || request('period_type'))
+                    <a href="{{ route('inventory.stock.index') }}"
+                       class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                       title="Reset filter">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </a>
+                @endif
+            </form>
+        </header>
+
+        {{-- Table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Departemen</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nama Barang / Item</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Stok Awal</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Stok Terpakai</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Sisa Stok</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Terakhir Diperbarui</th>
+                        @if(!auth()->user()->hasRole('Super Admin'))
+                            <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Aksi</th>
+                        @endif
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
+                    @forelse($stocks as $stock)
+                        @php
+                            $usedStock    = (int) ($stock->used_stock ?? 0);
+                            $currentStock = (int) $stock->stock; 
+                            $initialStock = $currentStock + $usedStock; 
+
+                            $isLow = $currentStock <= 5;
+                            $isCritical = $currentStock <= 2;
+                        @endphp
+                        <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shrink-0">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-medium text-gray-900 dark:text-white">{{ $stock->department->name ?? '-' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
+                                    {{ $stock->item->item_name ?? '-' }}
+                                </div>
+                                @if($stock->item->item_code ?? false)
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                                        {{ $stock->item->item_code }}
+                                    </div>
+                                @endif
+                            </td>
+                            
+                            <td class="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
+                                {{ $initialStock }}
+                            </td>
+
+                            <td class="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">
+                                {{ $usedStock }}
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                @if($isCritical)
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-200 dark:ring-red-900/60">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                        {{ $currentStock }} Unit
+                                    </span>
+                                @elseif($isLow)
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                        {{ $currentStock }} Unit
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                        {{ $currentStock }} Unit
+                                    </span>
+                                @endif
+                            </td>
+
+                            <td class="px-6 py-4 text-right">
+                                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                    {{ $stock->updated_at->format('d M Y') }}
+                                </div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                    {{ $stock->updated_at->format('H:i') }} WIB
+                                </div>
+                            </td>
+                            @if(!auth()->user()->hasRole('Super Admin'))
+                                <td class="px-6 py-4 text-center">
+                                    <a href="{{ route('inventory.stock.use.item', $stock->id) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                                        </svg>
+                                        Pakai
+                                    </a>
+                                </td>
+                            @endif
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ auth()->user()->hasRole('Super Admin') ? '6' : '7' }}" class="px-6 py-16">
+                                <div class="flex flex-col items-center justify-center text-center">
+                                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 mb-4">
+                                        <svg class="h-7 w-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada data stok</p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                                        Data stok untuk departemen ini belum tercatat dalam sistem.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Pagination --}}
+        @if($stocks->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                {{ $stocks->links() }}
+            </div>
+        @endif
+    </section>
+</div>
+
+{{-- ============================================================
+     MODAL: IMPORT EXCEL
+============================================================ --}}
+@include('inventory.stock._import-modal')
+
+{{-- ============================================================
+     MODAL: EXPORT EXCEL
+============================================================ --}}
+<div id="exportModal"
+     class="fixed inset-0 z-50 hidden"
+     role="dialog"
+     aria-modal="true">
+
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+         onclick="closeExportModal()"></div>
+
+    <div class="relative z-10 flex items-center justify-center min-h-full p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+
+            <div class="flex items-start gap-3 mb-5">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                        Export Stock Usage
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Pilih rentang tanggal untuk export laporan pemakaian.
+                    </p>
+                </div>
+            </div>
+
+            <form action="{{ route('inventory.stock.export-usage') }}" method="GET" class="space-y-4">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                            Dari Tanggal
+                        </label>
+                        <input type="date" name="start_date"
+                               value="{{ now()->startOfMonth()->format('Y-m-d') }}"
+                               required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                            Sampai Tanggal
+                        </label>
+                        <input type="date" name="end_date"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                @if(auth()->user()->hasRole('Super Admin'))
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                            Departemen
+                        </label>
+                        <select name="department_id"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">Semua Departemen</option>
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
+                <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 px-4 py-3">
+                    <div class="flex gap-2.5">
+                        <svg class="h-4 w-4 flex-shrink-0 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                            File Excel akan berisi rekapitulasi Stok Awal, Stok Terpakai, dan Sisa Stok sesuai periode yang dipilih.
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .xls, .csv (Max 5MB)</p>
-                        <input type="file" name="excel_file" id="excel_file" class="hidden"
-                               accept=".xlsx,.xls,.csv" onchange="analyzeImportFile(true)">
-                    </div>
-
-                    <div id="file-info" class="mt-3 hidden text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg flex items-center justify-between">
-                        <span id="file-name"></span>
-                        <button type="button" onclick="resetUpload()" class="text-red-500 hover:text-red-700 text-xs font-semibold">Hapus</button>
-                    </div>
-
-                    <p id="import-loading" class="hidden mt-3 text-sm text-blue-600">Membaca file &amp; mendeteksi kolom…</p>
-                    <p id="import-error" class="hidden mt-3 text-sm text-red-600"></p>
-                </div>
-
-                {{-- Mapping & Configuration Section --}}
-                <div id="step-mapping" class="hidden mt-6">
-                    <div class="grid grid-cols-2 gap-3 mb-4">    
-                        <div id="month-wrap">        
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Bulan <span class="text-red-500">*</span></label>        
-                            <select name="period_month" id="import-month" onchange="onMonthChange()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm"></select>    
-                        </div>    
-                        <div>        
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Tahun <span class="text-red-500">*</span></label>        
-                            <input type="number" name="period_year" id="import-year" min="2000" max="2100" onchange="checkImportReady()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">    
-                        </div>    
-                        <div id="sheet-wrap">        
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Sheet</label>        
-                            <select name="sheet" id="import-sheet" onchange="analyzeImportFile(false, true)" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm"></select>    
-                        </div>    
-                        <div>        
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Baris header (nomor baris di Excel)</label>        
-                            <input type="number" min="1" name="header_row" id="import-header-row" onchange="analyzeImportFile(false)" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">    
-                        </div>    
-                        <div class="col-span-2">        
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Departemen tujuan <span class="text-red-500">*</span></label>        
-                            <select name="department_id" id="import-department" onchange="checkImportReady()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">            
-                                <option value="">-- Pilih departemen --</option>            
-                                @foreach (($departments ?? []) as $d)                
-                                    <option value="{{ $d->id }}">{{ $d->name }}</option>            
-                                @endforeach        
-                            </select>        
-                            <p class="text-xs text-gray-500 mt-1">Dipakai untuk semua baris jika kolom Departemen tidak dipetakan.</p>    
-                        </div>
-                    </div>
-
-                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Pemetaan Kolom</h4>
-                    <p class="text-xs text-gray-500 mb-3">Hasil deteksi otomatis sudah terpilih. Ubah jika ada yang kurang tepat.</p>
-
-                    <div id="mapping-rows" class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700"></div>
-
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Kategori default (untuk item baru)</label>
-                            <select name="default_category_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
-                                @foreach (($categories ?? []) as $c)
-                                    <option value="{{ $c->id }}">{{ $c->name ?? $c->category_name ?? ('#' . $c->id) }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Satuan default (untuk item baru)</label>
-                            <select name="default_unit_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
-                                @foreach (($units ?? []) as $u)
-                                    <option value="{{ $u->id }}">{{ $u->name ?? $u->code ?? ('#' . $u->id) }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    @if (empty($categories) \vert{}\vert{} count($categories) === 0)
-                        <p class="mt-2 text-xs text-amber-600">Belum ada kategori. Buat dulu di menu Categories agar item baru bisa diimport.</p>
-                    @endif
-
-                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mt-5 mb-2">
-                        Preview <span id="import-total" class="text-xs font-normal text-gray-500"></span>
-                    </h4>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                        <table class="w-full text-xs text-left" id="import-preview"></table>
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-2 pt-6 mt-4 border-t border-gray-100 dark:border-gray-700">
-                    <button type="button" onclick="closeImportModal()"
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeExportModal()"
                             class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         Batal
                     </button>
-                    <button type="submit" id="btn-submit-import" disabled
-                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                        Proses Import
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download Excel
                     </button>
                 </div>
             </form>
@@ -170,180 +375,21 @@
 
 @push('scripts')
 <script>
-    const IMPORT_ANALYZE_URL = @json(route('inventory.stock.import-analyze'));
-    const IMPORT_FIELDS = [
-        { key: 'item_code',  label: 'Kode Item',   required: false },
-        { key: 'item_name',  label: 'Nama Barang', required: true  },
-        { key: 'stock',      label: 'Sisa Stok',   required: true  },
-        { key: 'department', label: 'Departemen (opsional)', required: false },
-    ];
-
-    const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-    const MONTH_ALIASES = {
-        1:['january','januari','jan'],   2:['february','februari','feb'],
-        3:['march','maret','mar'],       4:['april','apr'],
-        5:['may','mei'],                 6:['june','juni','jun'],
-        7:['july','juli','jul'],         8:['august','agustus','agu','aug'],
-        9:['september','sep','sept'],   10:['october','oktober','okt','oct'],
-        11:['november','nov'],           12:['december','desember','des','dec'],
-    };
-
-    function monthOfSheet(name) {
-        const n = String(name).trim().toLowerCase().split(/[\s_\-]+/)[0];
-        for (const [m, list] of Object.entries(MONTH_ALIASES)) {
-            if (list.includes(n)) return +m;
-        }
-        return null;
-    }
-
-    function onMonthChange() {
-        const opt = $imp('import-month').selectedOptions[0];
-        if (!opt || opt.dataset.sheet === undefined) { checkImportReady(); return; }
-        $imp('import-sheet').value = opt.dataset.sheet;
-        analyzeImportFile(false, true);
-    }
-
-    const $imp = (id) => document.getElementById(id);
-    const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-    function openImportModal() {
-        $imp('importModal').classList.remove('hidden');
+    function openExportModal() {
+        document.getElementById('exportModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    function closeImportModal() {
-        $imp('importModal').classList.add('hidden');
+    function closeExportModal() {
+        document.getElementById('exportModal').classList.add('hidden');
         document.body.style.overflow = '';
-        resetUpload();
     }
 
-    function resetUpload() {
-        $imp('excel_file').value = '';$imp('file-info').classList.add('hidden');
-        $imp('step-mapping').classList.add('hidden');$imp('import-error').classList.add('hidden');
-        $imp('import-loading').classList.add('hidden');$imp('btn-submit-import').disabled = true;
-        $imp('file-name').textContent = '';
-    }
-
-    async function analyzeImportFile(fresh = false, sheetOnly = false) {
-        const file = $imp('excel_file').files[0];
-        if (!file) return;
-
-        $imp('file-name').textContent = file.name;
-        $imp('file-info').classList.remove('hidden');
-        $imp('import-error').classList.add('hidden');$imp('import-loading').classList.remove('hidden');
-
-        const fd = new FormData();
-        fd.append('excel_file', file);
-        fd.append('_token', document.querySelector('#importForm input[name="_token"]').value);
-        if (!fresh) fd.append('sheet', $imp('import-sheet').value || 0);
-        if (!fresh && !sheetOnly && $imp('import-header-row').value) {
-            fd.append('header_row', $imp('import-header-row').value);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeExportModal();
         }
-
-        try {
-            const res  = await fetch(IMPORT_ANALYZE_URL, {
-                method: 'POST', body: fd,
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            });
-            const data = await res.json().catch(() => ({}));
-
-            $imp('import-loading').classList.add('hidden');
-
-            if (!res.ok) {
-                const firstErr = data.errors ? Object.values(data.errors)[0][0] : null;
-                showImportError(data.message && !data.errors ? data.message : (firstErr || 'Gagal membaca file.'));
-                return;
-            }
-            renderImportMapping(data);
-        } catch (e) {
-            $imp('import-loading').classList.add('hidden');
-            showImportError('Terjadi kesalahan jaringan/server: ' + e.message);
-        }
-    }
-
-    function showImportError(msg) {
-        const el = $imp('import-error');
-        el.textContent = msg;
-        el.classList.remove('hidden');
-        $imp('step-mapping').classList.add('hidden');$imp('btn-submit-import').disabled = true;
-    }
-
-    function renderImportMapping(data) {
-        $imp('import-sheet').innerHTML = data.sheets
-            .map((n, i) => `<option value="${i}" ${i === data.sheet ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
-        $imp('sheet-wrap').classList.toggle('hidden', data.sheets.length < 2);$imp('import-header-row').value = data.header_row;
-
-        const months = data.sheets
-            .map((n, i) => ({ i, m: monthOfSheet(n) }))
-            .filter(x => x.m)
-            .sort((a, b) => a.m - b.m);
-        const currentIsMonth = months.some(x => x.i === data.sheet);
-        $imp('import-month').innerHTML =
-            (currentIsMonth ? '' : '<option value="">-- Pilih bulan --</option>') +
-            months.map(x => `<option value="${x.m}" data-sheet="${x.i}" ${x.i === data.sheet ? 'selected' : ''}>${MONTH_NAMES_ID[x.m - 1]}</option>`).join('');
-        $imp('month-wrap').classList.toggle('hidden', months.length === 0);
-        if (!$imp('import-year').value)$imp('import-year').value = new Date().getFullYear();
-
-        const colOptions = data.columns
-            .map(c => `<option value="${c.index}">${escHtml(c.letter)} — ${escHtml(c.label)}</option>`).join('');
-
-        $imp('mapping-rows').innerHTML = IMPORT_FIELDS.map(f => {
-            const s = data.suggested[f.key];
-            let badge;
-            if (s && s.score >= 90)     badge = '<span class="text-xs text-emerald-600">✓ terdeteksi otomatis</span>';
-            else if (s)                 badge = '<span class="text-xs text-amber-600">⚠ perkiraan, mohon dicek</span>';
-            else if (f.required)        badge = '<span class="text-xs text-red-600">tidak terdeteksi, pilih manual</span>';
-            else                        badge = '<span class="text-xs text-gray-400">opsional</span>';
-
-            return `
-              <div class="grid grid-cols-2 gap-3 items-center">
-                <div>
-                  <div class="text-sm font-medium text-gray-700 dark:text-gray-300">${f.label}${f.required ? ' <span class="text-red-500">*</span>' : ''}</div>
-                  ${badge}
-                </div>
-                <select name="mapping[${f.key}]" data-field="${f.key}" onchange="checkImportReady()"
-                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm">
-                  <option value="">${f.required ? '-- Pilih kolom --' : '-- Tidak dipakai --'}</option>
-                  ${colOptions}
-                </select>
-              </div>`;
-        }).join('');
-
-        IMPORT_FIELDS.forEach(f => {
-            const s = data.suggested[f.key];
-            if (s) {
-                const selectEl = document.querySelector(`#mapping-rows select[data-field="${f.key}"]`);
-                if (selectEl) selectEl.value = s.column;
-            }
-        });
-
-        $imp('import-total').textContent = `(${data.total_rows} baris data)`;
-        $imp('import-preview').innerHTML =
-            '<thead class="bg-gray-50 dark:bg-gray-900/40"><tr>' +
-            data.preview_heads.map(h => `<th class="px-3 py-2 font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">${escHtml(h)}</th>`).join('') +
-            '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-700">' +
-            data.preview.map(r => '<tr>' + r.map(c => `<td class="px-3 py-1.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">${escHtml(c)}</td>`).join('') + '</tr>').join('') +
-            '</tbody>';
-
-        $imp('step-mapping').classList.remove('hidden');
-        checkImportReady();
-    }
-
-    function checkImportReady() {
-        const ok = IMPORT_FIELDS.filter(f => f.required).every(f => {
-            const sel = document.querySelector(`#mapping-rows select[data-field="${f.key}"]`);
-            return sel && sel.value !== '';
-        });
-        const mappedDept = document.querySelector('#mapping-rows select[data-field="department"]')?.value;
-        const deptOk  = $imp('import-department').value !== '' || (mappedDept && mappedDept !== '');
-        const monthOk = $imp('import-month').value !== '' \vert{}\vert{}$imp('month-wrap').classList.contains('hidden');
-        const yearOk  = $imp('import-year').value !== '';$imp('btn-submit-import').disabled = !(ok && deptOk && monthOk && yearOk);
-    }
-
-    $imp('importForm').addEventListener('submit', () => {
-        const b = $imp('btn-submit-import');
-        b.disabled = true;
-        b.textContent = 'Memproses…';
     });
 </script>
 @endpush
+@endsection
