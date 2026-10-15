@@ -30,8 +30,4 @@ class DepartmentStock extends Model
         return $this->belongsTo(Item::class);
     }
 
-    public function usages()
-{
-    return $this->hasMany(StockUsage::class, 'department_stock_id');
-}
 }
