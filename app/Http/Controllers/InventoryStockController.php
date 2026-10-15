@@ -6,6 +6,7 @@ use App\Exports\StockUsageExport;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\DepartmentStock;
+use App\Models\StockUsage;
 use App\Models\Item;
 use App\Models\StockLog;
 use App\Models\Unit;
