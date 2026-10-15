@@ -25,8 +25,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-start">
-
-            {{-- ✅ TOMBOL IMPORT EXCEL --}}
+            {{-- TOMBOL IMPORT EXCEL --}}
             <button type="button"
                     onclick="openImportModal()"
                     class="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
@@ -36,7 +35,7 @@
                 Import Excel
             </button>
 
-            {{-- ✅ TOMBOL EXPORT EXCEL --}}
+            {{-- TOMBOL EXPORT EXCEL --}}
             <button type="button"
                     onclick="openExportModal()"
                     class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition">
@@ -59,11 +58,11 @@
     </div>
 
     {{-- ============================================================
-         MAIN CARD (TABEL STOK)
+         MAIN CARD (FILTER & TABEL STOK)
     ============================================================ --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
-        {{-- Toolbar --}}
+        {{-- Toolbar / Filter Bar (Departemen & Periode Harian/Bulanan/Tahunan) --}}
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
@@ -85,10 +84,40 @@
                 </div>
             </div>
 
-            {{-- Filter Departemen --}}
-            @if(auth()->user()->hasRole('Super Admin'))
-                <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex items-center gap-2">
-                    <label for="department_id" class="sr-only">Filter Departemen</label>
+            {{-- Form Filter (Departemen & Periode Filter) --}}
+            <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
+                
+                {{-- Filter Periode Mode (Harian, Bulanan, Tahunan) --}}
+                <div class="relative">
+                    <select name="period_type" id="period_type" onchange="this.form.submit()"
+                            class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 transition cursor-pointer">
+                        <option value="daily" {{ request('period_type', 'daily') == 'daily' ? 'selected' : '' }}>Harian (Tanggal)</option>
+                        <option value="monthly" {{ request('period_type') == 'monthly' ? 'selected' : '' }}>Bulanan</option>
+                        <option value="yearly" {{ request('period_type') == 'yearly' ? 'selected' : '' }}>Tahunan</option>
+                    </select>
+                    <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+
+                {{-- Input Nilai Periode Berdasarkan Mode --}}
+                @if(request('period_type', 'daily') == 'monthly')
+                    <input type="month" name="period_value" value="{{ request('period_value', now()->format('Y-m')) }}" onchange="this.form.submit()"
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                @elseif(request('period_type') == 'yearly')
+                    <select name="period_value" onchange="this.form.submit()"
+                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                        @for($y = date('Y'); $y >= date('Y') - 5; $y--)
+                            <option value="{{ $y }}" {{ request('period_value', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endfor
+                    </select>
+                @else
+                    <input type="date" name="period_value" value="{{ request('period_value', now()->format('Y-m-d')) }}" onchange="this.form.submit()"
+                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
+                @endif
+
+                {{-- Filter Departemen (Khusus Super Admin) --}}
+                @if(auth()->user()->hasRole('Super Admin'))
                     <div class="relative">
                         <select name="department_id" id="department_id" onchange="this.form.submit()"
                                 class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition cursor-pointer">
@@ -103,17 +132,18 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                    @if(request('department_id'))
-                        <a href="{{ route('inventory.stock.index') }}"
-                           class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                           title="Reset filter">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </a>
-                    @endif
-                </form>
-            @endif
+                @endif
+
+                @if(request('department_id') || request('period_value'))
+                    <a href="{{ route('inventory.stock.index') }}"
+                       class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                       title="Reset filter">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </a>
+                @endif
+            </form>
         </header>
 
         {{-- Table --}}
@@ -123,6 +153,8 @@
                     <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Departemen</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nama Barang / Item</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Stok Awal</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Stok Terpakai</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Sisa Stok</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Terakhir Diperbarui</th>
                         @if(!auth()->user()->hasRole('Super Admin'))
@@ -133,9 +165,13 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                     @forelse($stocks as $stock)
                         @php
-                            $stockValue = (int) $stock->stock;
-                            $isLow = $stockValue <= 5;
-                            $isCritical = $stockValue <= 2;
+                            // Variabel penunjang kalkulasi (pastikan properti ini sudah disiapkan di Controller/Model)
+                            $initialStock = (int) ($stock->initial_stock ?? $stock->stock); 
+                            $usedStock    = (int) ($stock->used_stock ?? 0);
+                            $remaining    = (int) ($stock->stock ?? ($initialStock - $usedStock));
+
+                            $isLow = $remaining <= 5;
+                            $isCritical = $remaining <= 2;
                         @endphp
                         <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <td class="px-6 py-4">
@@ -158,24 +194,37 @@
                                     </div>
                                 @endif
                             </td>
+                            
+                            {{-- Stok Awal --}}
+                            <td class="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
+                                {{ $initialStock }}
+                            </td>
+
+                            {{-- Stok Terpakai --}}
+                            <td class="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">
+                                {{ $usedStock }}
+                            </td>
+
+                            {{-- Sisa Stok --}}
                             <td class="px-6 py-4 text-center">
                                 @if($isCritical)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-200 dark:ring-red-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                        {{ $stockValue }} Unit
+                                        {{ $remaining }} Unit
                                     </span>
                                 @elseif($isLow)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                        {{ $stockValue }} Unit
+                                        {{ $remaining }} Unit
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                        {{ $stockValue }} Unit
+                                        {{ $remaining }} Unit
                                     </span>
                                 @endif
                             </td>
+
                             <td class="px-6 py-4 text-right">
                                 <div class="text-xs font-medium text-gray-600 dark:text-gray-300">
                                     {{ $stock->updated_at->format('d M Y') }}
@@ -198,7 +247,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->hasRole('Super Admin') ? '4' : '5' }}" class="px-6 py-16">
+                            <td colspan="{{ auth()->user()->hasRole('Super Admin') ? '6' : '7' }}" class="px-6 py-16">
                                 <div class="flex flex-col items-center justify-center text-center">
                                     <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 mb-4">
                                         <svg class="h-7 w-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
@@ -226,14 +275,14 @@
     </section>
 </div>
 
-{{-- ═══════════════════════════════════════════════════════════════
-     MODAL: IMPORT EXCEL (dipindah ke partial)
-═══════════════════════════════════════════════════════════════ --}}
+{{-- ============================================================
+     MODAL: IMPORT EXCEL
+============================================================ --}}
 @include('inventory.stock._import-modal')
 
-{{-- ═══════════════════════════════════════════════════════════════
+{{-- ============================================================
      MODAL: EXPORT EXCEL
-═══════════════════════════════════════════════════════════════ --}}
+============================================================ --}}
 <div id="exportModal"
      class="fixed inset-0 z-50 hidden"
      role="dialog"
@@ -305,7 +354,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                            File Excel akan berisi daftar lengkap pemakaian stok harian dengan tanggal, jam, nama barang, jumlah, dan waktu update terakhir.
+                            File Excel akan berisi rekapitulasi Stok Awal, Stok Terpakai, dan Sisa Stok sesuai periode yang dipilih.
                         </p>
                     </div>
                 </div>
@@ -330,7 +379,6 @@
 
 @push('scripts')
 <script>
-    // --- Script Modal Export ---
     function openExportModal() {
         document.getElementById('exportModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -341,7 +389,6 @@
         document.body.style.overflow = '';
     }
 
-    // Escape key untuk menutup modal
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeExportModal();
