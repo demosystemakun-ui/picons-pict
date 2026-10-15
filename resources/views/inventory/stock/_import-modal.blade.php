@@ -63,7 +63,7 @@
             <form action="{{ route('inventory.stock.import-process') }}" method="POST" enctype="multipart/form-data" id="importForm">
                 @csrf
 
-                {{-- Upload --}}
+                {{-- Upload Section --}}
                 <div id="step-upload">
                     <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:bg-gray-50 dark:hover:bg-gray-700/30 transition cursor-pointer"
                          onclick="document.getElementById('excel_file').click()">
@@ -87,7 +87,7 @@
                     <p id="import-error" class="hidden mt-3 text-sm text-red-600"></p>
                 </div>
 
-                {{-- Mapping --}}
+                {{-- Mapping & Configuration Section --}}
                 <div id="step-mapping" class="hidden mt-6">
                     <div class="grid grid-cols-2 gap-3 mb-4">    
                         <div id="month-wrap">        
@@ -196,7 +196,6 @@
         return null;
     }
 
-    // user pilih bulan -> pindah ke sheet bulan itu
     function onMonthChange() {
         const opt = $imp('import-month').selectedOptions[0];
         if (!opt || opt.dataset.sheet === undefined) { checkImportReady(); return; }
@@ -225,10 +224,6 @@
         $imp('file-name').textContent = '';
     }
 
-    /**
-     * @param {boolean} fresh      file baru dipilih (header & sheet auto)
-     * @param {boolean} sheetOnly  user ganti sheet (header auto lagi)
-     */
     async function analyzeImportFile(fresh = false, sheetOnly = false) {
         const file = $imp('excel_file').files[0];
         if (!file) return;
@@ -274,12 +269,10 @@
     }
 
     function renderImportMapping(data) {
-        // Sheet & header
         $imp('import-sheet').innerHTML = data.sheets
             .map((n, i) => `<option value="${i}" ${i === data.sheet ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
         $imp('sheet-wrap').classList.toggle('hidden', data.sheets.length < 2);$imp('import-header-row').value = data.header_row;
 
-        // Filter bulan: hanya sheet yang namanya nama bulan, urut kalender
         const months = data.sheets
             .map((n, i) => ({ i, m: monthOfSheet(n) }))
             .filter(x => x.m)
@@ -291,7 +284,6 @@
         $imp('month-wrap').classList.toggle('hidden', months.length === 0);
         if (!$imp('import-year').value)$imp('import-year').value = new Date().getFullYear();
 
-        // Baris mapping
         const colOptions = data.columns
             .map(c => `<option value="${c.index}">${escHtml(c.letter)} — ${escHtml(c.label)}</option>`).join('');
 
@@ -325,7 +317,6 @@
             }
         });
 
-        // Preview
         $imp('import-total').textContent = `(${data.total_rows} baris data)`;
         $imp('import-preview').innerHTML =
             '<thead class="bg-gray-50 dark:bg-gray-900/40"><tr>' +
