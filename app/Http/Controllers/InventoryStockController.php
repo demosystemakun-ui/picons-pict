@@ -93,30 +93,30 @@ class InventoryStockController extends Controller
 // Contoh method saat tombol "Pakai" disubmit
 public function processUseItem(Request $request, $id)
 {
-    $request->validate([
-        'quantity' => 'required|integer|min:1'
+    $validated = $request->validate([
+        'quantity' => 'required|numeric|min:1', // Ubah dari 'used_stock' menjadi 'quantity'
     ]);
 
     $stock = DepartmentStock::findOrFail($id);
 
-    if ($stock->stock < $request->quantity) {
-        return back()->with('error', 'Stok tidak mencukupi!');
+    if ($stock->stock < $validated['quantity']) {
+        return back()->with('error', 'Jumlah pemakaian melebihi sisa stok yang tersedia!');
     }
 
-    // Kurangi sisa stok utama
-    $stock->stock -= $request->quantity;
+    // Kurangi stok utama
+    $stock->stock -= $validated['quantity'];
     $stock->save();
 
-    // Catat ke log riwayat pemakaian
-    $stock->usages()->create([
-        'user_id'       => auth()->id(),
-        'quantity_used' => $request->quantity,
+    // Catat ke log pemakaian (StockUsage)
+    StockUsage::create([
+        'department_stock_id' => $stock->id,
+        'user_id'             => auth()->id(),
+        'quantity_used'       => $validated['quantity'], // Simpan ke kolom quantity_used
     ]);
 
     return redirect()->route('inventory.stock.index')
         ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
 }
-
 
 
 
