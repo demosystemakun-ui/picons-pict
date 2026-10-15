@@ -101,6 +101,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
         ->name('inventory.stock.index');
 
+        Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
+    ->name('inventory.stock.usage-detail');
+
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
     ───────────────────────────────────────────── */
@@ -153,6 +156,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/consumable-requests/{consumableRequest}/reject', [ConsumableRequestController::class, 'reject'])
             ->name('consumable-requests.reject');
+
     });
 
     /* ─────────────────────────────────────────────

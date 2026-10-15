@@ -704,4 +704,73 @@ class InventoryStockController extends Controller
             $filename
         );
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+   USAGE DETAIL — Riwayat pemakaian per item-departemen
+═══════════════════════════════════════════════════════════════ */
+public function usageDetail(Request $request, $id)
+{
+    $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
+
+    $this->authorizeDepartment($stock);
+
+    // Filter periode
+    $periodType = $request->get('period_type', 'monthly');
+    if (!in_array($periodType, ['daily', 'monthly', 'yearly', 'all'], true)) {
+        $periodType = 'monthly';
+    }
+
+    $rawValue = (string) $request->get('period_value', now()->format('Y-m'));
+
+    switch ($periodType) {
+        case 'yearly':
+            $periodValue = preg_match('/^\d{4}/', $rawValue) ? substr($rawValue, 0, 4) : now()->format('Y');
+            break;
+        case 'monthly':
+            $periodValue = preg_match('/^\d{4}-\d{2}/', $rawValue) ? substr($rawValue, 0, 7) : now()->format('Y-m');
+            break;
+        case 'all':
+            $periodValue = null;
+            break;
+        default:
+            $periodValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValue)
+                ? $rawValue
+                : now()->format('Y-m-d');
+    }
+
+    // Query pemakaian
+    $query = StockUsage::with(['user', 'user.department'])
+        ->where('department_stock_id', $stock->id);
+
+    if ($periodType === 'monthly' && $periodValue) {
+        $d = Carbon::createFromFormat('Y-m', $periodValue);
+        $query->whereYear('created_at', $d->year)
+              ->whereMonth('created_at', $d->month);
+    } elseif ($periodType === 'yearly' && $periodValue) {
+        $query->whereYear('created_at', (int) $periodValue);
+    } elseif ($periodType === 'daily' && $periodValue) {
+        $query->whereDate('created_at', $periodValue);
+    }
+
+    $usages = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->all());
+
+    // Total pemakaian di periode ini
+    $totalUsed = (clone $query)->sum('quantity_used');
+
+    // Total pemakaian sepanjang waktu
+    $totalUsedAllTime = StockUsage::where('department_stock_id', $stock->id)->sum('quantity_used');
+
+    // Rekap per user
+    $perUser = StockUsage::select('user_id', DB::raw('SUM(quantity_used) as total'))
+        ->with('user')
+        ->where('department_stock_id', $stock->id)
+        ->groupBy('user_id')
+        ->orderByDesc('total')
+        ->get();
+
+    return view('inventory.stock.usage-detail', compact(
+        'stock', 'usages', 'totalUsed', 'totalUsedAllTime',
+        'perUser', 'periodType', 'periodValue'
+    ));
+}
 }

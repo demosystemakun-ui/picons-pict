@@ -40,24 +40,25 @@ class StockUsageExport implements
      * Query dari tabel stock_logs.
      * Return type Enumerable/Collection WAJIB agar sesuai interface FromCollection di PHP 8.5.
      */
-    public function collection(): Enumerable
-    {
-        $query = StockLog::query()
-            ->with(['item.unit', 'department', 'user'])
-            ->orderBy('created_at', 'desc');
-
-        if ($this->startDate) {
-            $query->whereDate('created_at', '>=', $this->startDate);
-        }
-
-        if ($this->endDate) {
-            $query->whereDate('created_at', '<=', $this->endDate);
-        }
-
-        if ($this->departmentId) {
-            $query->where('department_id', $this->departmentId);
-        }
-
+   public function collection()
+{
+    return StockUsage::with(['user', 'user.department', 'departmentStock.item', 'departmentStock.department'])
+        ->whereBetween('created_at', [$this->startDate, $this->endDate . ' 23:59:59'])
+        ->when($this->departmentId, fn ($q) => $q->whereHas('departmentStock', fn ($q2) => $q2->where('department_id', $this->departmentId)))
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($u) {
+            return [
+                'Tanggal'      => $u->created_at->format('d M Y H:i'),
+                'Departemen'   => $u->departmentStock->department->name ?? '-',
+                'Kode Item'    => $u->departmentStock->item->item_code ?? '-',
+                'Nama Item'    => $u->departmentStock->item->item_name ?? '-',
+                'Pemakai'      => $u->user->name ?? 'User dihapus',
+                'Dept Pemakai' => $u->user->department->name ?? '-',
+                'Jumlah Pakai' => $u->quantity_used,
+            ];
+        });
+}
         return $query->get();
     }
 
