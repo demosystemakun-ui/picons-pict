@@ -50,11 +50,11 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        INDEX — Tampilan Tabel Stok
     ═══════════════════════════════════════════════════════════════ */
-  public function index(Request $request)
+public function index(Request $request)
 {
     $user  = auth()->user();
     
-    // Ambil parameter filter periode (default: harian / hari ini)
+    // Ambil parameter filter periode
     $periodType  = $request->get('period_type', 'daily');
     $periodValue = $request->get('period_value', now()->format('Y-m-d'));
 
@@ -70,7 +70,7 @@ class InventoryStockController extends Controller
         $departments = Department::all();
     }
 
-    // Menghitung jumlah terpakai (used_stock) berdasarkan filter periode
+    // Pastikan withSum untuk menghitung 'used_stock' dipasang di sini agar berjalan untuk SEMUA role
     $query->withSum(['usages as used_stock' => function ($q) use ($periodType, $periodValue) {
         if ($periodType == 'monthly') {
             $q->whereYear('created_at', substr($periodValue, 0, 4))
@@ -89,35 +89,6 @@ class InventoryStockController extends Controller
 
     return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
 }
-
-// Contoh method saat tombol "Pakai" disubmit
-public function processUseItem(Request $request, $id)
-{
-    $validated = $request->validate([
-        'used_stock' => 'required|numeric|min:1', // Diubah dari 'quantity' menjadi 'used_stock'
-    ]);
-
-    $stock = DepartmentStock::findOrFail($id);
-
-    if ($stock->stock < $validated['used_stock']) {
-        return back()->with('error', 'Jumlah pemakaian melebihi sisa stok yang tersedia!');
-    }
-
-    // Kurangi stok utama
-    $stock->stock -= $validated['used_stock'];
-    $stock->save();
-
-    // Catat ke log pemakaian (StockUsage)
-    StockUsage::create([
-        'department_stock_id' => $stock->id,
-        'user_id'             => auth()->id(),
-        'quantity_used'       => $validated['used_stock'],
-    ]);
-
-    return redirect()->route('inventory.stock.index')
-        ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
-}
-
 
 
     /* ═══════════════════════════════════════════════════════════════
