@@ -149,8 +149,8 @@ class ProcurementRequestController extends Controller
 
         /* ═══ Hapus file lama di Supabase Storage jika ada perubahan ═══ */
         foreach ($procurementRequest->items as $oldItem) {
-            if ($oldItem->picture && Storage::disk('supabase-procurement-request-items')->exists($oldItem->picture)) {
-                Storage::disk('supabase-procurement-request-items')->delete($oldItem->picture);
+            if ($oldItem->picture && Storage::disk('supabase-procurement_request')->exists($oldItem->picture)) {
+                Storage::disk('supabase-procurement_request')->delete($oldItem->picture);
             }
         }
 
@@ -161,14 +161,14 @@ class ProcurementRequestController extends Controller
             $picturePath = $itemData['existing_picture'] ?? null;
 
             if ($request->hasFile("items.{$index}.picture")) {
-                if ($picturePath && Storage::disk('supabase-procurement-request-items')->exists($picturePath)) {
-                    Storage::disk('supabase-procurement-request-items')->delete($picturePath);
+                if ($picturePath && Storage::disk('supabase-procurement_request')->exists($picturePath)) {
+                    Storage::disk('supabase-procurement_request')->delete($picturePath);
                 }
 
                 $pic     = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
                 // Disimpan langsung ke disk Supabase Storage
-                $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement-request-items');
+                $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement_request');
             }
 
             $procurementRequest->items()->create([
@@ -191,8 +191,8 @@ class ProcurementRequestController extends Controller
     public function destroy(ProcurementRequest $procurementRequest)
     {
         foreach ($procurementRequest->items as $item) {
-            if ($item->picture && Storage::disk('supabase-procurement-request-items')->exists($item->picture)) {
-                Storage::disk('supabase-procurement-request-items')->delete($item->picture);
+            if ($item->picture && Storage::disk('supabase-procurement_request')->exists($item->picture)) {
+                Storage::disk('supabase-procurement_request')->delete($item->picture);
             }
         }
 
@@ -227,10 +227,10 @@ class ProcurementRequestController extends Controller
         $filePath = $folder . '/' . $filename;
 
         // Simpan PDF ke Supabase Storage
-        Storage::disk('supabase-procurement-request-items')->put($filePath, $pdf->output());
+        Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
         // Ambil URL publik dari Supabase untuk di-redirect/ditampilkan
-        $pdfUrl = Storage::disk('supabase-procurement-request-items')->url($filePath);
+        $pdfUrl = Storage::disk('supabase-procurement_request')->url($filePath);
 
         return redirect()->away($pdfUrl);
     }
@@ -310,9 +310,9 @@ class ProcurementRequestController extends Controller
         $filePath = $folder . '/' . $filename;
 
         // Simpan PDF Final ke Supabase Storage
-        Storage::disk('supabase-procurement-request-items')->put($filePath, $pdf->output());
+        Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
-        $pdfUrl = Storage::disk('supabase-procurement-request-items')->url($filePath);
+        $pdfUrl = Storage::disk('supabase-procurement_request')->url($filePath);
 
         return redirect()->away($pdfUrl);
     }

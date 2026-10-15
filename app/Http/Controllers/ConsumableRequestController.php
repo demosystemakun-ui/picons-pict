@@ -76,7 +76,7 @@ class ConsumableRequestController extends Controller
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
                 
                 // Disimpan langsung ke Supabase Storage menggunakan disk kustom
-                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-request-items');
+                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-consumable_request');
             }
 
             $consumableRequest->items()->create([
@@ -166,8 +166,8 @@ class ConsumableRequestController extends Controller
 
         // Hapus file lama di Supabase Storage jika ada
         foreach ($consumableRequest->items as $oldItem) {
-            if ($oldItem->picture && Storage::disk('supabase-request-items')->exists($oldItem->picture)) {
-                Storage::disk('supabase-request-items')->delete($oldItem->picture);
+            if ($oldItem->picture && Storage::disk('supabase-consumable_request')->exists($oldItem->picture)) {
+                Storage::disk('supabase-consumable_request')->delete($oldItem->picture);
             }
         }
         $consumableRequest->items()->delete();
@@ -177,7 +177,7 @@ class ConsumableRequestController extends Controller
             if ($request->hasFile("items.{$index}.picture")) {
                 $pic = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-request-items');
+                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-consumable_request');
             }
 
             $consumableRequest->items()->create([
@@ -208,8 +208,8 @@ class ConsumableRequestController extends Controller
         }
 
         foreach ($consumableRequest->items as $item) {
-            if ($item->picture && Storage::disk('supabase-request-items')->exists($item->picture)) {
-                Storage::disk('supabase-request-items')->delete($item->picture);
+            if ($item->picture && Storage::disk('supabase-consumable_request')->exists($item->picture)) {
+                Storage::disk('supabase-consumable_request')->delete($item->picture);
             }
         }
 

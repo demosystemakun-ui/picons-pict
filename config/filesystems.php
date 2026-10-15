@@ -61,12 +61,12 @@ return [
         ],
 
          // Disk khusus untuk Bucket consumable di Supabase
-        'supabase-request-items' => [
+        'supabase-consumable_request' => [
             'driver'                  => 's3',
             'key'                     => env('SUPABASE_S3_KEY'),
             'secret'                  => env('SUPABASE_S3_SECRET'),
             'region'                  => env('SUPABASE_S3_REGION', 'ap-northeast-1'),
-            'bucket'                  => env('SUPABASE_REQUEST-ITEMS_BUCKET', 'request-items'),
+            'bucket'                  => env('SUPABASE_CONSUMABLE_REQUEST_BUCKET', 'consumable_request'),
             'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'visibility'              => 'public',
@@ -74,12 +74,12 @@ return [
             'report'                  => false,
         ],
 
-         'supabase-procurement-request-items' => [
+         'supabase-procurement_request' => [
             'driver'                  => 's3',
             'key'                     => env('SUPABASE_S3_KEY'),
             'secret'                  => env('SUPABASE_S3_SECRET'),
             'region'                  => env('SUPABASE_S3_REGION', 'ap-northeast-1'),
-            'bucket'                  => env('SUPABASE_PROCUREMENT-REQUEST-ITEMS_BUCKET', 'procurement-request-items'),
+            'bucket'                  => env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request'),
             'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'visibility'              => 'public',
