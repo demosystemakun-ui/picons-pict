@@ -25,17 +25,19 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-start">
-            {{-- TOMBOL IMPORT EXCEL --}}
-            <button type="button"
-                    onclick="openImportModal()"
-                    class="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
-                Import Excel
-            </button>
+            {{-- TOMBOL IMPORT EXCEL — hanya Super Admin --}}
+            @if(auth()->user()->hasRole('Super Admin'))
+                <button type="button"
+                        onclick="openImportModal()"
+                        class="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    Import Excel
+                </button>
+            @endif
 
-            {{-- TOMBOL EXPORT EXCEL --}}
+            {{-- TOMBOL EXPORT EXCEL — semua role --}}
             <button type="button"
                     onclick="openExportModal()"
                     class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition">
@@ -84,10 +86,9 @@
                 </div>
             </div>
 
-            {{-- Form Filter (Periode & Departemen) --}}
+            {{-- Form Filter --}}
             <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
-                
-                {{-- Filter Periode Mode (Harian, Bulanan, Tahunan) --}}
+                {{-- Filter Periode Mode --}}
                 <div class="relative">
                     <select name="period_type" id="period_type" onchange="this.form.submit()"
                             class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 transition cursor-pointer">
@@ -166,8 +167,8 @@
                     @forelse($stocks as $stock)
                         @php
                             $usedStock    = (int) ($stock->used_stock ?? 0);
-                            $currentStock = (int) $stock->stock; 
-                            $initialStock = $currentStock + $usedStock; 
+                            $currentStock = (int) $stock->stock;
+                            $initialStock = $currentStock + $usedStock;
 
                             $isLow = $currentStock <= 5;
                             $isCritical = $currentStock <= 2;
@@ -193,7 +194,7 @@
                                     </div>
                                 @endif
                             </td>
-                            
+
                             {{-- Stok Awal --}}
                             <td class="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
                                 {{ $initialStock }}
@@ -275,9 +276,11 @@
 </div>
 
 {{-- ============================================================
-     MODAL: IMPORT EXCEL
+     MODAL: IMPORT EXCEL — hanya render untuk Super Admin
 ============================================================ --}}
-@include('inventory.stock._import-modal')
+@if(auth()->user()->hasRole('Super Admin'))
+    @include('inventory.stock._import-modal')
+@endif
 
 {{-- ============================================================
      MODAL: EXPORT EXCEL
