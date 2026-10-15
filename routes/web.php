@@ -74,13 +74,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/inventory/stock', [InventoryStockController::class, 'store'])
             ->name('inventory.stock.store');
 
-        // ✅ Route Import Excel via Modal
+        // ✅ Import Excel — Step 1: analisa file & deteksi kolom otomatis (AJAX)
+        Route::post('/inventory/stock/import-analyze', [InventoryStockController::class, 'importAnalyze'])
+            ->name('inventory.stock.import-analyze');
+
+        // ✅ Import Excel — Step 2: proses import sesuai mapping
         Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])
             ->name('inventory.stock.import-process');
-
-        // ✅ Route Import Langsung (Debug bypass UI)
-        Route::get('/inventory/stock/import-langsung', [InventoryStockController::class, 'importLangsung'])
-            ->name('inventory.stock.import-langsung');
     });
 
     // ⚠️ STATIC ROUTES — HARUS DI ATAS route dengan {id}
@@ -224,7 +224,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('reimbursement', ReimbursementController::class);
 
     /* ─────────────────────────────────────────────
-       DEBUG LOG
+       DEBUG LOG (hapus jika sudah tidak diperlukan)
     ───────────────────────────────────────────── */
     Route::get('/debug-log', function () {
         return [
