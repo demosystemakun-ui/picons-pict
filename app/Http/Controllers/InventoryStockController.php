@@ -8,15 +8,15 @@ use App\Models\Department;
 use App\Models\DepartmentStock;
 use App\Models\StockUsage;
 use App\Models\Item;
-use App\Models\StockLog;
 use App\Models\Unit;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-
 
 class InventoryStockController extends Controller
 {
@@ -27,7 +27,6 @@ class InventoryStockController extends Controller
      * Kamus alias nama kolom (sudah dalam bentuk ternormalisasi:
      * huruf kecil, tanpa simbol, spasi tunggal). Tambah sendiri kalau perlu.
      */
-
     private const FIELD_ALIASES = [
         'department' => [
             'departemen', 'department', 'dept', 'dep', 'unit kerja', 'divisi', 'division',
@@ -49,56 +48,91 @@ class InventoryStockController extends Controller
     ];
 
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Tampilan Tabel Stok
+       HELPER ROLE
+       Satu sumber kebenaran: Super Admin & Admin = akses penuh.
     ═══════════════════════════════════════════════════════════════ */
-public function index(Request $request)
-{
-    $user  = auth()->user();
-    
-    // Ambil parameter filter periode
-    $periodType  = $request->get('period_type', 'daily');
-    $periodValue = $request->get('period_value', now()->format('Y-m-d'));
-
-    $query = DepartmentStock::with(['department', 'item']);
-
-    // JIKA BUKAN SUPER ADMIN DAN BUKAN ADMIN (Sesuaikan role admin Anda jika ada, misal 'Admin' atau 'Warehouse')
-    // Jika role Admin ingin melihat seluruh stok juga, cukup izinkan Super Admin & Admin melihat semua.
-    if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin')) {
-        // Jika murni user biasa/staff departemen, batasi hanya departemennya sendiri:
-        $query->where('department_id', $user->department_id);
-        $departments = collect([$user->department]);
-    } else {
-        // Untuk Super Admin & Admin: bisa filter berdasarkan department_id atau lihat semua
-        if ($request->has('department_id') && $request->department_id != '') {
-            $query->where('department_id', $request->department_id);
-        }
-        $departments = Department::all();
+    private function isPrivileged(): bool
+    {
+        $user = auth()->user();
+        return $user->hasRole('Super Admin') || $user->hasRole('Admin');
     }
 
-    // Menghitung jumlah terpakai (used_stock) secara real-time berdasarkan filter periode
-    $query->withSum(['usages as used_stock' => function ($q) use ($periodType, $periodValue) {
-        if ($periodType == 'monthly') {
-            $q->whereYear('created_at', substr($periodValue, 0, 4))
-              ->whereMonth('created_at', substr($periodValue, 5, 2));
-        } elseif ($periodType == 'yearly') {
-            $q->whereYear('created_at', $periodValue);
-        } else {
-            $q->whereDate('created_at', $periodValue);
+    /* ═══════════════════════════════════════════════════════════════
+       INDEX — Tampilan Tabel Stok
+    ═══════════════════════════════════════════════════════════════ */
+    public function index(Request $request)
+    {
+        $user       = auth()->user();
+        $isPrivileged = $this->isPrivileged();
+
+        // ── Normalisasi filter periode ──
+        $periodType = $request->get('period_type', 'daily');
+        if (!in_array($periodType, ['daily', 'monthly', 'yearly'], true)) {
+            $periodType = 'daily';
         }
-    }], 'quantity_used');
 
-    $stocks = $query->orderBy('updated_at', 'desc')->paginate(15)->appends($request->all());
+        $rawValue = (string) $request->get('period_value', now()->format('Y-m-d'));
 
-    $categories = Category::all();
-    $units      = Unit::all();
+        // Saat user ganti tipe periode, period_value lama (mis. 2026-10-15)
+        // masih terkirim. Potong sesuai tipe supaya filter tidak salah.
+        switch ($periodType) {
+            case 'yearly':
+                $periodValue = preg_match('/^\d{4}/', $rawValue) ? substr($rawValue, 0, 4) : now()->format('Y');
+                break;
+            case 'monthly':
+                $periodValue = preg_match('/^\d{4}-\d{2}/', $rawValue) ? substr($rawValue, 0, 7) : now()->format('Y-m');
+                break;
+            default:
+                $periodValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawValue)
+                    ? $rawValue
+                    : (preg_match('/^\d{4}-\d{2}$/', $rawValue) ? $rawValue . '-01' : now()->format('Y-m-d'));
+        }
 
-    return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
-}
+        // ── Query dasar (sama untuk semua role, bedanya hanya filter departemen) ──
+        $query = DepartmentStock::with(['department', 'item']);
+
+        if (!$isPrivileged) {
+            $query->where('department_id', $user->department_id);
+            $departments = collect([$user->department])->filter();
+        } else {
+            if ($request->filled('department_id')) {
+                $query->where('department_id', $request->department_id);
+            }
+            $departments = Department::all();
+        }
+
+        // ── Total pemakaian sesuai periode (subquery eksplisit, sama untuk semua role) ──
+        $usedSub = StockUsage::query()
+            ->selectRaw('COALESCE(SUM(quantity_used), 0)')
+            ->whereColumn('stock_usages.department_stock_id', 'department_stocks.id');
+
+        if ($periodType === 'monthly') {
+            $d = Carbon::createFromFormat('Y-m', $periodValue);
+            $usedSub->whereYear('stock_usages.created_at', $d->year)
+                    ->whereMonth('stock_usages.created_at', $d->month);
+        } elseif ($periodType === 'yearly') {
+            $usedSub->whereYear('stock_usages.created_at', (int) $periodValue);
+        } else {
+            $usedSub->whereDate('stock_usages.created_at', $periodValue);
+        }
+
+        $query->select('department_stocks.*')
+              ->addSelect(['used_stock' => $usedSub]);
+
+        $stocks = $query->orderBy('updated_at', 'desc')
+                        ->paginate(15)
+                        ->appends($request->all());
+
+        $categories = Category::all();
+        $units      = Unit::all();
+
+        return view('inventory.stock.index', compact(
+            'stocks', 'departments', 'categories', 'units', 'isPrivileged'
+        ));
+    }
 
     /* ═══════════════════════════════════════════════════════════════
        IMPORT STEP 1 — Analisa file (AJAX)
-       Mengembalikan: daftar sheet, baris header, daftar kolom,
-       tebakan mapping otomatis, dan preview beberapa baris data.
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
@@ -162,33 +196,7 @@ public function index(Request $request)
             'total_rows'    => max(0, count($rows) - $headerIdx - 1),
         ]);
     }
-    
-    public function processUseItem(Request $request, $id)
-{
-    $validated = $request->validate([
-        'used_stock' => 'required|numeric|min:1',
-    ]);
 
-    $stock = DepartmentStock::findOrFail($id);
-
-    if ($stock->stock < $validated['used_stock']) {
-        return back()->with('error', 'Jumlah pemakaian melebihi sisa stok yang tersedia!');
-    }
-
-    // Kurangi stok utama
-    $stock->stock -= $validated['used_stock'];
-    $stock->save();
-
-    // Catat ke log pemakaian (StockUsage)
-    StockUsage::create([
-        'department_stock_id' => $stock->id,
-        'user_id'             => auth()->id(),
-        'quantity_used'       => $validated['used_stock'],
-    ]);
-
-    return redirect()->route('inventory.stock.index')
-        ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
-}
     /* ═══════════════════════════════════════════════════════════════
        IMPORT STEP 2 — Proses import berdasarkan mapping
     ═══════════════════════════════════════════════════════════════ */
@@ -330,7 +338,7 @@ public function index(Request $request)
                 // ── Departemen ──
                 $department = $this->resolveDepartment($deptName, $deptCache, $newDepts);
 
-                // ── Stok (atribut di-set langsung, tidak tergantung $fillable) ──
+                // ── Stok ──
                 $ds = DepartmentStock::where('item_id', $item->id)
                     ->where('department_id', $department->id)
                     ->first() ?? new DepartmentStock();
@@ -389,7 +397,6 @@ public function index(Request $request)
             $sheetIndex = 0;
         }
 
-        // calculateFormulas=true, formatData=false (nilai mentah, angka tetap angka)
         $rows = $spreadsheet->getSheet($sheetIndex)->toArray(null, true, false, false);
         $spreadsheet->disconnectWorksheets();
 
@@ -428,7 +435,7 @@ public function index(Request $request)
         return $best;
     }
 
-    /** Tebak mapping: field => ['column' => index, 'score' => skor] (1 kolom hanya untuk 1 field) */
+    /** Tebak mapping: field => ['column' => index, 'score' => skor] */
     private function suggestMapping(array $labels): array
     {
         $candidates = [];
@@ -460,7 +467,7 @@ public function index(Request $request)
         return $map;
     }
 
-    /** 100 = sama persis; 63-80 = mengandung alias; <=85 = mirip (typo) */
+    /** 100 = sama persis; 60-80 = mengandung alias; mirip (typo) = skala persen */
     private function scoreHeader(string $norm, array $aliases): int
     {
         if ($norm === '') {
@@ -592,11 +599,57 @@ public function index(Request $request)
     {
         $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
 
-        if (!auth()->user()->hasRole('Super Admin') && $stock->department_id !== auth()->user()->department_id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorizeDepartment($stock);
 
         return view('inventory.stock.use', compact('stock'));
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       USE — Proses pemakaian barang
+    ═══════════════════════════════════════════════════════════════ */
+    public function processUseItem(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'used_stock' => 'required|integer|min:1',
+        ]);
+
+        $error = null;
+
+        DB::transaction(function () use ($id, $validated, &$error) {
+            // lockForUpdate mencegah dua pemakaian bersamaan membuat stok minus
+            $stock = DepartmentStock::lockForUpdate()->findOrFail($id);
+
+            $this->authorizeDepartment($stock);
+
+            if ($stock->stock < $validated['used_stock']) {
+                $error = 'Jumlah pemakaian melebihi sisa stok yang tersedia!';
+                return;
+            }
+
+            $stock->stock -= $validated['used_stock'];
+            $stock->save();
+
+            StockUsage::create([
+                'department_stock_id' => $stock->id,
+                'user_id'             => auth()->id(),
+                'quantity_used'       => $validated['used_stock'],
+            ]);
+        });
+
+        if ($error) {
+            return back()->with('error', $error);
+        }
+
+        return redirect()->route('inventory.stock.index')
+            ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
+    }
+
+    /** Non-admin hanya boleh mengakses stok departemennya sendiri */
+    private function authorizeDepartment(DepartmentStock $stock): void
+    {
+        if (!$this->isPrivileged() && (int) $stock->department_id !== (int) auth()->user()->department_id) {
+            abort(403, 'Unauthorized action.');
+        }
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -613,7 +666,7 @@ public function index(Request $request)
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
 
-        $departmentId = auth()->user()->hasRole('Super Admin')
+        $departmentId = $this->isPrivileged()
             ? $request->input('department_id')
             : auth()->user()->department_id;
 
