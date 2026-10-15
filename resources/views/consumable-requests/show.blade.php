@@ -152,12 +152,12 @@
                             </div>
                         </div>
 
-                        {{-- Picture dari Supabase Storage (Menggunakan disk supabase-consumable_request) --}}
+                        {{-- Picture dari Supabase Storage (Menggunakan temporaryUrl agar memiliki signature yang valid) --}}
                         @if($item->picture)
                             <div>
                                 <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Picture Attachment</span>
                                 @php
-                                    $imageUrl = Storage::disk('supabase-consumable_request')->url($item->picture);
+                                    $imageUrl = Storage::disk('supabase-consumable_request')->temporaryUrl($item->picture, now()->addMinutes(60));
                                 @endphp
                                 <button type="button"
                                         @click="modalOpen = true; modalImg = '{{ $imageUrl }}'"
