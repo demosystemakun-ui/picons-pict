@@ -75,7 +75,7 @@ class ConsumableRequestController extends Controller
                 $pic = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
                 
-                // Disimpan langsung ke Supabase Storage menggunakan disk kustom
+                // Disimpan langsung ke Supabase Storage menggunakan disk supabase-consumable_request
                 $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-consumable_request');
             }
 
@@ -242,8 +242,8 @@ class ConsumableRequestController extends Controller
         $folder   = 'consumable_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        // Jika dokumen PDF juga ingin disimpan ke Supabase Storage, gunakan disk kustom juga
-        Storage::disk('supabase-request-items')->put($filePath, $pdf->output());
+        // Disimpan ke Supabase Storage menggunakan disk supabase-consumable_request
+        Storage::disk('supabase-consumable_request')->put($filePath, $pdf->output());
 
         return back()->with('success', 'File PDF berhasil disimpan ke Supabase');
     }

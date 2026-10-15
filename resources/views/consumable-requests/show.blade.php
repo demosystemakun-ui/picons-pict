@@ -25,7 +25,6 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            {{-- Tombol Cetak & PDF --}}
             <a href="{{ route('consumable-requests.print', $consumableRequest->id) }}" target="_blank"
                class="px-3.5 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
                 Print
@@ -35,7 +34,6 @@
                 Unduh PDF
             </a>
 
-            {{-- Tombol Edit --}}
             @if(auth()->user()->hasRole('Super Admin') || ($consumableRequest->user_id === auth()->id() && $consumableRequest->status == 'pending'))
                 <a href="{{ route('consumable-requests.edit', $consumableRequest->id) }}"
                    class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium">
@@ -43,7 +41,6 @@
                 </a>
             @endif
 
-            {{-- Tombol Approval Admin/Manager --}}
             @if(auth()->user()->hasRole(['Super Admin', 'Manager', 'Approver']) && $consumableRequest->status === 'pending')
                 <form action="{{ route('consumable-requests.update-status', $consumableRequest) }}" method="POST" class="inline">
                     @csrf
@@ -83,7 +80,6 @@
     {{-- Main Document Card --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm space-y-6 p-6">
 
-        {{-- Header Info --}}
         <div class="grid sm:grid-cols-2 gap-4 pb-6 border-b border-gray-100 dark:border-gray-700">
             <div>
                 <span class="text-xs text-gray-400 block">ID Dokumen</span>
@@ -108,7 +104,6 @@
                 @foreach($consumableRequest->items as $index => $item)
                     <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
 
-                        {{-- Header Item --}}
                         <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
                             <span class="text-xs font-bold text-gray-500">Item #{{ $index + 1 }}</span>
                             <span class="text-xs font-semibold px-2 py-0.5 bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded">
@@ -116,7 +111,6 @@
                             </span>
                         </div>
 
-                        {{-- Item Details --}}
                         <div>
                             <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Item Details / Specs</span>
                             <div class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line mt-0.5">
@@ -143,7 +137,6 @@
                             </div>
                         </div>
 
-                        {{-- Purpose 1, 2, 3 --}}
                         <div class="grid sm:grid-cols-3 gap-3 text-xs bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                             <div>
                                 <span class="font-semibold text-gray-500 block mb-1">1. Why you want to purchase it?</span>
@@ -159,14 +152,17 @@
                             </div>
                         </div>
 
-                        {{-- Picture dari Supabase Storage --}}
+                        {{-- Picture dari Supabase Storage (Menggunakan disk supabase-consumable_request) --}}
                         @if($item->picture)
                             <div>
                                 <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Picture Attachment</span>
+                                @php
+                                    $imageUrl = Storage::disk('supabase-consumable_request')->url($item->picture);
+                                @endphp
                                 <button type="button"
-                                        @click="modalOpen = true; modalImg = '{{ Storage::disk('supabase-consumable_request')->url($item->picture) }}'"
+                                        @click="modalOpen = true; modalImg = '{{ $imageUrl }}'"
                                         class="group relative block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none">
-                                    <img src="{{ Storage::disk('supabase-consumable_request')->url($item->picture) }}" alt="Item Picture"
+                                    <img src="{{ $imageUrl }}" alt="Item Picture"
                                          class="h-20 w-20 object-cover group-hover:scale-105 transition duration-200">
                                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
                                         <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -181,7 +177,6 @@
             </div>
         </div>
 
-        {{-- Note --}}
         @if($consumableRequest->general_note)
             <div class="pb-6 border-b border-gray-100 dark:border-gray-700">
                 <span class="text-xs text-gray-400 block mb-1">Note</span>
@@ -189,7 +184,6 @@
             </div>
         @endif
 
-        {{-- Signatures --}}
         <div>
             <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Signatures</h3>
             <div class="grid sm:grid-cols-3 gap-4 text-center">
