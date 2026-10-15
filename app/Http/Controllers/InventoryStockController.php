@@ -61,17 +61,21 @@ public function index(Request $request)
 
     $query = DepartmentStock::with(['department', 'item']);
 
-    if (!$user->hasRole('Super Admin')) {
+    // JIKA BUKAN SUPER ADMIN DAN BUKAN ADMIN (Sesuaikan role admin Anda jika ada, misal 'Admin' atau 'Warehouse')
+    // Jika role Admin ingin melihat seluruh stok juga, cukup izinkan Super Admin & Admin melihat semua.
+    if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin')) {
+        // Jika murni user biasa/staff departemen, batasi hanya departemennya sendiri:
         $query->where('department_id', $user->department_id);
         $departments = collect([$user->department]);
     } else {
+        // Untuk Super Admin & Admin: bisa filter berdasarkan department_id atau lihat semua
         if ($request->has('department_id') && $request->department_id != '') {
             $query->where('department_id', $request->department_id);
         }
         $departments = Department::all();
     }
 
-    // Pastikan withSum untuk menghitung 'used_stock' dipasang di sini agar berjalan untuk SEMUA role
+    // Menghitung jumlah terpakai (used_stock) secara real-time berdasarkan filter periode
     $query->withSum(['usages as used_stock' => function ($q) use ($periodType, $periodValue) {
         if ($periodType == 'monthly') {
             $q->whereYear('created_at', substr($periodValue, 0, 4))
@@ -90,7 +94,6 @@ public function index(Request $request)
 
     return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
 }
-
 
     /* ═══════════════════════════════════════════════════════════════
        IMPORT STEP 1 — Analisa file (AJAX)
