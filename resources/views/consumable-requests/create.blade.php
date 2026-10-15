@@ -22,6 +22,10 @@ const SPEC_LABELS = [
 
 function initConsumableForm() {
     itemIndex = 0;
+    const container = document.getElementById('itemsContainer');
+    if (container) {
+        container.innerHTML = '';
+    }
     addItemRow();
 }
 

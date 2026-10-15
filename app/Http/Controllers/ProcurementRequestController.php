@@ -115,13 +115,13 @@ class ProcurementRequestController extends Controller
             'fem_manager_name'      => 'nullable|string|max:255',
             'coo_name'              => 'nullable|string|max:255',
 
-            'items'                         => 'required|array|min:1',
-            'items.*.item_name'             => 'required|string|max:255',
+            'items'                       => 'required|array|min:1',
+            'items.*.item_name'           => 'required|string|max:255',
             'items.*.item_requirement_note' => 'nullable|string',
-            'items.*.quantity'              => 'required|numeric|min:0.01',
-            'items.*.unit'                  => 'nullable|string|max:50',
-            'items.*.picture'               => 'nullable|image|max:2048',
-            'items.*.existing_picture'      => 'nullable|string',
+            'items.*.quantity'            => 'required|numeric|min:0.01',
+            'items.*.unit'                => 'nullable|string|max:50',
+            'items.*.picture'             => 'nullable|image|max:2048',
+            'items.*.existing_picture'    => 'nullable|string',
         ]);
 
         $orderType = $request->input('order_type');
@@ -147,6 +147,13 @@ class ProcurementRequestController extends Controller
 
         $procurementRequest->update($validated);
 
+        /* ═══ Hapus file lama di Supabase Storage jika ada perubahan ═══ */
+        foreach ($procurementRequest->items as $oldItem) {
+            if ($oldItem->picture && Storage::disk('supabase-procurement-request-items')->exists($oldItem->picture)) {
+                Storage::disk('supabase-procurement-request-items')->delete($oldItem->picture);
+            }
+        }
+
         /* ═══ Replace items ═══ */
         $procurementRequest->items()->delete();
 
@@ -154,13 +161,14 @@ class ProcurementRequestController extends Controller
             $picturePath = $itemData['existing_picture'] ?? null;
 
             if ($request->hasFile("items.{$index}.picture")) {
-                if ($picturePath && Storage::disk('public')->exists($picturePath)) {
-                    Storage::disk('public')->delete($picturePath);
+                if ($picturePath && Storage::disk('supabase-procurement-request-items')->exists($picturePath)) {
+                    Storage::disk('supabase-procurement-request-items')->delete($picturePath);
                 }
 
                 $pic     = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'public');
+                // Disimpan langsung ke disk Supabase Storage
+                $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement-request-items');
             }
 
             $procurementRequest->items()->create([
@@ -182,7 +190,15 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementRequest $procurementRequest)
     {
+        foreach ($procurementRequest->items as $item) {
+            if ($item->picture && Storage::disk('supabase-procurement-request-items')->exists($item->picture)) {
+                Storage::disk('supabase-procurement-request-items')->delete($item->picture);
+            }
+        }
+
+        $procurementRequest->items()->delete();
         $procurementRequest->delete();
+
         return redirect()->route('procurement.index')->with('success', 'Data dihapus.');
     }
 
@@ -208,99 +224,98 @@ class ProcurementRequestController extends Controller
         $cleanNo  = preg_replace('/[^A-Za-z0-9_\-]/', '-', $procurementRequest->no);
         $filename = 'PR-' . $cleanNo . '.pdf';
         $folder   = 'procurement_documents/' . date('Y/m');
+        $filePath = $folder . '/' . $filename;
 
-        $publicDir = public_path($folder);
-        if (! is_dir($publicDir)) {
-            mkdir($publicDir, 0755, true);
-        }
+        // Simpan PDF ke Supabase Storage
+        Storage::disk('supabase-procurement-request-items')->put($filePath, $pdf->output());
 
-        $pdf->save($publicDir . '/' . $filename);
+        // Ambil URL publik dari Supabase untuk di-redirect/ditampilkan
+        $pdfUrl = Storage::disk('supabase-procurement-request-items')->url($filePath);
 
-        return redirect()->away(asset($folder . '/' . $filename));
+        return redirect()->away($pdfUrl);
     }
 
     /* ═══════════════════════════════════════════════════════════════
        PDF FINAL — Generate PDF Final (dengan comparison vendor)
     ═══════════════════════════════════════════════════════════════ */
-  public function pdfFinal(ProcurementRequest $procurementRequest)
-{
-    $procurement = $this->mapToPrintData($procurementRequest);
-    $procurementRequest->load('vendors.items', 'winnerVendor');
+    public function pdfFinal(ProcurementRequest $procurementRequest)
+    {
+        $procurement = $this->mapToPrintData($procurementRequest);
+        $procurementRequest->load('vendors.items', 'winnerVendor');
 
-    /* ═══ Semua vendor (urut dari termurah) ═══ */
-    $procurement['vendors'] = $procurementRequest->vendors()
-        ->orderBy('total_price')
-        ->get()
-        ->map(fn ($v) => [
-            'vendor_name'         => $v->vendor_name,
-            'marketplace'         => $v->marketplace,
-            'company_name'        => $v->company_name,
-            'payment_method'      => $v->payment_method,
-            'payment_bank'        => $v->payment_bank,
-            'estimated_delivery'  => $v->estimated_delivery,
-            'subtotal'            => $v->subtotal,
-            'shipping_cost'       => $v->shipping_cost,
-            'discount_voucher'    => $v->discount_voucher,
-            'tax_ppn'             => $v->tax_ppn,
-            'total_before_tax'    => $v->total_before_tax,
-            'total_price'         => $v->total_price,
-            'tax_note'            => $v->tax_note,
-            'is_winner'           => $v->is_winner,
-            'items'               => $v->items->map(fn ($it) => [
-                'product_name' => $it->product_name,
-                'variant'      => $it->variant,
-                'sku'          => $it->sku,
-                'quantity'     => $it->quantity,
-                'unit_price'   => $it->unit_price,
-                'subtotal'     => $it->subtotal,
-                'stock_status' => $it->stock_status,
-            ])->toArray(),
-        ])
-        ->toArray();
+        /* ═══ Semua vendor (urut dari termurah) ═══ */
+        $procurement['vendors'] = $procurementRequest->vendors()
+            ->orderBy('total_price')
+            ->get()
+            ->map(fn ($v) => [
+                'vendor_name'         => $v->vendor_name,
+                'marketplace'         => $v->marketplace,
+                'company_name'        => $v->company_name,
+                'payment_method'      => $v->payment_method,
+                'payment_bank'        => $v->payment_bank,
+                'estimated_delivery'  => $v->estimated_delivery,
+                'subtotal'            => $v->subtotal,
+                'shipping_cost'       => $v->shipping_cost,
+                'discount_voucher'    => $v->discount_voucher,
+                'tax_ppn'             => $v->tax_ppn,
+                'total_before_tax'    => $v->total_before_tax,
+                'total_price'         => $v->total_price,
+                'tax_note'            => $v->tax_note,
+                'is_winner'           => $v->is_winner,
+                'items'               => $v->items->map(fn ($it) => [
+                    'product_name' => $it->product_name,
+                    'variant'      => $it->variant,
+                    'sku'          => $it->sku,
+                    'quantity'     => $it->quantity,
+                    'unit_price'   => $it->unit_price,
+                    'subtotal'     => $it->subtotal,
+                    'stock_status' => $it->stock_status,
+                ])->toArray(),
+            ])
+            ->toArray();
 
-    /* ═══ Vendor pemenang ═══ */
-    $winner = $procurementRequest->winnerVendor;
+        /* ═══ Vendor pemenang ═══ */
+        $winner = $procurementRequest->winnerVendor;
 
-    $procurement['winner'] = $winner ? [
-        'vendor_name'         => $winner->vendor_name,
-        'marketplace'         => $winner->marketplace,
-        'company_name'        => $winner->company_name,
-        'payment_method'      => $winner->payment_method,
-        'payment_bank'        => $winner->payment_bank,
-        'estimated_delivery'  => $winner->estimated_delivery,
-        'subtotal'            => $winner->subtotal,
-        'shipping_cost'       => $winner->shipping_cost,
-        'discount_voucher'    => $winner->discount_voucher,
-        'tax_ppn'             => $winner->tax_ppn,
-        'total_before_tax'    => $winner->total_before_tax,
-        'total_price'         => $winner->total_price,
-        'tax_note'            => $winner->tax_note,
-    ] : null;
+        $procurement['winner'] = $winner ? [
+            'vendor_name'         => $winner->vendor_name,
+            'marketplace'         => $winner->marketplace,
+            'company_name'        => $winner->company_name,
+            'payment_method'      => $winner->payment_method,
+            'payment_bank'        => $winner->payment_bank,
+            'estimated_delivery'  => $winner->estimated_delivery,
+            'subtotal'            => $winner->subtotal,
+            'shipping_cost'       => $winner->shipping_cost,
+            'discount_voucher'    => $winner->discount_voucher,
+            'tax_ppn'             => $winner->tax_ppn,
+            'total_before_tax'    => $winner->total_before_tax,
+            'total_price'         => $winner->total_price,
+            'tax_note'            => $winner->tax_note,
+        ] : null;
 
-    /* ═══ Field tambahan untuk PDF ═══ */
-    $procurement['budget_type']          = $procurementRequest->budget_type;
-    $procurement['reason_choose_vendor'] = $procurementRequest->reason_choose_vendor;
-    $procurement['accounting_mgr_name']  = $procurementRequest->accounting_mgr_name;
-    $procurement['ceo_name']             = $procurementRequest->ceo_name;
-    $procurement['cfo_name']             = $procurementRequest->cfo_name;
+        /* ═══ Field tambahan untuk PDF ═══ */
+        $procurement['budget_type']          = $procurementRequest->budget_type;
+        $procurement['reason_choose_vendor'] = $procurementRequest->reason_choose_vendor;
+        $procurement['accounting_mgr_name']  = $procurementRequest->accounting_mgr_name;
+        $procurement['ceo_name']             = $procurementRequest->ceo_name;
+        $procurement['cfo_name']             = $procurementRequest->cfo_name;
 
-    /* ═══ Render PDF ═══ */
-    $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement'))
-        ->setPaper('a4', 'portrait');
+        /* ═══ Render PDF ═══ */
+        $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement'))
+            ->setPaper('a4', 'portrait');
 
-    $cleanNo  = preg_replace('/[^A-Za-z0-9_\-]/', '-', $procurementRequest->no);
-    $filename = 'PR-FINAL-' . $cleanNo . '.pdf';
-    $folder   = 'procurement_documents/' . date('Y/m');
+        $cleanNo  = preg_replace('/[^A-Za-z0-9_\-]/', '-', $procurementRequest->no);
+        $filename = 'PR-FINAL-' . $cleanNo . '.pdf';
+        $folder   = 'procurement_documents/' . date('Y/m');
+        $filePath = $folder . '/' . $filename;
 
-    $publicDir = public_path($folder);
-    if (! is_dir($publicDir)) {
-        mkdir($publicDir, 0755, true);
+        // Simpan PDF Final ke Supabase Storage
+        Storage::disk('supabase-procurement-request-items')->put($filePath, $pdf->output());
+
+        $pdfUrl = Storage::disk('supabase-procurement-request-items')->url($filePath);
+
+        return redirect()->away($pdfUrl);
     }
-
-    $pdf->save($publicDir . '/' . $filename);
-
-    return redirect()->away(asset($folder . '/' . $filename));
-}
 
     /* ═══════════════════════════════════════════════════════════════
        UPDATE STATUS — Approve / Reject / Revision
@@ -329,8 +344,6 @@ class ProcurementRequestController extends Controller
 
     /* ═══════════════════════════════════════════════════════════════
        MAP TO PRINT DATA
-       Mapping model → array data untuk view print & PDF.
-       Required spec auto-generate dari detail item.
     ═══════════════════════════════════════════════════════════════ */
     private function mapToPrintData(ProcurementRequest $model): array
     {

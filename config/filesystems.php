@@ -60,6 +60,33 @@ return [
             'report' => false,
         ],
 
+         // Disk khusus untuk Bucket consumable di Supabase
+        'supabase-request-items' => [
+            'driver'                  => 's3',
+            'key'                     => env('SUPABASE_S3_KEY'),
+            'secret'                  => env('SUPABASE_S3_SECRET'),
+            'region'                  => env('SUPABASE_S3_REGION', 'ap-northeast-1'),
+            'bucket'                  => env('SUPABASE_REQUEST-ITEMS_BUCKET', 'request-items'),
+            'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility'              => 'public',
+            'throw'                   => true,
+            'report'                  => false,
+        ],
+
+         'supabase-procurement-request-items' => [
+            'driver'                  => 's3',
+            'key'                     => env('SUPABASE_S3_KEY'),
+            'secret'                  => env('SUPABASE_S3_SECRET'),
+            'region'                  => env('SUPABASE_S3_REGION', 'ap-northeast-1'),
+            'bucket'                  => env('SUPABASE_PROCUREMENT-REQUEST-ITEMS_BUCKET', 'procurement-request-items'),
+            'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility'              => 'public',
+            'throw'                   => true,
+            'report'                  => false,
+        ],
+
     ],
 
     /*

@@ -36,12 +36,12 @@ class ConsumableRequestController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date'          => 'required|date',
-            'subject'       => 'required|string|max:255',
-            'general_note'  => 'nullable|string|max:255',
-            'request_by'    => 'nullable|string|max:255',
-            'approved_by'   => 'nullable|string|max:255',
-            'verified_by'   => 'nullable|string|max:255',
+            'date'            => 'required|date',
+            'subject'         => 'required|string|max:255',
+            'general_note'    => 'nullable|string|max:255',
+            'request_by'      => 'nullable|string|max:255',
+            'approved_by'     => 'nullable|string|max:255',
+            'verified_by'     => 'nullable|string|max:255',
 
             'items'                 => 'required|array|min:1',
             'items.*.item_name'     => 'required|string|max:255',
@@ -74,7 +74,9 @@ class ConsumableRequestController extends Controller
             if ($request->hasFile("items.{$index}.picture")) {
                 $pic = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'public');
+                
+                // Disimpan langsung ke Supabase Storage menggunakan disk kustom
+                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-request-items');
             }
 
             $consumableRequest->items()->create([
@@ -93,7 +95,6 @@ class ConsumableRequestController extends Controller
             ]);
         }
 
-        // ✅ Response untuk AJAX (dari modal)
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success'  => true,
@@ -132,12 +133,12 @@ class ConsumableRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'date'          => 'required|date',
-            'subject'       => 'required|string|max:255',
-            'general_note'  => 'nullable|string|max:255',
-            'request_by'    => 'nullable|string|max:255',
-            'approved_by'   => 'nullable|string|max:255',
-            'verified_by'   => 'nullable|string|max:255',
+            'date'            => 'required|date',
+            'subject'         => 'required|string|max:255',
+            'general_note'    => 'nullable|string|max:255',
+            'request_by'      => 'nullable|string|max:255',
+            'approved_by'     => 'nullable|string|max:255',
+            'verified_by'     => 'nullable|string|max:255',
 
             'items'                 => 'required|array|min:1',
             'items.*.item_name'     => 'required|string|max:255',
@@ -163,9 +164,10 @@ class ConsumableRequestController extends Controller
             'verified_by'  => $validated['verified_by'] ?? null,
         ]);
 
+        // Hapus file lama di Supabase Storage jika ada
         foreach ($consumableRequest->items as $oldItem) {
-            if ($oldItem->picture && Storage::disk('public')->exists($oldItem->picture)) {
-                Storage::disk('public')->delete($oldItem->picture);
+            if ($oldItem->picture && Storage::disk('supabase-request-items')->exists($oldItem->picture)) {
+                Storage::disk('supabase-request-items')->delete($oldItem->picture);
             }
         }
         $consumableRequest->items()->delete();
@@ -175,7 +177,7 @@ class ConsumableRequestController extends Controller
             if ($request->hasFile("items.{$index}.picture")) {
                 $pic = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'public');
+                $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-request-items');
             }
 
             $consumableRequest->items()->create([
@@ -206,8 +208,8 @@ class ConsumableRequestController extends Controller
         }
 
         foreach ($consumableRequest->items as $item) {
-            if ($item->picture && Storage::disk('public')->exists($item->picture)) {
-                Storage::disk('public')->delete($item->picture);
+            if ($item->picture && Storage::disk('supabase-request-items')->exists($item->picture)) {
+                Storage::disk('supabase-request-items')->delete($item->picture);
             }
         }
 
@@ -240,10 +242,10 @@ class ConsumableRequestController extends Controller
         $folder   = 'consumable_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        Storage::disk('public')->makeDirectory($folder);
-        Storage::disk('public')->put($filePath, $pdf->output());
+        // Jika dokumen PDF juga ingin disimpan ke Supabase Storage, gunakan disk kustom juga
+        Storage::disk('supabase-request-items')->put($filePath, $pdf->output());
 
-        return back()->with('success', 'File PDF berhasil disimpan');
+        return back()->with('success', 'File PDF berhasil disimpan ke Supabase');
     }
 
     public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
@@ -353,7 +355,7 @@ class ConsumableRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'no'               => 'required|string|max:100|unique:procurement_requests,no',
+            'no'                 => 'required|string|max:100|unique:procurement_requests,no',
             'background'       => 'nullable|string',
             'purpose'          => 'nullable|string',
             'required_spec'    => 'nullable|string',

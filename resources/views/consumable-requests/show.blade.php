@@ -121,7 +121,6 @@
                             <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Item Details / Specs</span>
                             <div class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line mt-0.5">
                                 @php
-                                    // Bangun daftar detail dari field baru, fallback ke item_details lama
                                     $detailLines = [];
 
                                     if (!empty($item->item_name)) $detailLines[] = 'Item: ' . $item->item_name;
@@ -131,7 +130,6 @@
                                     if (!empty($item->capacity))  $detailLines[] = 'Capacity: ' . $item->capacity;
                                     if (!empty($item->specs))     $detailLines[] = $item->specs;
 
-                                    // Fallback ke legacy item_details
                                     if (empty($detailLines) && !empty($item->item_details)) {
                                         $detailLines[] = $item->item_details;
                                     }
@@ -161,14 +159,14 @@
                             </div>
                         </div>
 
-                        {{-- Picture --}}
+                        {{-- Picture dari Supabase Storage --}}
                         @if($item->picture)
                             <div>
                                 <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Picture Attachment</span>
                                 <button type="button"
-                                        @click="modalOpen = true; modalImg = '{{ Storage::url($item->picture) }}'"
+                                        @click="modalOpen = true; modalImg = '{{ Storage::disk('supabase-request-items')->url($item->picture) }}'"
                                         class="group relative block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 focus:outline-none">
-                                    <img src="{{ Storage::url($item->picture) }}" alt="Item Picture"
+                                    <img src="{{ Storage::disk('supabase-request-items')->url($item->picture) }}" alt="Item Picture"
                                          class="h-20 w-20 object-cover group-hover:scale-105 transition duration-200">
                                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
                                         <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
