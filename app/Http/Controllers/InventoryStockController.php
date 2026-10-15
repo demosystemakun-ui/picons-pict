@@ -48,29 +48,72 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        INDEX — Tampilan Tabel Stok
     ═══════════════════════════════════════════════════════════════ */
-    public function index(Request $request)
-    {
-        $user  = auth()->user();
-        $query = DepartmentStock::with(['department', 'item']);
+  public function index(Request $request)
+{
+    $user  = auth()->user();
+    
+    // Ambil parameter filter periode (default: harian / hari ini)
+    $periodType  = $request->get('period_type', 'daily');
+    $periodValue = $request->get('period_value', now()->format('Y-m-d'));
 
-        if (!$user->hasRole('Super Admin')) {
-            $query->where('department_id', $user->department_id);
-            $departments = collect([$user->department]);
-        } else {
-            if ($request->has('department_id') && $request->department_id != '') {
-                $query->where('department_id', $request->department_id);
-            }
-            $departments = Department::all();
+    $query = DepartmentStock::with(['department', 'item']);
+
+    if (!$user->hasRole('Super Admin')) {
+        $query->where('department_id', $user->department_id);
+        $departments = collect([$user->department]);
+    } else {
+        if ($request->has('department_id') && $request->department_id != '') {
+            $query->where('department_id', $request->department_id);
         }
-
-        $stocks = $query->orderBy('updated_at', 'desc')->paginate(15);
-
-        // Dipakai modal import untuk memilih kategori & satuan default item baru
-        $categories = Category::all();
-        $units      = Unit::all();
-
-        return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
+        $departments = Department::all();
     }
+
+    // Menghitung jumlah terpakai (used_stock) berdasarkan filter periode
+    $query->withSum(['usages as used_stock' => function ($q) use ($periodType, $periodValue) {
+        if ($periodType == 'monthly') {
+            $q->whereYear('created_at', substr($periodValue, 0, 4))
+              ->whereMonth('created_at', substr($periodValue, 5, 2));
+        } elseif ($periodType == 'yearly') {
+            $q->whereYear('created_at', $periodValue);
+        } else {
+            $q->whereDate('created_at', $periodValue);
+        }
+    }], 'quantity_used');
+
+    $stocks = $query->orderBy('updated_at', 'desc')->paginate(15)->appends($request->all());
+
+    $categories = Category::all();
+    $units      = Unit::all();
+
+    return view('inventory.stock.index', compact('stocks', 'departments', 'categories', 'units'));
+}
+
+// Contoh method saat tombol "Pakai" disubmit
+public function processUseItem(Request $request, $id)
+{
+    $request->validate([
+        'quantity' => 'required|integer|min:1'
+    ]);
+
+    $stock = DepartmentStock::findOrFail($id);
+
+    if ($stock->stock < $request->quantity) {
+        return back()->with('error', 'Stok tidak mencukupi!');
+    }
+
+    // Kurangi sisa stok utama
+    $stock->stock -= $request->quantity;
+    $stock->save();
+
+    // Catat ke log riwayat pemakaian
+    $stock->usages()->create([
+        'user_id'       => auth()->id(),
+        'quantity_used' => $request->quantity,
+    ]);
+
+    return redirect()->route('inventory.stock.index')
+        ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
+}
 
     /* ═══════════════════════════════════════════════════════════════
        IMPORT STEP 1 — Analisa file (AJAX)

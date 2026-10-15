@@ -62,7 +62,7 @@
     ============================================================ --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
-        {{-- Toolbar / Filter Bar (Departemen & Periode Harian/Bulanan/Tahunan) --}}
+        {{-- Toolbar / Filter Bar --}}
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
@@ -84,7 +84,7 @@
                 </div>
             </div>
 
-            {{-- Form Filter (Departemen & Periode Filter) --}}
+            {{-- Form Filter (Periode & Departemen) --}}
             <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
                 
                 {{-- Filter Periode Mode (Harian, Bulanan, Tahunan) --}}
@@ -100,8 +100,8 @@
                     </svg>
                 </div>
 
-                {{-- Input Nilai Periode Berdasarkan Mode --}}
-                @if(request('period_type', 'daily') == 'monthly')
+                {{-- Input Nilai Periode --}}
+                @if(request('period_type') == 'monthly')
                     <input type="month" name="period_value" value="{{ request('period_value', now()->format('Y-m')) }}" onchange="this.form.submit()"
                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
                 @elseif(request('period_type') == 'yearly')
@@ -116,7 +116,7 @@
                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
                 @endif
 
-                {{-- Filter Departemen (Khusus Super Admin) --}}
+                {{-- Filter Departemen (Super Admin) --}}
                 @if(auth()->user()->hasRole('Super Admin'))
                     <div class="relative">
                         <select name="department_id" id="department_id" onchange="this.form.submit()"
@@ -134,7 +134,7 @@
                     </div>
                 @endif
 
-                @if(request('department_id') || request('period_value'))
+                @if(request('department_id') || request('period_value') || request('period_type'))
                     <a href="{{ route('inventory.stock.index') }}"
                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                        title="Reset filter">
@@ -165,13 +165,12 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                     @forelse($stocks as $stock)
                         @php
-                            // Variabel penunjang kalkulasi (pastikan properti ini sudah disiapkan di Controller/Model)
-                            $initialStock = (int) ($stock->initial_stock ?? $stock->stock); 
                             $usedStock    = (int) ($stock->used_stock ?? 0);
-                            $remaining    = (int) ($stock->stock ?? ($initialStock - $usedStock));
+                            $currentStock = (int) $stock->stock; 
+                            $initialStock = $currentStock + $usedStock; 
 
-                            $isLow = $remaining <= 5;
-                            $isCritical = $remaining <= 2;
+                            $isLow = $currentStock <= 5;
+                            $isCritical = $currentStock <= 2;
                         @endphp
                         <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <td class="px-6 py-4">
@@ -210,17 +209,17 @@
                                 @if($isCritical)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-200 dark:ring-red-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                        {{ $remaining }} Unit
+                                        {{ $currentStock }} Unit
                                     </span>
                                 @elseif($isLow)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                        {{ $remaining }} Unit
+                                        {{ $currentStock }} Unit
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                        {{ $remaining }} Unit
+                                        {{ $currentStock }} Unit
                                     </span>
                                 @endif
                             </td>
