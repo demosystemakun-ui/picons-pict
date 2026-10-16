@@ -58,28 +58,45 @@
     {{-- CARD --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
 
-        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
-                        @if(auth()->user()->hasRole('Super Admin'))
-                            Physical Stock List
-                        @else
-                            Stok Departemen
-                        @endif
-                    </h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Total {{ $stocks->total() ?? $stocks->count() }} entri stok tercatat
-                    </p>
+        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            @if(auth()->user()->hasRole('Super Admin'))
+                                Physical Stock List
+                            @else
+                                Stok Departemen
+                            @endif
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Total {{ $stocks->total() ?? $stocks->count() }} entri stok tercatat
+                        </p>
+                    </div>
                 </div>
             </div>
 
+            {{-- FORM FILTER --}}
             <form method="GET" action="{{ route('inventory.stock.index') }}" class="flex flex-wrap items-center gap-2">
+
+                {{-- SEARCH --}}
+                <div class="relative">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
+                    </svg>
+                    <input type="text" name="search" value="{{ request('search') }}"
+                           placeholder="Cari nama barang / kode / dept…"
+                           onchange="this.form.submit()"
+                           class="w-56 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-9 pr-3 py-2 text-xs">
+                </div>
+
+                {{-- PERIODE --}}
                 <div class="relative">
                     <select name="period_type" onchange="this.form.submit()"
                             class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm cursor-pointer">
@@ -107,6 +124,21 @@
                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs">
                 @endif
 
+                {{-- FILTER STATUS STOK --}}
+                <div class="relative">
+                    <select name="stock_status" onchange="this.form.submit()"
+                            class="appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 pl-3 pr-9 py-2 text-xs cursor-pointer">
+                        <option value="">Semua Status ({{ $stats['all'] ?? 0 }})</option>
+                        <option value="out"       {{ request('stock_status') == 'out'       ? 'selected' : '' }}>Habis ({{ $stats['out'] ?? 0 }})</option>
+                        <option value="critical"  {{ request('stock_status') == 'critical'  ? 'selected' : '' }}>Kritis ≤2 ({{ $stats['critical'] ?? 0 }})</option>
+                        <option value="low"       {{ request('stock_status') == 'low'       ? 'selected' : '' }}>Rendah ≤5 ({{ $stats['low'] ?? 0 }})</option>
+                        <option value="available" {{ request('stock_status') == 'available' ? 'selected' : '' }}>Masih Banyak &gt;5 ({{ $stats['available'] ?? 0 }})</option>
+                    </select>
+                    <svg class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+
                 @if(auth()->user()->hasRole('Super Admin'))
                     <div class="relative">
                         <select name="department_id" onchange="this.form.submit()"
@@ -124,7 +156,7 @@
                     </div>
                 @endif
 
-                @if(request('department_id') || request('period_value') || request('period_type'))
+                @if(request('department_id') || request('period_value') || request('period_type') || request('search') || request('stock_status'))
                     <a href="{{ route('inventory.stock.index') }}"
                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                        title="Reset filter">
@@ -156,12 +188,20 @@
                             $currentStock = (int) $stock->stock;
                             $initialStock = $currentStock + $usedStock;
 
-                            $isLow = $currentStock <= 5;
+                            $isLow      = $currentStock <= 5;
                             $isCritical = $currentStock <= 2;
+                            $isOut      = $currentStock <= 0;
 
                             $isOfficeStock = strtolower($stock->department->name ?? '') === 'office';
                             $isOwnDept     = (int) $stock->department_id === (int) auth()->user()->department_id;
-                            $canUse        = !auth()->user()->hasRole('Super Admin') && ($isOwnDept || $isOfficeStock);
+
+                            // Semua role boleh pakai, asalkan stok belum habis
+                            $canUse = !$isOut && (
+                                auth()->user()->hasRole('Super Admin')
+                                || auth()->user()->hasRole('Admin')
+                                || $isOwnDept
+                                || $isOfficeStock
+                            );
                         @endphp
                         <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <td class="px-6 py-4">
@@ -219,7 +259,15 @@
 
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    @if($canUse)
+                                    @if($isOut)
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                                              title="Stok habis">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                                            </svg>
+                                            Habis
+                                        </span>
+                                    @elseif($canUse)
                                         <a href="{{ route('inventory.stock.use.item', $stock->id) }}"
                                            class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
@@ -245,7 +293,13 @@
                             <td colspan="7" class="px-6 py-16">
                                 <div class="flex flex-col items-center justify-center text-center">
                                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada data stok</p>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Data stok belum tercatat dalam sistem.</p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if(request('search') || request('stock_status'))
+                                            Tidak ada hasil untuk filter yang dipilih.
+                                        @else
+                                            Data stok belum tercatat dalam sistem.
+                                        @endif
+                                    </p>
                                 </div>
                             </td>
                         </tr>

@@ -110,6 +110,19 @@ class InventoryStockController extends Controller
             $departments = Department::all();
         }
 
+        // ── SEARCH: nama barang / kode item / nama departemen ─────────
+        if ($request->filled('search')) {
+            $term = trim($request->search);
+            $query->where(function ($q) use ($term) {
+                $q->whereHas('item', function ($qi) use ($term) {
+                    $qi->where('item_name', 'like', "%{$term}%")
+                       ->orWhere('item_code', 'like', "%{$term}%");
+                })->orWhereHas('department', function ($qd) use ($term) {
+                    $qd->where('name', 'like', "%{$term}%");
+                });
+            });
+        }
+
         $usedSub = StockUsage::query()
             ->selectRaw('COALESCE(SUM(quantity_used), 0)')
             ->whereColumn('stock_usages.department_stock_id', 'department_stocks.id');
@@ -127,15 +140,74 @@ class InventoryStockController extends Controller
         $query->select('department_stocks.*')
               ->addSelect(['used_stock' => $usedSub]);
 
-        $stocks = $query->orderBy('updated_at', 'desc')
-                        ->paginate(15)
-                        ->appends($request->all());
+        // ── FILTER: status stok ───────────────────────────────────────
+        if ($request->filled('stock_status')) {
+            switch ($request->stock_status) {
+                case 'out':
+                    $query->where('department_stocks.stock', '<=', 0);
+                    break;
+                case 'critical':
+                    $query->whereBetween('department_stocks.stock', [1, 2]);
+                    break;
+                case 'low':
+                    $query->whereBetween('department_stocks.stock', [1, 5]);
+                    break;
+                case 'available':
+                    $query->where('department_stocks.stock', '>', 5);
+                    break;
+            }
+        }
+
+        // ── SORTING ───────────────────────────────────────────────────
+        $sort = $request->get('sort', 'updated_at');
+        $dir  = $request->get('dir', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        switch ($sort) {
+            case 'stock':
+                $query->orderBy('department_stocks.stock', $dir);
+                break;
+            case 'used':
+                $query->orderBy('used_stock', $dir);
+                break;
+            case 'item_name':
+                $query->join('items', 'items.id', '=', 'department_stocks.item_id')
+                      ->orderBy('items.item_name', $dir)
+                      ->select('department_stocks.*')
+                      ->addSelect(['used_stock' => $usedSub]);
+                break;
+            default:
+                $query->orderBy('department_stocks.updated_at', $dir);
+        }
+
+        $stocks = $query->paginate(15)->appends($request->all());
+
+        // Statistik ringkas untuk kartu filter
+        $statsBase = DepartmentStock::query();
+        if (!$isPrivileged) {
+            $statsBase->where(function ($q) use ($user, $officeDeptId) {
+                $q->where('department_id', $user->department_id);
+                if ($officeDeptId) {
+                    $q->orWhere('department_id', $officeDeptId);
+                }
+            });
+        } elseif ($request->filled('department_id')) {
+            $statsBase->where('department_id', $request->department_id);
+        }
+
+        $stats = [
+            'all'       => (clone $statsBase)->count(),
+            'out'       => (clone $statsBase)->where('stock', '<=', 0)->count(),
+            'critical'  => (clone $statsBase)->whereBetween('stock', [1, 2])->count(),
+            'low'       => (clone $statsBase)->whereBetween('stock', [1, 5])->count(),
+            'available' => (clone $statsBase)->where('stock', '>', 5)->count(),
+        ];
 
         $categories = Category::all();
         $units      = Unit::all();
 
         return view('inventory.stock.index', compact(
-            'stocks', 'departments', 'categories', 'units', 'isPrivileged'
+            'stocks', 'departments', 'categories', 'units',
+            'isPrivileged', 'stats'
         ));
     }
 
@@ -143,22 +215,21 @@ class InventoryStockController extends Controller
        GET ITEMS BY DEPARTMENT (AJAX)
     ═══════════════════════════════════════════════════════════════ */
     public function getItemsByDepartment(Request $request)
-{
-    $departmentId = $request->get('department_id');
+    {
+        $departmentId = $request->get('department_id');
 
-    if (!$departmentId) {
-        return response()->json([]);
+        if (!$departmentId) {
+            return response()->json([]);
+        }
+
+        $items = Item::whereHas('departmentStocks', function ($q) use ($departmentId) {
+                $q->where('department_id', $departmentId);
+            })
+            ->orderBy('item_name')
+            ->get(['id', 'item_code', 'item_name']);
+
+        return response()->json($items);
     }
-
-    // HANYA tampilkan item yang sudah terdaftar di departemen ini
-    $items = Item::whereHas('departmentStocks', function ($q) use ($departmentId) {
-            $q->where('department_id', $departmentId);
-        })
-        ->orderBy('item_name')
-        ->get(['id', 'item_code', 'item_name']);
-
-    return response()->json($items);
-}
 
     /* ═══════════════════════════════════════════════════════════════
        USAGE DETAIL
@@ -347,7 +418,6 @@ class InventoryStockController extends Controller
         $deptCache = [];
         $lastDept  = null;
 
-        // Cache item yang sudah ada untuk mengurangi query
         $existingItems = Item::whereIn('item_code', array_filter(array_column($dataRows, $codeCol)))
             ->orWhereIn('item_name', array_filter(array_column($dataRows, $nameCol)))
             ->get()
@@ -668,7 +738,6 @@ class InventoryStockController extends Controller
     public function create()
     {
         $departments = Department::all();
-        // Items akan di-load via AJAX berdasarkan departemen yang dipilih
         return view('inventory.stock.create', compact('departments'));
     }
 
@@ -744,6 +813,11 @@ class InventoryStockController extends Controller
             ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
     }
 
+    /**
+     * Semua role dapat memakai stok, selama:
+     * - Super Admin / Admin: bebas (semua departemen)
+     * - User biasa: hanya dept sendiri atau departemen "Office"
+     */
     private function authorizeDepartment(DepartmentStock $stock): void
     {
         if ($this->isPrivileged()) {
