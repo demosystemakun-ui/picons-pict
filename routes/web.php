@@ -75,6 +75,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
         ->name('inventory.stock.use');
 
+        Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])
+    ->name('inventory.stock.items-by-department');
+
     // ── Super Admin only ──
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])

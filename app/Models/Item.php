@@ -28,6 +28,11 @@ class Item extends Model
         ];
     }
 
+    public function departmentStocks()
+{
+    return $this->hasMany(DepartmentStock::class);
+}
+
     public function category()
     {
         return $this->belongsTo(Category::class);

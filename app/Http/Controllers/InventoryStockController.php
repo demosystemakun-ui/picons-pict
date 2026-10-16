@@ -50,10 +50,13 @@ class InventoryStockController extends Controller
 
     /**
      * Cek apakah sebuah stok berasal dari departemen "Office".
-     * Office = stok yang bisa dipakai semua user.
      */
     private function isOfficeStock(DepartmentStock $stock): bool
     {
+        if ($stock->relationLoaded('department')) {
+            return strtolower($stock->department->name) === 'office';
+        }
+
         return Department::where('id', $stock->department_id)
             ->whereRaw('LOWER(name) = ?', ['office'])
             ->exists();
@@ -89,11 +92,9 @@ class InventoryStockController extends Controller
 
         $query = DepartmentStock::with(['department', 'item']);
 
-        // ── Cari ID departemen "Office" ──
         $officeDeptId = Department::whereRaw('LOWER(name) = ?', ['office'])->value('id');
 
         if (!$isPrivileged) {
-            // Non-privileged: lihat stok departemennya sendiri + Office
             $query->where(function ($q) use ($user, $officeDeptId) {
                 $q->where('department_id', $user->department_id);
                 if ($officeDeptId) {
@@ -109,7 +110,6 @@ class InventoryStockController extends Controller
             $departments = Department::all();
         }
 
-        // Subquery total pemakaian
         $usedSub = StockUsage::query()
             ->selectRaw('COALESCE(SUM(quantity_used), 0)')
             ->whereColumn('stock_usages.department_stock_id', 'department_stocks.id');
@@ -140,7 +140,26 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       USAGE DETAIL — Riwayat pemakaian per item-departemen
+       GET ITEMS BY DEPARTMENT (AJAX)
+    ═══════════════════════════════════════════════════════════════ */
+    public function getItemsByDepartment(Request $request)
+    {
+        $departmentId = $request->get('department_id');
+
+        if (!$departmentId) {
+            return response()->json([]);
+        }
+
+        // Tampilkan SEMUA item (baik yang sudah ada di departemen maupun belum)
+        // agar user bisa menambah stok baru atau menambah stok ke item yang sudah ada
+        $items = Item::orderBy('item_name')
+            ->get(['id', 'item_code', 'item_name']);
+
+        return response()->json($items);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       USAGE DETAIL
     ═══════════════════════════════════════════════════════════════ */
     public function usageDetail(Request $request, $id)
     {
@@ -148,7 +167,6 @@ class InventoryStockController extends Controller
 
         $this->authorizeDepartment($stock);
 
-        // Filter periode
         $periodType = $request->get('period_type', 'monthly');
         if (!in_array($periodType, ['daily', 'monthly', 'yearly', 'all'], true)) {
             $periodType = 'monthly';
@@ -327,6 +345,14 @@ class InventoryStockController extends Controller
         $deptCache = [];
         $lastDept  = null;
 
+        // Cache item yang sudah ada untuk mengurangi query
+        $existingItems = Item::whereIn('item_code', array_filter(array_column($dataRows, $codeCol)))
+            ->orWhereIn('item_name', array_filter(array_column($dataRows, $nameCol)))
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->item_code ?: $item->item_name;
+            });
+
         foreach ($dataRows as $offset => $row) {
             $lineNum  = $headerRow + $offset + 1;
             $deptName = $this->cleanText($row[$deptCol] ?? null);
@@ -366,16 +392,13 @@ class InventoryStockController extends Controller
             }
 
             try {
-                // Cari item
-                $item = null;
-                if ($itemCode !== '') {
-                    $item = Item::where('item_code', $itemCode)->first();
-                }
+                $cacheKey = $itemCode ?: $itemName;
+                $item = $existingItems->get($cacheKey);
+
                 if (!$item && $itemName !== '') {
-                    $item = Item::where('item_name', $itemName)->first();
+                    $item = $existingItems->get($itemName);
                 }
 
-                // Buat item baru jika belum ada
                 if (!$item) {
                     if ($itemCode === '') {
                         $itemCode = $this->generateAutoCode();
@@ -402,6 +425,8 @@ class InventoryStockController extends Controller
                     $item = new Item();
                     $item->forceFill($attrs)->save();
                     $newItems++;
+
+                    $existingItems->put($itemCode, $item);
                 } elseif ($itemName !== '' && $item->item_name !== $itemName) {
                     $item->update(['item_name' => $itemName]);
                 }
@@ -641,8 +666,8 @@ class InventoryStockController extends Controller
     public function create()
     {
         $departments = Department::all();
-        $items       = Item::all();
-        return view('inventory.stock.create', compact('departments', 'items'));
+        // Items akan di-load via AJAX berdasarkan departemen yang dipilih
+        return view('inventory.stock.create', compact('departments'));
     }
 
     public function store(Request $request)
@@ -717,9 +742,6 @@ class InventoryStockController extends Controller
             ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
     }
 
-    /**
-     * Non-admin: boleh akses stok departemennya sendiri ATAU stok Office.
-     */
     private function authorizeDepartment(DepartmentStock $stock): void
     {
         if ($this->isPrivileged()) {
