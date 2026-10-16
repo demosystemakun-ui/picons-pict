@@ -64,12 +64,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
     });
 
-    /* ═════════════════════════════════════════════
-       INVENTORY STOCK
-       ⚠️ URUTAN SANGAT PENTING:
-       - Route STATIS (tanpa {id}) di atas
-       - Route DINAMIS (dengan {id}) di bawah
-    ═════════════════════════════════════════════ */
 
     // ── STATIC ROUTES ──
     Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
