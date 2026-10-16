@@ -143,20 +143,22 @@ class InventoryStockController extends Controller
        GET ITEMS BY DEPARTMENT (AJAX)
     ═══════════════════════════════════════════════════════════════ */
     public function getItemsByDepartment(Request $request)
-    {
-        $departmentId = $request->get('department_id');
+{
+    $departmentId = $request->get('department_id');
 
-        if (!$departmentId) {
-            return response()->json([]);
-        }
-
-        // Tampilkan SEMUA item (baik yang sudah ada di departemen maupun belum)
-        // agar user bisa menambah stok baru atau menambah stok ke item yang sudah ada
-        $items = Item::orderBy('item_name')
-            ->get(['id', 'item_code', 'item_name']);
-
-        return response()->json($items);
+    if (!$departmentId) {
+        return response()->json([]);
     }
+
+    // HANYA tampilkan item yang sudah terdaftar di departemen ini
+    $items = Item::whereHas('departmentStocks', function ($q) use ($departmentId) {
+            $q->where('department_id', $departmentId);
+        })
+        ->orderBy('item_name')
+        ->get(['id', 'item_code', 'item_name']);
+
+    return response()->json($items);
+}
 
     /* ═══════════════════════════════════════════════════════════════
        USAGE DETAIL
