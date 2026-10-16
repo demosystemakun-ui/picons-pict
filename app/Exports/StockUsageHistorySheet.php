@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\StockUsage;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -33,7 +34,6 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
             'Departemen Pemakai',
             'Jumlah Pakai',
             'Sisa Stok Setelah Pakai',
-            'Keterangan',
         ];
     }
 
@@ -42,7 +42,6 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
         $start = $this->startDate . ' 00:00:00';
         $end   = $this->endDate   . ' 23:59:59';
 
-        // Ambil semua usage dalam periode, urut kronologis ASC agar bisa hitung sisa per transaksi
         $usages = StockUsage::with([
                 'user',
                 'user.department',
@@ -61,12 +60,9 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
             return [];
         }
 
-        // Untuk hitung sisa stok setelah pakai di tiap transaksi
-        // Kita perlu stok awal per department_stock_id.
-        // Stok awal = sisa sekarang + total pemakaian all-time.
         $stockIds = $usages->pluck('department_stock_id')->unique()->values()->all();
 
-        $usedAllTime = \DB::table('stock_usages')
+        $usedAllTime = DB::table('stock_usages')
             ->whereIn('department_stock_id', $stockIds)
             ->selectRaw('department_stock_id, SUM(quantity_used) as total')
             ->groupBy('department_stock_id')
@@ -74,7 +70,7 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
             ->map(fn ($v) => (int) $v)
             ->toArray();
 
-        $currentStock = \DB::table('department_stocks')
+        $currentStock = DB::table('department_stocks')
             ->whereIn('id', $stockIds)
             ->pluck('stock', 'id')
             ->map(fn ($v) => (int) $v)
@@ -85,9 +81,8 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
             $initialStock[$sid] = ($currentStock[$sid] ?? 0) + ($usedAllTime[$sid] ?? 0);
         }
 
-        // Hitung sisa setelah tiap transaksi (running)
         $runningUsed = [];
-        $rows = [];
+        $rows        = [];
 
         foreach ($usages as $u) {
             $sid = $u->department_stock_id;
@@ -103,11 +98,10 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
                 $u->user->department->name            ?? '-',
                 (int) $u->quantity_used,
                 $sisaSetelah,
-                $u->note ?? '-',   // jika ada kolom note; kalau tidak ada, hapus baris ini
             ];
         }
 
-        // Balik DESC untuk tampilan (terbaru di atas)
+        // Sort DESC untuk tampilan (terbaru di atas)
         usort($rows, fn ($a, $b) => strcmp($b[0], $a[0]));
 
         return $rows;
@@ -119,11 +113,10 @@ class StockUsageHistorySheet implements FromArray, WithHeadings, WithTitle, With
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                foreach (range('A', 'I') as $col) {
+                foreach (range('A', 'H') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
 
-                // Freeze baris header
                 $sheet->freezePane('A2');
             },
         ];

@@ -48,9 +48,6 @@ class InventoryStockController extends Controller
         return $user->hasRole('Super Admin') || $user->hasRole('Admin');
     }
 
-    /**
-     * Cek apakah sebuah stok berasal dari departemen "Office".
-     */
     private function isOfficeStock(DepartmentStock $stock): bool
     {
         if ($stock->relationLoaded('department')) {
@@ -110,7 +107,6 @@ class InventoryStockController extends Controller
             $departments = Department::all();
         }
 
-        // ── SEARCH: nama barang / kode item / nama departemen ─────────
         if ($request->filled('search')) {
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
@@ -140,7 +136,6 @@ class InventoryStockController extends Controller
         $query->select('department_stocks.*')
               ->addSelect(['used_stock' => $usedSub]);
 
-        // ── FILTER: status stok ───────────────────────────────────────
         if ($request->filled('stock_status')) {
             switch ($request->stock_status) {
                 case 'out':
@@ -158,7 +153,6 @@ class InventoryStockController extends Controller
             }
         }
 
-        // ── SORTING ───────────────────────────────────────────────────
         $sort = $request->get('sort', 'updated_at');
         $dir  = $request->get('dir', 'desc') === 'asc' ? 'asc' : 'desc';
 
@@ -181,7 +175,6 @@ class InventoryStockController extends Controller
 
         $stocks = $query->paginate(15)->appends($request->all());
 
-        // Statistik ringkas untuk kartu filter
         $statsBase = DepartmentStock::query();
         if (!$isPrivileged) {
             $statsBase->where(function ($q) use ($user, $officeDeptId) {
@@ -813,11 +806,6 @@ class InventoryStockController extends Controller
             ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
     }
 
-    /**
-     * Semua role dapat memakai stok, selama:
-     * - Super Admin / Admin: bebas (semua departemen)
-     * - User biasa: hanya dept sendiri atau departemen "Office"
-     */
     private function authorizeDepartment(DepartmentStock $stock): void
     {
         if ($this->isPrivileged()) {
@@ -834,26 +822,26 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        EXPORT USAGE
     ═══════════════════════════════════════════════════════════════ */
-   public function exportUsage(Request $request)
-{
-    $request->validate([
-        'start_date'    => 'nullable|date',
-        'end_date'      => 'nullable|date|after_or_equal:start_date',
-        'department_id' => 'nullable|exists:departments,id',
-    ]);
+    public function exportUsage(Request $request)
+    {
+        $request->validate([
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date|after_or_equal:start_date',
+            'department_id' => 'nullable|exists:departments,id',
+        ]);
 
-    $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-    $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
+        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
+        $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
 
-    $departmentId = $this->isPrivileged()
-        ? $request->input('department_id')
-        : auth()->user()->department_id;
+        $departmentId = $this->isPrivileged()
+            ? $request->input('department_id')
+            : auth()->user()->department_id;
 
-    $filename = 'stock-usage-' . $startDate . '_to_' . $endDate . '.xlsx';
+        $filename = 'stock-usage-' . $startDate . '_to_' . $endDate . '.xlsx';
 
-    return Excel::download(
-        new StockUsageExport($startDate, $endDate, $departmentId),
-        $filename
-    );
-}
+        return Excel::download(
+            new StockUsageExport($startDate, $endDate, $departmentId),
+            $filename
+        );
+    }
 }
