@@ -735,27 +735,37 @@ class InventoryStockController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'department_id' => 'required|exists:departments,id',
-            'item_id'       => 'required|exists:items,id',
-            'stock'         => 'required|numeric|min:0',
-        ]);
+{
+    $validated = $request->validate([
+        'department_id' => 'required|exists:departments,id',
+        'item_id'       => 'required|exists:items,id',
+        'stock'         => 'required|numeric|min:1',
+        'note'          => 'nullable|string|max:255',
+    ]);
 
-        $departmentStock = DepartmentStock::where('department_id', $validated['department_id'])
-            ->where('item_id', $validated['item_id'])
-            ->first();
-
-        if ($departmentStock) {
-            $departmentStock->stock += $validated['stock'];
-            $departmentStock->save();
-        } else {
-            DepartmentStock::create([
+    DB::transaction(function () use ($validated) {
+        $departmentStock = DepartmentStock::firstOrCreate(
+            [
                 'department_id' => $validated['department_id'],
                 'item_id'       => $validated['item_id'],
-                'stock'         => $validated['stock'],
-            ]);
-        }
+            ],
+            ['stock' => 0]
+        );
+
+        $departmentStock->stock += $validated['stock'];
+        $departmentStock->save();
+
+        StockIn::create([
+            'department_stock_id' => $departmentStock->id,
+            'user_id'             => auth()->id(),
+            'quantity_in'         => $validated['stock'],
+            'note'                => $validated['note'] ?? null,
+        ]);
+    });
+
+    return redirect()->route('inventory.stock.index')
+        ->with('success', 'Stok masuk berhasil dicatat.');
+}
 
         return redirect()->route('inventory.stock.index')
             ->with('success', 'Stok departemen berhasil ditambahkan.');

@@ -17,14 +17,13 @@ class StockUsageExport implements Export, WithMultipleSheets
     {
         return [
             'Ringkasan Stok'    => new StockSummarySheet(
-                $this->startDate,
-                $this->endDate,
-                $this->departmentId
+                $this->startDate, $this->endDate, $this->departmentId
             ),
             'History Pemakaian' => new StockUsageHistorySheet(
-                $this->startDate,
-                $this->endDate,
-                $this->departmentId
+                $this->startDate, $this->endDate, $this->departmentId
+            ),
+            'Daily Log'         => new StockDailyLogSheet(
+                $this->startDate, $this->endDate, $this->departmentId
             ),
         ];
     }
