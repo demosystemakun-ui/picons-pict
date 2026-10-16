@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\StockUsage;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -15,7 +16,10 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping
         protected ?int $departmentId = null
     ) {}
 
-    public function collection()
+    /**
+     * @return Enumerable
+     */
+    public function collection(): Enumerable
     {
         return StockUsage::with([
                 'user',
@@ -23,7 +27,10 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping
                 'departmentStock.item',
                 'departmentStock.department',
             ])
-            ->whereBetween('created_at', [$this->startDate . ' 00:00:00', $this->endDate . ' 23:59:59'])
+            ->whereBetween('created_at', [
+                $this->startDate . ' 00:00:00',
+                $this->endDate   . ' 23:59:59',
+            ])
             ->when($this->departmentId, function ($q) {
                 $q->whereHas('departmentStock', fn ($q2) => $q2->where('department_id', $this->departmentId));
             })
