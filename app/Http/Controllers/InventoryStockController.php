@@ -767,10 +767,6 @@ class InventoryStockController extends Controller
         ->with('success', 'Stok masuk berhasil dicatat.');
 }
 
-        return redirect()->route('inventory.stock.index')
-            ->with('success', 'Stok departemen berhasil ditambahkan.');
-    }
-
     public function useItemForm($id)
     {
         $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
