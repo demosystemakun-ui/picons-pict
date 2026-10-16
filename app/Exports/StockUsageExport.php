@@ -3,28 +3,17 @@
 namespace App\Exports;
 
 use App\Models\DepartmentStock;
-use Illuminate\Support\Enumerable;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class StockUsageExport implements FromCollection, WithHeadings, WithMapping, WithEvents
+class StockSummarySheet implements FromArray, WithHeadings, WithTitle, WithEvents
 {
-    /** Threshold minimum stok */
     private const MIN_STOCK = 5;
-
-    /** @var array<int, int> total used dalam periode per department_stock_id */
-    protected array $usedInPeriod = [];
-
-    /** @var array<int, int> total used all-time per department_stock_id */
-    protected array $usedAllTime = [];
-
-    /** @var array<int, int> user unik yang pakai per department_stock_id */
-    protected array $uniqueUsers = [];
 
     public function __construct(
         protected string $startDate,
@@ -32,56 +21,9 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping, Wit
         protected ?int $departmentId = null
     ) {}
 
-    public function collection(): Enumerable
+    public function title(): string
     {
-        $start = $this->startDate . ' 00:00:00';
-        $end   = $this->endDate   . ' 23:59:59';
-
-        // ── Ambil SEMUA DepartmentStock (bukan hanya yang terpakai) ──
-        $stocks = DepartmentStock::with(['department', 'item'])
-            ->when($this->departmentId, function ($q) {
-                $q->where('department_id', $this->departmentId);
-            })
-            ->orderBy('department_id')
-            ->orderBy('item_id')
-            ->get();
-
-        if ($stocks->isEmpty()) {
-            return collect();
-        }
-
-        $stockIds = $stocks->pluck('id')->all();
-
-        // ── Total pemakaian dalam PERIODE ──
-        $this->usedInPeriod = DB::table('stock_usages')
-            ->whereIn('department_stock_id', $stockIds)
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('department_stock_id, SUM(quantity_used) as total')
-            ->groupBy('department_stock_id')
-            ->pluck('total', 'department_stock_id')
-            ->map(fn ($v) => (int) $v)
-            ->toArray();
-
-        // ── Total pemakaian ALL-TIME ──
-        $this->usedAllTime = DB::table('stock_usages')
-            ->whereIn('department_stock_id', $stockIds)
-            ->selectRaw('department_stock_id, SUM(quantity_used) as total')
-            ->groupBy('department_stock_id')
-            ->pluck('total', 'department_stock_id')
-            ->map(fn ($v) => (int) $v)
-            ->toArray();
-
-        // ── Jumlah user unik yang memakai (dalam periode) ──
-        $this->uniqueUsers = DB::table('stock_usages')
-            ->whereIn('department_stock_id', $stockIds)
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('department_stock_id, COUNT(DISTINCT user_id) as total')
-            ->groupBy('department_stock_id')
-            ->pluck('total', 'department_stock_id')
-            ->map(fn ($v) => (int) $v)
-            ->toArray();
-
-        return $stocks;
+        return 'Ringkasan Stok';
     }
 
     public function headings(): array
@@ -94,37 +36,90 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping, Wit
             'Terpakai (Periode)',
             'Sisa Stok',
             'Jumlah Pemakai',
+            'Pemakai',
             'Status',
             'Terakhir Diperbarui',
         ];
     }
 
-    public function map($stock): array
+    public function array(): array
     {
-        $sid = $stock->id;
+        $start = $this->startDate . ' 00:00:00';
+        $end   = $this->endDate   . ' 23:59:59';
 
-        $sisa          = (int) $stock->stock;                              // sisa saat ini
-        $usedAllTime   = $this->usedAllTime[$sid]  ?? 0;
-        $usedInPeriod  = $this->usedInPeriod[$sid] ?? 0;
-        $usersCount    = $this->uniqueUsers[$sid]  ?? 0;
+        $stocks = DepartmentStock::with(['department', 'item'])
+            ->when($this->departmentId, fn ($q) => $q->where('department_id', $this->departmentId))
+            ->orderBy('department_id')
+            ->orderBy('item_id')
+            ->get();
 
-        // Stok awal = sisa sekarang + SEMUA pemakaian all-time
-        $stokAwal = $sisa + $usedAllTime;
+        if ($stocks->isEmpty()) {
+            return [];
+        }
 
-        // Status berdasarkan sisa saat ini
-        $status = $sisa <= self::MIN_STOCK ? 'NG' : 'OK';
+        $stockIds = $stocks->pluck('id')->all();
 
-        return [
-            $stock->department->name     ?? '-',
-            $stock->item->item_code      ?? '-',
-            $stock->item->item_name      ?? '-',
-            $stokAwal,
-            $usedInPeriod,
-            $sisa,
-            $usersCount,
-            $status,
-            optional($stock->updated_at)->format('d M Y H:i') ?? '-',
-        ];
+        // Terpakai dalam periode
+        $usedInPeriod = DB::table('stock_usages')
+            ->whereIn('department_stock_id', $stockIds)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('department_stock_id, SUM(quantity_used) as total')
+            ->groupBy('department_stock_id')
+            ->pluck('total', 'department_stock_id')
+            ->map(fn ($v) => (int) $v)
+            ->toArray();
+
+        // Terpakai all-time (untuk hitung stok awal)
+        $usedAllTime = DB::table('stock_usages')
+            ->whereIn('department_stock_id', $stockIds)
+            ->selectRaw('department_stock_id, SUM(quantity_used) as total')
+            ->groupBy('department_stock_id')
+            ->pluck('total', 'department_stock_id')
+            ->map(fn ($v) => (int) $v)
+            ->toArray();
+
+        // User unik + nama per stock
+        $userAgg = DB::table('stock_usages')
+            ->join('users', 'users.id', '=', 'stock_usages.user_id')
+            ->whereIn('stock_usages.department_stock_id', $stockIds)
+            ->whereBetween('stock_usages.created_at', [$start, $end])
+            ->selectRaw('stock_usages.department_stock_id as sid, users.name as user_name')
+            ->groupBy('sid', 'users.name')
+            ->orderBy('sid')
+            ->orderBy('user_name')
+            ->get();
+
+        $namesByStock = [];
+        foreach ($userAgg as $row) {
+            $namesByStock[(int) $row->sid][] = $row->user_name;
+        }
+
+        $rows = [];
+        foreach ($stocks as $stock) {
+            $sid        = $stock->id;
+            $sisa       = (int) $stock->stock;
+            $usedAll    = $usedAllTime[$sid]  ?? 0;
+            $usedPeriod = $usedInPeriod[$sid] ?? 0;
+            $userList   = $namesByStock[$sid] ?? [];
+
+            $stokAwal = $sisa + $usedAll;
+            $status   = $sisa <= self::MIN_STOCK ? 'NG' : 'OK';
+
+            $rows[] = [
+                $stock->department->name ?? '-',
+                $stock->item->item_code  ?? '-',
+                $stock->item->item_name  ?? '-',
+                $stokAwal,
+                $usedPeriod,
+                $sisa,
+                count($userList),
+                $userList ? implode(', ', $userList) : '-',
+                $status,
+                optional($stock->updated_at)->format('d M Y H:i') ?? '-',
+            ];
+        }
+
+        return $rows;
     }
 
     public function registerEvents(): array
@@ -133,7 +128,7 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping, Wit
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet      = $event->sheet->getDelegate();
                 $highestRow = $sheet->getHighestRow();
-                $colStatus  = 'H'; // kolom Status
+                $colStatus  = 'I';
 
                 for ($row = 2; $row <= $highestRow; $row++) {
                     $cell = $colStatus . $row;
@@ -154,7 +149,7 @@ class StockUsageExport implements FromCollection, WithHeadings, WithMapping, Wit
                     }
                 }
 
-                foreach (range('A', $colStatus) as $col) {
+                foreach (range('A', 'J') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
             },

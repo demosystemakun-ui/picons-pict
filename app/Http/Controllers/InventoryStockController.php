@@ -834,26 +834,26 @@ class InventoryStockController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        EXPORT USAGE
     ═══════════════════════════════════════════════════════════════ */
-    public function exportUsage(Request $request)
-    {
-        $request->validate([
-            'start_date'    => 'nullable|date',
-            'end_date'      => 'nullable|date|after_or_equal:start_date',
-            'department_id' => 'nullable|exists:departments,id',
-        ]);
+   public function exportUsage(Request $request)
+{
+    $request->validate([
+        'start_date'    => 'nullable|date',
+        'end_date'      => 'nullable|date|after_or_equal:start_date',
+        'department_id' => 'nullable|exists:departments,id',
+    ]);
 
-        $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
-        $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
+    $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
+    $endDate   = $request->input('end_date',   now()->format('Y-m-d'));
 
-        $departmentId = $this->isPrivileged()
-            ? $request->input('department_id')
-            : auth()->user()->department_id;
+    $departmentId = $this->isPrivileged()
+        ? $request->input('department_id')
+        : auth()->user()->department_id;
 
-        $filename = 'stock-usage-' . $startDate . '_to_' . $endDate . '.xlsx';
+    $filename = 'stock-usage-' . $startDate . '_to_' . $endDate . '.xlsx';
 
-        return Excel::download(
-            new StockUsageExport($startDate, $endDate, $departmentId),
-            $filename
-        );
-    }
+    return Excel::download(
+        new StockUsageExport($startDate, $endDate, $departmentId),
+        $filename
+    );
+}
 }
