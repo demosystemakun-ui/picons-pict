@@ -357,4 +357,4 @@ class GeminiVisionService
         ATURAN: harga angka bulat, gabung vendor sama, jangan tambahkan apapun di luar JSON.
         PROMPT;
     }
-}
+}//gemini
