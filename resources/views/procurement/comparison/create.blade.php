@@ -203,6 +203,26 @@
             </header>
 
             <div class="p-6 space-y-4">
+                
+                {{-- ═══════════════════════════════════════════════════════════════
+                     TIPE BUDGET (Diletakkan di atas daftar vendor)
+                ═══════════════════════════════════════════════════════════════ --}}
+                <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">Tipe Budget Pengadaan</label>
+                        <p class="text-xs text-gray-500">Pilih apakah pengadaan ini masuk dalam anggaran (Budgeted) atau di luar anggaran (Non Budgeted).</p>
+                    </div>
+                    <div class="flex gap-6">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="budget_type" value="Budgeted" x-model="budgetType" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Budgeted</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="budget_type" value="Non Budgeted" x-model="budgetType" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Non Budgeted</span>
+                        </label>
+                    </div>
+                </div>
 
                 {{-- Empty state --}}
                 <template x-if="vendors.length === 0">
@@ -427,6 +447,9 @@
     ═══════════════════════════════════════════════════════════════ */
     function vendorForm() {
         return {
+            // TAMBAHAN: Inisialisasi Tipe Budget
+            budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}',
+
             vendors: [],
 
             init() {
