@@ -44,37 +44,89 @@ class GeminiVisionService
             ];
         }
 
-        $url = "{$this->baseUrl}/{$this->model}:generateContent?key={$this->apiKey}";
+        $payload = [
+            'contents'         => [['parts' => $parts]],
+            'generationConfig' => ['temperature' => 0.1],
+        ];
 
-        $response = Http::timeout(120)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, [
-                'contents'         => [['parts' => $parts]],
-                'generationConfig' => ['temperature' => 0.1],
-            ]);
-
-        if ($response->failed()) {
-            $body = $response->json() ?: $response->body();
-            Log::error('Gemini API error', [
-                'status' => $response->status(),
-                'mode'   => $mode,
-                'body'   => $body,
-            ]);
-            $message = data_get($body, 'error.message') ?? 'Gemini API gagal: ' . $response->status();
-            throw new \RuntimeException($message);
+        // Daftar model yang akan dicoba (Fallback)
+        $modelsToTry = [$this->model];
+        // Jika model utama bukan 1.5-flash, tambahkan sebagai cadangan
+        if ($this->model !== 'gemini-1.5-flash') {
+            $modelsToTry[] = 'gemini-1.5-flash';
         }
 
-        $text = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
-        $text = trim(str_replace(['```json', '```'], '', $text));
+        $lastException = null;
 
-        $decoded = json_decode($text, true);
-        if (! is_array($decoded)) {
-            Log::warning('Gemini response bukan JSON', ['raw' => $text]);
-            return [];
+        foreach ($modelsToTry as $currentModel) {
+            // Coba maksimal 3 kali per model dengan Exponential Backoff
+            $maxRetries = 3;
+            $retryDelay = 2; // Mulai dari 2 detik
+
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    $url = "{$this->baseUrl}/{$currentModel}:generateContent?key={$this->apiKey}";
+
+                    $response = Http::timeout(120)
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->post($url, $payload);
+
+                    if ($response->failed()) {
+                        $body = $response->json() ?: $response->body();
+                        $status = $response->status();
+                        $message = data_get($body, 'error.message') ?? 'Gemini API gagal: ' . $status;
+
+                        // Jika error 503 (High Demand) atau 429 (Too Many Requests)
+                        if ($status === 503 || $status === 429 || str_contains($message, 'high demand')) {
+                            Log::warning("Gemini API High Demand (Model: {$currentModel}, Attempt: {$attempt}). Mencoba lagi dalam {$retryDelay} detik.");
+                            
+                            if ($attempt === $maxRetries) {
+                                throw new \RuntimeException($message);
+                            }
+
+                            sleep($retryDelay);
+                            $retryDelay *= 2; // 2s -> 4s -> 8s
+                            continue; // Lanjut ke percobaan berikutnya
+                        }
+
+                        // Jika error lain (misal API Key salah), langsung gagalkan tanpa retry
+                        Log::error('Gemini API error', [
+                            'status' => $status,
+                            'model'  => $currentModel,
+                            'mode'   => $mode,
+                            'body'   => $body,
+                        ]);
+                        throw new \RuntimeException($message);
+                    }
+
+                    // Jika sukses, proses response
+                    $text = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+                    $text = trim(str_replace(['```json', '```'], '', $text));
+
+                    $decoded = json_decode($text, true);
+                    if (! is_array($decoded)) {
+                        Log::warning('Gemini response bukan JSON', ['raw' => $text]);
+                        return [];
+                    }
+
+                    $vendors = $decoded['vendors'] ?? $decoded;
+                    return array_values(array_filter($vendors, fn ($v) => is_array($v)));
+
+                } catch (\Throwable $e) {
+                    $lastException = $e;
+                    
+                    // Jika ini bukan error High Demand, langsung lempar keluar loop model
+                    if (!str_contains($e->getMessage(), 'high demand') && !str_contains($e->getMessage(), '503')) {
+                        throw $e;
+                    }
+                }
+            }
+            
+            Log::warning("Model {$currentModel} gagal setelah {$maxRetries} percobaan. Beralih ke model fallback...");
         }
 
-        $vendors = $decoded['vendors'] ?? $decoded;
-        return array_values(array_filter($vendors, fn ($v) => is_array($v)));
+        // Jika semua model dan retry gagal
+        throw new \RuntimeException("Server AI sedang sibuk. Silakan coba beberapa saat lagi. Detail: " . ($lastException?->getMessage() ?? 'Unknown error'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
