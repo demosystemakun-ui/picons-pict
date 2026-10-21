@@ -232,7 +232,9 @@ class VendorComparisonController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
+        // 1. TAMBAHKAN VALIDASI UNTUK BUDGET_TYPE
         $validated = $request->validate([
+            'budget_type'                      => 'nullable|in:Budgeted,Non Budgeted', // <-- TAMBAHKAN INI
             'vendors'                          => 'required|array|min:1',
             'vendors.*.vendor_name'            => 'required|string|max:255',
             'vendors.*.marketplace'            => 'nullable|string|max:100',
@@ -259,6 +261,11 @@ class VendorComparisonController extends Controller
             'vendors.*.items.*.subtotal'            => 'nullable|numeric|min:0',
             'vendors.*.items.*.stock_status'        => 'nullable|string|max:50',
             'vendors.*.items.*.weight'              => 'nullable|numeric|min:0',
+        ]);
+
+        // 2. SIMPAN BUDGET_TYPE KE DATABASE
+        $procurement->update([
+            'budget_type' => $validated['budget_type'] ?? null // <-- TAMBAHKAN INI
         ]);
 
         $procurement->vendors()->delete();

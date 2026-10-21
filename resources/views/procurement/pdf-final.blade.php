@@ -117,8 +117,9 @@
         <td class="label-col" style="width:18%;">DATE</td>
         <td style="width:32%;">{{ $procurement['date'] }}</td>
         <td class="label-col" style="width:12%; text-align:center;">Budget issue</td>
-        <td class="budget-col">{!! pr_pdf_check($budgetType === 'budgeted') !!} Budgeted</td>
-        <td class="budget-col">{!! pr_pdf_check($budgetType === 'non_budgeted') !!} Non Budgeted</td>
+        {{-- PERBAIKAN: Nilai pengecekan disamakan dengan value dari form --}}
+        <td class="budget-col">{!! pr_pdf_check($budgetType === 'Budgeted') !!} Budgeted</td>
+        <td class="budget-col">{!! pr_pdf_check($budgetType === 'Non Budgeted') !!} Non Budgeted</td>
     </tr>
     <tr>
         <td class="label-col">REQUEST BY</td>
