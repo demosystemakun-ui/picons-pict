@@ -8,7 +8,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6 pb-12">
+<div class="max-w-5xl mx-auto space-y-6 pb-12" x-data="vendorForm()">
 
     {{-- HEADER --}}
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -101,15 +101,14 @@
     </section>
 
     {{-- FORM VENDORS --}}
-    <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST"
-          x-data="vendorForm()">
+    <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST">
         @csrf
 
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Data Vendor</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Sistem otomatis pilih vendor termurah.</p>
+                    <h2 class="text-sm font-semibold text-gray-900">Data Vendor / Keranjang</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Sistem otomatis hitung total & pilih termurah.</p>
                 </div>
                 <button type="button" @click="addVendor()"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">
@@ -150,6 +149,8 @@
                                 </div>
                                 <h3 class="font-bold text-gray-900 text-base mt-1 truncate"
                                     x-text="v.vendor_name || 'Vendor tanpa nama'"></h3>
+                                <!-- Menampilkan Total Harga Otomatis -->
+                                <p class="text-sm font-bold text-teal-700 mt-1" x-text="'Rp ' + (calculateTotal(v) || 0).toLocaleString('id-ID')"></p>
                             </div>
                             <button type="button" @click="removeVendor(idx)"
                                     class="text-xs text-rose-600 hover:underline shrink-0">Hapus</button>
@@ -168,11 +169,12 @@
                                        placeholder="Shopee / Tokopedia / Monotaro"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
                             </div>
+                            <!-- Input Total Harga dibuat Readonly, dihitung otomatis -->
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Total Harga (Rp) *</label>
-                                <input type="number" :name="`vendors[${idx}][total_price]`" x-model.number="v.total_price"
-                                       required min="0" step="100"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Total Harga Akhir (Otomatis)</label>
+                                <input type="number" :name="`vendors[${idx}][total_price]`" :value="calculateTotal(v)"
+                                       readonly
+                                       class="w-full rounded-lg border-gray-200 bg-gray-100 text-sm text-gray-700 font-semibold focus:ring-0 cursor-not-allowed">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Keterangan Pajak</label>
@@ -189,9 +191,11 @@
                             <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Rincian Biaya</div>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Subtotal</span>
-                                    <input type="number" :name="`vendors[${idx}][subtotal]`" x-model.number="v.subtotal"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500">
+                                    <span class="block text-gray-500 mb-0.5">Subtotal Produk</span>
+                                    <!-- Subtotal otomatis dari items -->
+                                    <input type="number" :name="`vendors[${idx}][subtotal]`" :value="calculateSubtotal(v)"
+                                           readonly
+                                           class="w-full rounded-md border-gray-200 bg-gray-100 text-xs text-gray-700 cursor-not-allowed">
                                 </div>
                                 <div>
                                     <span class="block text-gray-500 mb-0.5">Ongkir</span>
@@ -210,13 +214,15 @@
                                 </div>
                                 <div>
                                     <span class="block text-gray-500 mb-0.5">Total Sebelum Pajak</span>
-                                    <input type="number" :name="`vendors[${idx}][total_before_tax]`" x-model.number="v.total_before_tax"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500">
+                                    <!-- Total before tax otomatis -->
+                                    <input type="number" :name="`vendors[${idx}][total_before_tax]`" :value="calculateTotalBeforeTax(v)"
+                                           readonly
+                                           class="w-full rounded-md border-gray-200 bg-gray-100 text-xs text-gray-700 cursor-not-allowed">
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Metode & pengiriman (3 kolom, tanpa alamat) --}}
+                        {{-- Metode & pengiriman --}}
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Metode Pembayaran</label>
@@ -410,13 +416,37 @@
                 this.vendors[vendorIdx].items.splice(itemIdx, 1);
             },
 
+            // --- LOGIKA PERHITUNGAN OTOMATIS ---
+            
+            // 1. Hitung Subtotal dari semua item di vendor ini
+            calculateSubtotal(v) {
+                return (v.items || []).reduce((sum, item) => {
+                    return sum + ((item.quantity || 0) * (item.unit_price || 0));
+                }, 0);
+            },
+
+            // 2. Hitung Total Sebelum Pajak (Subtotal + Ongkir - Diskon)
+            calculateTotalBeforeTax(v) {
+                const subtotal = this.calculateSubtotal(v);
+                return subtotal + (v.shipping_cost || 0) - (v.discount_voucher || 0);
+            },
+
+            // 3. Hitung Total Akhir (Sebelum Pajak + PPN)
+            calculateTotal(v) {
+                const totalBeforeTax = this.calculateTotalBeforeTax(v);
+                return totalBeforeTax + (v.tax_ppn || 0);
+            },
+
+            // 4. Cek Pemenang berdasarkan Total Akhir
             isWinner(idx) {
                 const prices = this.vendors
-                    .map((v, i) => ({ i, price: parseFloat(v.total_price) || 0 }))
+                    .map((v, i) => ({ i, price: this.calculateTotal(v) }))
                     .filter(x => x.price > 0);
+                
                 if (prices.length === 0) return false;
+                
                 const minPrice = Math.min(...prices.map(x => x.price));
-                return parseFloat(this.vendors[idx].total_price) === minPrice;
+                return this.calculateTotal(this.vendors[idx]) === minPrice;
             },
         };
     }

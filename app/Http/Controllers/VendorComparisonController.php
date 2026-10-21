@@ -30,32 +30,23 @@ class VendorComparisonController extends Controller
        SCAN — 3 entry point (Monotaro / Others / Generic)
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Scan khusus Monotaro.
-     */
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');
     }
 
-    /**
-     * Scan untuk marketplace lain (Shopee, Tokopedia, Lazada, Bukalapak, Blibli).
-     */
     public function scanOthers(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'others');
     }
 
-    /**
-     * Scan generic (auto-detect semua marketplace).
-     */
     public function scanImage(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'auto');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       PROCESS SCAN — Shared logic
+       PROCESS SCAN — Shared logic (REVISED: Grouping & Merging)
     ═══════════════════════════════════════════════════════════════ */
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
@@ -71,59 +62,137 @@ class VendorComparisonController extends Controller
                 return back()->with('error', 'AI tidak mendeteksi data vendor dari screenshot.');
             }
 
-            /* ═══ Mode handling ═══
-               - 'monotaro' → REPLACE semua vendor (reset)
-               - 'others'   → APPEND (tambah ke vendor existing)
-               - 'auto'     → REPLACE semua
-            */
-            if ($mode === 'others') {
-                // Append mode: hindari duplikasi nama vendor
-                $existingNames = $procurement->vendors()
-                    ->pluck('vendor_name')
-                    ->map(fn ($n) => strtolower(trim($n)))
-                    ->toArray();
-
-                $extracted = array_filter(
-                    $extracted,
-                    fn ($v) => !in_array(strtolower(trim($v['vendor_name'] ?? '')), $existingNames)
-                );
-
-                $extracted = array_values($extracted);
-
-                if (empty($extracted)) {
-                    return back()->with('warning', 'Semua vendor dari screenshot sudah ada di daftar.');
+            // 1. Grouping data hasil scan berdasarkan Marketplace (Shopee, Monotaro, dll)
+            $groupedVendors = [];
+            
+            foreach ($extracted as $item) {
+                // Tentukan nama marketplace (fallback ke mode atau vendor_name)
+                $marketplace = strtolower(trim($item['marketplace'] ?? ''));
+                if (empty($marketplace) || $marketplace === 'auto' || $marketplace === 'others') {
+                    $marketplace = strtolower($item['vendor_name'] ?? ($mode === 'monotaro' ? 'Monotaro' : 'Lainnya'));
                 }
 
-                $baseSort = ($procurement->vendors()->max('sort_order') ?? 0);
-            } else {
-                // Replace mode
-                $procurement->vendors()->delete();
-                $baseSort = 0;
+                // Inisialisasi array untuk marketplace jika belum ada
+                if (!isset($groupedVendors[$marketplace])) {
+                    $groupedVendors[$marketplace] = [
+                        'vendor_name'      => ucfirst($marketplace),
+                        'marketplace'      => ucfirst($marketplace),
+                        'items'            => [],
+                        'shipping_cost'    => 0,
+                        'discount_voucher' => 0,
+                        'tax_ppn'          => 0,
+                    ];
+                }
+
+                // Gabungkan items & cek duplikasi
+                if (!empty($item['items']) && is_array($item['items'])) {
+                    foreach ($item['items'] as $it) {
+                        $exists = false;
+                        // Cek apakah produk sudah ada di keranjang marketplace ini
+                        foreach ($groupedVendors[$marketplace]['items'] as &$existingItem) {
+                            $isSameSku = !empty($it['sku']) && $existingItem['sku'] === $it['sku'];
+                            $isSameName = empty($it['sku']) && strtolower($existingItem['product_name']) === strtolower($it['product_name']);
+                            
+                            if ($isSameSku || $isSameName) {
+                                // Jika sama, tambahkan quantity dan subtotal
+                                $existingItem['quantity'] += ($it['quantity'] ?? 1);
+                                $existingItem['subtotal'] += ($it['subtotal'] ?? 0);
+                                $exists = true;
+                                break;
+                            }
+                        }
+                        unset($existingItem); // Hapus referensi agar aman
+
+                        // Jika tidak duplikat, masukkan sebagai item baru
+                        if (!$exists) {
+                            $groupedVendors[$marketplace]['items'][] = $it;
+                        }
+                    }
+                }
+
+                // Akumulasi biaya tambahan
+                $groupedVendors[$marketplace]['shipping_cost'] += ($item['shipping_cost'] ?? 0);
+                $groupedVendors[$marketplace]['discount_voucher'] += ($item['discount_voucher'] ?? 0);
+                $groupedVendors[$marketplace]['tax_ppn'] += ($item['tax_ppn'] ?? 0);
             }
 
-            /* ═══ Simpan vendor + items ═══ */
-            foreach ($extracted as $i => $v) {
-                $vendor = $procurement->vendors()->create([
-                    'vendor_name'        => $v['vendor_name']        ?? 'Vendor ' . ($i + 1),
-                    'marketplace'        => $v['marketplace']        ?? ($mode === 'monotaro' ? 'Monotaro' : null),
-                    'company_name'       => $v['company_name']       ?? null,
-                    'payment_method'     => $v['payment_method']     ?? null,
-                    'payment_bank'       => $v['payment_bank']       ?? null,
-                    'estimated_delivery' => $v['estimated_delivery'] ?? null,
-                    'product_url'        => $v['store_url']          ?? null,
-                    'notes'              => $v['notes']              ?? null,
-                    'subtotal'           => $v['subtotal']           ?? 0,
-                    'shipping_cost'      => $v['shipping_cost']      ?? 0,
-                    'discount_voucher'   => $v['discount_voucher']   ?? 0,
-                    'tax_ppn'            => $v['tax_ppn']            ?? 0,
-                    'total_before_tax'   => $v['total_before_tax']   ?? 0,
-                    'total_price'        => $v['total_price']        ?? 0,
-                    'tax_note'           => $v['tax_note']           ?? 'Include Tax',
-                    'sort_order'         => $baseSort + $i + 1,
-                ]);
+            // 2. Simpan Vendor yang sudah di-group ke Database
+            foreach ($groupedVendors as $marketplaceName => $data) {
+                // Hitung ulang total untuk vendor ini
+                $itemsSubtotal = collect($data['items'])->sum('subtotal');
+                $totalBeforeTax = $itemsSubtotal + $data['shipping_cost'] - $data['discount_voucher'];
+                $totalPrice = $totalBeforeTax + $data['tax_ppn'];
 
-                if (!empty($v['items']) && is_array($v['items'])) {
-                    foreach ($v['items'] as $j => $item) {
+                // Jika mode REPLACE (Monotaro/Auto), hapus data lama untuk marketplace ini
+                if ($mode !== 'others') {
+                    $procurement->vendors()->where('marketplace', $data['marketplace'])->delete();
+                }
+
+                // Cek apakah vendor untuk marketplace ini sudah ada (khusus mode append/others)
+                $existingVendor = null;
+                if ($mode === 'others') {
+                    $existingVendor = $procurement->vendors()->where('marketplace', $data['marketplace'])->first();
+                }
+
+                if ($existingVendor) {
+                    // UPDATE: Tambahkan item baru ke vendor yang sudah ada
+                    foreach ($data['items'] as $newItem) {
+                        $existingItem = $existingVendor->items()
+                            ->where(function($q) use ($newItem) {
+                                if (!empty($newItem['sku'])) {
+                                    $q->where('sku', $newItem['sku']);
+                                } else {
+                                    $q->where('product_name', $newItem['product_name']);
+                                }
+                            })->first();
+
+                        if ($existingItem) {
+                            // Update quantity jika item sudah ada
+                            $existingItem->update([
+                                'quantity' => $existingItem->quantity + ($newItem['quantity'] ?? 1),
+                                'subtotal' => $existingItem->subtotal + ($newItem['subtotal'] ?? 0)
+                            ]);
+                        } else {
+                            // Buat item baru
+                            $existingVendor->items()->create([
+                                'product_name' => $newItem['product_name'] ?? '-',
+                                'variant'      => $newItem['variant']      ?? null,
+                                'sku'          => $newItem['sku']          ?? null,
+                                'image_url'    => $newItem['image_url']    ?? null,
+                                'quantity'     => $newItem['quantity']     ?? 1,
+                                'unit_price'   => $newItem['unit_price']   ?? 0,
+                                'subtotal'     => $newItem['subtotal']     ?? 0,
+                                'stock_status' => $newItem['stock_status'] ?? null,
+                                'weight'       => $newItem['weight']       ?? null,
+                                'sort_order'   => $existingVendor->items()->count() + 1,
+                            ]);
+                        }
+                    }
+                    
+                    // Update totalan vendor
+                    $newSubtotal = $existingVendor->items()->sum('subtotal');
+                    $newTotalBeforeTax = $newSubtotal + $existingVendor->shipping_cost - $existingVendor->discount_voucher;
+                    $existingVendor->update([
+                        'subtotal'         => $newSubtotal,
+                        'total_before_tax' => $newTotalBeforeTax,
+                        'total_price'      => $newTotalBeforeTax + $existingVendor->tax_ppn
+                    ]);
+
+                } else {
+                    // CREATE: Buat vendor baru (Keranjang baru)
+                    $vendor = $procurement->vendors()->create([
+                        'vendor_name'        => $data['vendor_name'],
+                        'marketplace'        => $data['marketplace'],
+                        'subtotal'           => $itemsSubtotal,
+                        'shipping_cost'      => $data['shipping_cost'],
+                        'discount_voucher'   => $data['discount_voucher'],
+                        'tax_ppn'            => $data['tax_ppn'],
+                        'total_before_tax'   => $totalBeforeTax,
+                        'total_price'        => $totalPrice,
+                        'sort_order'         => 1, // Bisa disesuaikan
+                    ]);
+
+                    foreach ($data['items'] as $j => $item) {
                         $vendor->items()->create([
                             'product_name' => $item['product_name'] ?? '-',
                             'variant'      => $item['variant']      ?? null,
@@ -142,15 +211,7 @@ class VendorComparisonController extends Controller
 
             $this->autoPickWinner($procurement);
 
-            $modeLabel = match ($mode) {
-                'monotaro' => 'Monotaro',
-                'others'   => 'Marketplace lain',
-                default    => '',
-            };
-
-            $message = count($extracted) . ' vendor';
-            if ($modeLabel) $message .= " ({$modeLabel})";
-            $message .= ' berhasil di-scan.';
+            $message = count($groupedVendors) . ' marketplace berhasil di-scan dan digabungkan ke keranjang.';
 
             return redirect()
                 ->route('procurement.comparisons.index', $procurement)
