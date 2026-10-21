@@ -61,6 +61,11 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('signers', SignerController::class)
             ->except(['show', 'create']);
 
+    Route::middleware(['role:Super Admin'])->group(function () {
+        Route::get('/users/nonaktif', [UserController::class, 'nonaktifIndex'])->name('users.nonaktif.index');
+        Route::get('/users/{user}/nonaktif', [UserController::class, 'nonaktif'])->name('users.nonaktif');
+    });
+
         Route::resource('users', UserController::class)->except(['show']);
     });
 

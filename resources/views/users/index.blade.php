@@ -57,6 +57,9 @@
                             </td>
                             <td class="px-5 py-3">
                                 <div class="flex justify-end gap-2">
+                                    <a href="{{ route('users.nonaktif', $u) }}" class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                                        <i data-lucide="user-x" class="w-4 h-4"></i>
+                                    </a>
                                     <a href="{{ route('users.edit', $u) }}" class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
                                         <i data-lucide="pencil" class="w-4 h-4"></i>
                                     </a>

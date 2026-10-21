@@ -124,4 +124,15 @@ class UserController extends Controller
 
         return redirect()->route('users.index')->with('success', 'User berhasil dihapus.');
     }
+
+    public function nonaktifkan(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Kamu tidak bisa menonaktifkan akunmu sendiri.');
+        }
+
+        $user->update(['is_active' => false]);
+
+        return redirect()->route('users.index')->with('success', 'User berhasil dinonaktifkan.');
+    }
 }
