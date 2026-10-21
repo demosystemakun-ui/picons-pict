@@ -60,7 +60,7 @@ return [
             'report' => false,
         ],
 
-         // Disk khusus untuk Bucket consumable di Supabase
+        // Disk khusus untuk Bucket consumable di Supabase
         'supabase-consumable_request' => [
             'driver'                  => 's3',
             'key'                     => env('SUPABASE_S3_KEY'),
@@ -68,19 +68,28 @@ return [
             'region'                  => env('SUPABASE_S3_REGION', 'ap-south-1'),
             'bucket'                  => env('SUPABASE_CONSUMABLE_REQUEST_BUCKET', 'consumable_request'),
             'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
+            
+            // TAMBAHAN: URL Publik untuk Supabase
+            'url'                     => env('SUPABASE_S3_URL') . '/' . env('SUPABASE_CONSUMABLE_REQUEST_BUCKET', 'consumable_request'),
+            
             'use_path_style_endpoint' => true,
             'visibility'              => 'public',
             'throw'                   => true,
             'report'                  => false,
         ],
 
-         'supabase-procurement_request' => [
+        // Disk khusus untuk Bucket procurement_request di Supabase
+        'supabase-procurement_request' => [
             'driver'                  => 's3',
             'key'                     => env('SUPABASE_S3_KEY'),
             'secret'                  => env('SUPABASE_S3_SECRET'),
             'region'                  => env('SUPABASE_S3_REGION', 'ap-south-1'),
             'bucket'                  => env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request'),
             'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
+            
+            // TAMBAHAN: URL Publik untuk Supabase
+            'url'                     => env('SUPABASE_S3_URL') . '/' . env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request'),
+            
             'use_path_style_endpoint' => true,
             'visibility'              => 'public',
             'throw'                   => true,

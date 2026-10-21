@@ -229,8 +229,11 @@ class ProcurementRequestController extends Controller
         // Simpan PDF ke Supabase Storage
         Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
-        // Ambil URL publik dari Supabase untuk di-redirect/ditampilkan
-        $pdfUrl = Storage::disk('supabase-procurement_request')->url($filePath);
+        // --- PERBAIKAN URL PUBLIK SUPABASE ---
+        $projectId = 'thlvvgolwryzhdxjgyvz'; // Sesuaikan dengan Project ID Anda
+        $bucket    = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+        
+        $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
 
         return redirect()->away($pdfUrl);
     }
@@ -312,7 +315,11 @@ class ProcurementRequestController extends Controller
         // Simpan PDF Final ke Supabase Storage
         Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
-        $pdfUrl = Storage::disk('supabase-procurement_request')->url($filePath);
+        // --- PERBAIKAN URL PUBLIK SUPABASE ---
+        $projectId = 'thlvvgolwryzhdxjgyvz'; // Sesuaikan dengan Project ID Anda
+        $bucket    = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+        
+        $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
 
         return redirect()->away($pdfUrl);
     }
