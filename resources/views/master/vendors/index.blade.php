@@ -119,7 +119,25 @@
                 </button>
             </header>
 
-            <div class="p-6 space-y-4">
+            <div class="p-6 space-y-6">
+                {{-- TIPE BUDGET (Dipindah ke atas, sebelum daftar vendor) --}}
+                <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex items-center justify-between">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-800">Tipe Budget Pengadaan</label>
+                        <p class="text-xs text-gray-500">Pilih apakah pengadaan ini masuk dalam anggaran (Budgeted) atau di luar anggaran (Non Budgeted).</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="budget_type" value="Budgeted" x-model="budgetType" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Budgeted</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="budget_type" value="Non Budgeted" x-model="budgetType" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Non Budgeted</span>
+                        </label>
+                    </div>
+                </div>
+
                 <template x-if="vendors.length === 0">
                     <div class="text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
                         <p class="text-sm font-medium text-gray-700">Belum ada vendor</p>
@@ -311,6 +329,7 @@
                             Cetak PR Final
                         </a>
                     @endif
+                    
                     <button type="submit"
                             class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -330,6 +349,9 @@
 <script>
     function vendorForm() {
         return {
+            // TAMBAHAN: Inisialisasi Tipe Budget
+            budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}', 
+            
             vendors: [],
 
             init() {
