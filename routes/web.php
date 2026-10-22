@@ -258,20 +258,23 @@ Route::middleware(['auth'])->group(function () {
    (Silakan hapus 2 rute di bawah ini jika migrasi sudah beres)
 ═══════════════════════════════════════════════════════════════════ */
 
-// Rute untuk memperbaiki error "Specified key was too long"
-Route::get('/fix-migration', function () {
+// Rute untuk menjalankan migrasi baru dengan aman
+Route::get('/jalankan-migrasi-baru', function () {
     try {
+        // 1. Hapus paksa semua tabel yang terkait
         \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
         \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
         
-        // Hapus catatan migrasi sebelumnya agar bisa di-run ulang
+        // 2. Hapus SEMUA riwayat migrasi terkait purchases lama
         \Illuminate\Support\Facades\DB::table('migrations')
             ->where('migration', 'like', '%create_purchases%')
+            ->orWhere('migration', 'like', '%fix_purchases%')
             ->delete();
 
+        // 3. Jalankan migrasi
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         
-        return '<h3>Perbaikan Berhasil!</h3><p>Tabel sudah dihapus dan dibuat ulang dengan struktur yang benar.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+        return '<h3>Berhasil!</h3><p>Migrasi baru sudah berjalan.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return '<h3>Error:</h3> ' . $e->getMessage();
     }
