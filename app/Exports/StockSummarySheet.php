@@ -79,6 +79,7 @@ class StockSummarySheet implements FromArray, WithHeadings, WithTitle, WithEvent
             ->toArray();
 
         // User unik + nama per stock
+        // PASTIKAN 'stock_usages.user_id' sesuai dengan nama kolom di database Anda
         $userAgg = DB::table('stock_usages')
             ->join('users', 'users.id', '=', 'stock_usages.user_id')
             ->whereIn('stock_usages.department_stock_id', $stockIds)
