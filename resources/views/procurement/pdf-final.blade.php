@@ -3,6 +3,11 @@
     $vendors     = $procurement['vendors'] ?? [];
     $winner      = $procurement['winner']  ?? null;
     $budgetType  = $procurement['budget_type'] ?? null;
+    
+    // Mengambil data item untuk di-chunk
+    $purchaseItems = $procurement['purchase_items'] ?? [];
+    // Bagi array menjadi 2 kolom (misal jika ada 30 data, baris 1 berisi data 1 & 16, baris 2 berisi data 2 & 17, dst)
+    $chunkedItems = array_chunk($purchaseItems, max(1, ceil(count($purchaseItems) / 2)));
 
     if (! function_exists('pr_pdf_check')) {
         function pr_pdf_check(bool $checked, int $size = 11): string {
@@ -52,6 +57,18 @@
         font-size: 9.5px;
         padding: 4px !important;
     }
+    
+    /* Styling Tabel Multi-Kolom */
+    .grid-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .grid-table th, .grid-table td { 
+        border: 1px solid #000; 
+        padding: 4px; 
+        font-size: 8px; 
+        vertical-align: top;
+    }
+    .grid-table th { background: #f0f0f0; font-weight: bold; text-align: center; }
+    .spec-text { font-size: 7.5px; color: #333; white-space: pre-line; line-height: 1.3; margin-top: 2px;}
+
     .vendor-wrap { display: table; width: 100%; table-layout: fixed; }
     .vendor-cell {
         display: table-cell;
@@ -117,7 +134,6 @@
         <td class="label-col" style="width:18%;">DATE</td>
         <td style="width:32%;">{{ $procurement['date'] }}</td>
         <td class="label-col" style="width:12%; text-align:center;">Budget issue</td>
-        {{-- PERBAIKAN: Nilai pengecekan disamakan dengan value dari form --}}
         <td class="budget-col">{!! pr_pdf_check($budgetType === 'Budgeted') !!} Budgeted</td>
         <td class="budget-col">{!! pr_pdf_check($budgetType === 'Non Budgeted') !!} Non Budgeted</td>
     </tr>
@@ -136,6 +152,96 @@
     <tr>
         <td class="label-col">DESCRIPTION</td>
         <td colspan="4">{{ $procurement['description'] }}</td>
+    </tr>
+
+    {{-- ═══ REQUIRED SPEC (DIUBAH JADI 2 KOLOM) ═══ --}}
+    <tr>
+        <td colspan="5" class="section-header">Required spec (Detail and reason of it)</td>
+    </tr>
+    <tr>
+        <td colspan="5" style="padding: 0;">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Item & Specifications</th>
+                        <th style="width: 50%;">Item & Specifications</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if(count($purchaseItems) > 0)
+                        @foreach($chunkedItems as $chunk)
+                            <tr>
+                                {{-- Kolom Kiri --}}
+                                <td>
+                                    @if(isset($chunk[0]))
+                                        @php $item = $chunk[0]; @endphp
+                                        <strong>{{ $item['item'] ?? 'No Name' }}</strong>
+                                        <div class="spec-text">{{ $item['requirement'] ?? '-' }}</div>
+                                    @endif
+                                </td>
+                                {{-- Kolom Kanan --}}
+                                <td>
+                                    @if(isset($chunk[1]))
+                                        @php $item = $chunk[1]; @endphp
+                                        <strong>{{ $item['item'] ?? 'No Name' }}</strong>
+                                        <div class="spec-text">{{ $item['requirement'] ?? '-' }}</div>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    @else
+                        <tr>
+                            <td colspan="2" style="text-align:center;">Tidak ada spesifikasi.</td>
+                        </tr>
+                    @endif
+                </tbody>
+            </table>
+        </td>
+    </tr>
+
+    {{-- ═══ REQUEST PURCHASE ITEM (DIUBAH JADI 2 KOLOM) ═══ --}}
+    <tr>
+        <td colspan="5" style="padding: 0;">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Request purchase item</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 35%;">Request purchase item</th>
+                        <th style="width: 10%;">Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if(count($purchaseItems) > 0)
+                        @foreach($chunkedItems as $chunk)
+                            <tr>
+                                {{-- Kolom Kiri --}}
+                                <td>{{ $chunk[0]['item'] ?? '' }}</td>
+                                <td style="text-align:center; font-weight:bold;">{{ $chunk[0]['quantity'] ?? '' }}</td>
+                                
+                                {{-- Kolom Kanan --}}
+                                <td>{{ $chunk[1]['item'] ?? '' }}</td>
+                                <td style="text-align:center; font-weight:bold;">{{ $chunk[1]['quantity'] ?? '' }}</td>
+                            </tr>
+                        @endforeach
+                    @else
+                        <tr>
+                            <td colspan="4" style="text-align:center;">Tidak ada item.</td>
+                        </tr>
+                    @endif
+                </tbody>
+            </table>
+        </td>
+    </tr>
+
+    {{-- ═══ TARGET PURCHASE ═══ --}}
+    <tr>
+        <td colspan="5" class="section-header">Target to purchase (Consider the install schedule)</td>
+    </tr>
+    <tr>
+        <td colspan="5" style="padding: 8px 6px;">
+            {{ $procurement['target_purchase'] ?? '-' }}
+        </td>
     </tr>
 
     {{-- ═══ CANDIDATES OF SUPPLIERS ═══ --}}
