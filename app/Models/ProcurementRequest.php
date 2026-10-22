@@ -20,7 +20,7 @@ class ProcurementRequest extends Model
         'division',
         'prepared_by',
         'description',
-         'source',
+        'source', // Penanda PR: 'manual' atau 'consumable'
 
         // Order type (boolean)
         'is_new_order',
@@ -62,16 +62,11 @@ class ProcurementRequest extends Model
         'user_id',
     ];
 
-    public function documents()
-{
-    return $this->morphMany(DocumentArchive::class, 'documentable');
-}
-
     /* ═══════════════════════════════════════════════════════════════
        CASTS
     ═══════════════════════════════════════════════════════════════ */
     protected $casts = [
-        'date'              => 'date',
+        'date'              => 'datetime', // Diubah dari 'date' ke 'datetime' untuk mencegah error ->format()
         'is_new_order'      => 'boolean',
         'is_repeat_order'   => 'boolean',
         'is_goods'          => 'boolean',
@@ -110,7 +105,7 @@ class ProcurementRequest extends Model
     }
 
     /**
-     * Comparison lama (legacy — bisa dihapus jika sudah migrasi penuh).
+     * Comparison lama (legacy).
      */
     public function comparisons()
     {
@@ -157,6 +152,14 @@ class ProcurementRequest extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Dokumen arsip (seperti hasil scan AI, invoice, dll).
+     */
+    public function documents()
+    {
+        return $this->morphMany(DocumentArchive::class, 'documentable');
     }
 
     /* ═══════════════════════════════════════════════════════════════
