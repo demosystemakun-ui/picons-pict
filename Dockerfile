@@ -62,23 +62,22 @@ COPY . .
 
 # ============================================
 # INSTALL DEPENDENCIES COMPOSER
-# (--no-scripts dihapus agar package discovery jalan)
+# (--no-scripts DITAMBAHKAN agar build tidak gagal saat discover)
 # ============================================
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 # ============================================
-# CLEAR & REBUILD CACHE LARAVEL
+# CLEAR CACHE LARAVEL (Hanya clear file, tanpa sentuh DB)
 # ============================================
-RUN php artisan package:discover --ansi || true \
-    && php artisan config:clear || true \
-    && php artisan cache:clear || true \
+RUN php artisan config:clear || true \
     && php artisan route:clear || true \
     && php artisan view:clear || true
 
 # ============================================
 # SET PERMISSIONS
 # ============================================
-RUN chown -R www-data:www-data /var/www/html \
+RUN mkdir -p bootstrap/cache storage/framework/{cache,sessions,views} \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # ============================================
@@ -87,13 +86,13 @@ RUN chown -R www-data:www-data /var/www/html \
 EXPOSE 80
 
 # ============================================
-# STARTUP: Fix MPM ulang saat runtime + Jalankan Apache
-# (Railway menyuntikkan mpm_event saat runtime)
+# STARTUP: Jalankan optimasi & Apache
 # ============================================
 CMD ["bash", "-lc", "\
 set -eux; \
 a2dismod mpm_event mpm_worker || true; \
 rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* || true; \
 a2enmod mpm_prefork; \
+php artisan package:discover --ansi || true; \
 exec apache2-foreground \
 "]
