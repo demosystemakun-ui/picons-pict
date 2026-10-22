@@ -252,3 +252,22 @@ Route::middleware(['auth'])->group(function () {
         ];
     });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// RUTE SEMENTARA UNTUK MIGRASI DATABASE SERVER
+// (Hapus rute ini jika tabel sudah berhasil dibuat di server)
+// ═══════════════════════════════════════════════════════════════
+Route::get('/force-migrate', function () {
+    try {
+        // 1. Hapus tabel yang setengah jadi (jika ada error 1050 sebelumnya)
+        \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
+        \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
+
+        // 2. Jalankan ulang migrasi
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        
+        return '<h3>Migrasi Berhasil!</h3><p>Tabel berhasil dihapus dan dibuat ulang.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+    } catch (\Exception $e) {
+        return '<h3>Error:</h3> ' . $e->getMessage();
+    }
+});
