@@ -20,6 +20,7 @@ class ProcurementRequest extends Model
         'division',
         'prepared_by',
         'description',
+         'source',
 
         // Order type (boolean)
         'is_new_order',
@@ -60,6 +61,11 @@ class ProcurementRequest extends Model
         // Relasi user
         'user_id',
     ];
+
+    public function documents()
+{
+    return $this->morphMany(DocumentArchive::class, 'documentable');
+}
 
     /* ═══════════════════════════════════════════════════════════════
        CASTS

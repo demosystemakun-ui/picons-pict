@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
+  public function up(): void
+{
+    // Tambahkan pengecekan ini
+    if (!Schema::hasTable('stock_ins')) {
         Schema::create('stock_ins', function (Blueprint $table) {
             $table->id();
             $table->foreignId('department_stock_id')->constrained()->cascadeOnDelete();
@@ -15,10 +17,11 @@ return new class extends Migration
             $table->integer('quantity_in');
             $table->string('note')->nullable();
             $table->timestamps();
-
+            
             $table->index(['department_stock_id', 'created_at']);
         });
     }
+}
 
     public function down(): void
     {

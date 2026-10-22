@@ -6,22 +6,62 @@
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6 pb-24">
 
+    {{-- ALERT ERROR --}}
+    @if (session('error'))
+        <div class="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 text-sm">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    {{-- ALERT SUCCESS --}}
     @if (session('success'))
         <div class="rounded-lg bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3 text-sm">
             {{ session('success') }}
         </div>
     @endif
 
-    <form action="{{ route('consumable-requests.consolidation.process') }}" method="POST" target="_blank" class="space-y-6">
+    <form action="{{ route('consumable-requests.consolidation.process') }}" method="POST" class="space-y-6">
         @csrf
         
+        {{-- BAGIAN 1: INPUT DATA PR BARU --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
+            <h2 class="text-base font-semibold text-gray-800 dark:text-white mb-4">Informasi Procurement Request (PR) Baru</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Nomor PR <span class="text-red-500">*</span></label>
+                    <input type="text" name="no" value="{{ old('no', \App\Models\ProcurementRequest::generateNumber()) }}" required
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:ring-primary-500 focus:border-primary-500 @error('no') border-red-500 @enderror">
+                    @error('no') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Target Pembelian <span class="text-red-500">*</span></label>
+                    <input type="date" name="target_purchase" value="{{ old('target_purchase', now()->addDays(7)->format('Y-m-d')) }}" required
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:ring-primary-500 focus:border-primary-500 @error('target_purchase') border-red-500 @enderror">
+                    @error('target_purchase') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Background (Latar Belakang)</label>
+                    <textarea name="background" rows="2" placeholder="Opsional, misal: Kebutuhan operasional bulan ini..."
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:ring-primary-500 focus:border-primary-500">{{ old('background') }}</textarea>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Purpose (Tujuan)</label>
+                    <textarea name="purpose" rows="2" placeholder="Opsional, misal: Menunjang kegiatan operasional..."
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm focus:ring-primary-500 focus:border-primary-500">{{ old('purpose') }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- BAGIAN 2: PILIH CONSUMABLE --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm flex items-center justify-between">
             <div>
                 <h2 class="text-base font-semibold text-gray-800 dark:text-white">Pilih Consumable Request yang Disetujui</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Centang request di bawah ini untuk disatukan ke dalam satu format PR/Rekap pengadaan.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Centang request di bawah ini untuk disatukan ke dalam PR.</p>
             </div>
             <button type="submit" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition">
-                Gabungkan & Cetak Rekap PR
+                Gabungkan Menjadi PR
             </button>
         </div>
 
@@ -74,3 +114,4 @@
     });
 </script>
 @endpush
+@endsection

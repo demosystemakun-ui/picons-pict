@@ -1,53 +1,29 @@
 <?php
 
-namespace App\Http\Controllers;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
-use App\Models\Signer;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-
-class SignerController extends Controller
+return new class extends Migration
 {
-    public function index()
+    public function up(): void
     {
-        $signers = Signer::orderBy('slot')->orderBy('name')->get();
-        return view('signers.index', compact('signers'));
+        // Opsi A: Jika Anda ingin tetap menggunakan ENUM, tambahkan 'revision'
+        // Pastikan semua opsi ENUM yang lama ditulis ulang agar tidak hilang
+        DB::statement("ALTER TABLE procurement_requests MODIFY COLUMN status ENUM('pending', 'approved', 'rejected', 'revision') NOT NULL DEFAULT 'pending'");
+        
+        // --- ATAU ---
+
+        // Opsi B: Ubah menjadi VARCHAR (lebih fleksibel untuk ke depannya)
+        // Schema::table('procurement_requests', function (Blueprint $table) {
+        //     $table->string('status')->change();
+        // });
     }
 
-    public function store(Request $request)
+    public function down(): void
     {
-        Signer::create($this->validated($request));
-        return redirect()->route('signers.index')->with('success', 'Penandatangan ditambahkan.');
+        // Kembalikan ke struktur semula jika di-rollback
+        DB::statement("ALTER TABLE procurement_requests MODIFY COLUMN status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'");
     }
-
-    public function edit(Signer $signer)
-    {
-        return view('signers.edit', compact('signer'));
-    }
-
-    public function update(Request $request, Signer $signer)
-    {
-        $signer->update($this->validated($request));
-        return redirect()->route('signers.index')->with('success', 'Penandatangan diperbarui.');
-    }
-
-    public function destroy(Signer $signer)
-    {
-        $signer->delete();
-        return redirect()->route('signers.index')->with('success', 'Penandatangan dihapus.');
-    }
-
-    private function validated(Request $request): array
-    {
-        $data = $request->validate([
-            'name'  => 'required|string|max:150',
-            'title' => 'required|string|max:150',
-            'slot'  => ['required', Rule::in(array_keys(Signer::SLOTS))],
-        ]);
-        $data['is_active'] = $request->boolean('is_active');
-
-        return $data;
-    }
-}
-
-//percoabaan
+};

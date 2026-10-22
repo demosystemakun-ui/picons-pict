@@ -19,8 +19,9 @@
                 @if($consumableRequest->status == 'approved') bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300
                 @elseif($consumableRequest->status == 'rejected') bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300
                 @elseif($consumableRequest->status == 'revision') bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300
+                @elseif($consumableRequest->status == 'converted') bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300
                 @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 @endif">
-                Status: {{ ucfirst($consumableRequest->status) }}
+                Status: {{ $consumableRequest->status === 'converted' ? 'Converted to PR' : ucfirst($consumableRequest->status) }}
             </span>
         </div>
 
@@ -34,6 +35,7 @@
                 Unduh PDF
             </a>
 
+            {{-- Tombol EDIT hanya muncul jika status PENDING --}}
             @if(auth()->user()->hasRole('Super Admin') || ($consumableRequest->user_id === auth()->id() && $consumableRequest->status == 'pending'))
                 <a href="{{ route('consumable-requests.edit', $consumableRequest->id) }}"
                    class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium">
@@ -41,6 +43,7 @@
                 </a>
             @endif
 
+            {{-- Tombol APPROVE/REJECT hanya muncul jika status PENDING --}}
             @if(auth()->user()->hasRole(['Super Admin', 'Manager', 'Approver']) && $consumableRequest->status === 'pending')
                 <form action="{{ route('consumable-requests.update-status', $consumableRequest) }}" method="POST" class="inline">
                     @csrf

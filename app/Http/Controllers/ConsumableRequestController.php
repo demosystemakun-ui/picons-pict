@@ -7,6 +7,8 @@ use App\Models\ProcurementRequest;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ConsumableRequestController extends Controller
 {
@@ -356,11 +358,11 @@ class ConsumableRequestController extends Controller
 
         $validated = $request->validate([
             'no'                 => 'required|string|max:100|unique:procurement_requests,no',
-            'background'       => 'nullable|string',
-            'purpose'          => 'nullable|string',
-            'required_spec'    => 'nullable|string',
-            'request_ids'      => 'required|array|min:1',
-            'request_ids.*'    => 'exists:consumable_requests,id',
+            'background'         => 'nullable|string',
+            'purpose'            => 'nullable|string',
+            'required_spec'      => 'nullable|string',
+            'request_ids'        => 'required|array|min:1',
+            'request_ids.*'      => 'exists:consumable_requests,id',
         ], [
             'no.required' => 'Nomor PR wajib diisi.',
             'no.unique'   => 'Nomor PR sudah digunakan. Silakan masukkan nomor lain.',
@@ -376,60 +378,78 @@ class ConsumableRequestController extends Controller
         }
 
         $user = auth()->user();
-        $totalQuantity = 0;
-        $itemsPayload  = [];
+        
+        DB::beginTransaction();
+        try {
+            $totalQuantity = 0;
+            $itemsPayload  = [];
 
-        foreach ($consumableRequests as $cr) {
-            foreach ($cr->items as $item) {
-                $totalQuantity += $item->quantity;
+            foreach ($consumableRequests as $cr) {
+                foreach ($cr->items as $item) {
+                    $totalQuantity += $item->quantity;
 
-                $requirement = collect([
-                    $item->purpose_1,
-                    $item->purpose_2,
-                    $item->purpose_3,
-                ])->filter()->implode(' | ');
+                    $requirement = collect([
+                        $item->purpose_1,
+                        $item->purpose_2,
+                        $item->purpose_3,
+                    ])->filter()->implode(' | ');
 
-                $itemsPayload[] = [
-                    'item_name'             => $item->item_name,
-                    'brand'                 => $item->brand,
-                    'type'                  => $item->type,
-                    'model'                 => $item->model,
-                    'capacity'              => $item->capacity,
-                    'specs'                 => $item->specs,
-                    'item_requirement_note' => $requirement,
-                    'quantity'              => $item->quantity,
-                    'unit'                  => $item->unit,
-                    'picture'               => $item->picture,
-                ];
+                    $itemsPayload[] = [
+                        'item_name'                  => $item->item_name,
+                        'brand'                      => $item->brand,
+                        'type'                       => $item->type,
+                        'model'                      => $item->model,
+                        'capacity'                   => $item->capacity,
+                        'specs'                      => $item->specs,
+                        'item_requirement_note'      => $requirement,
+                        'quantity'                   => $item->quantity,
+                        'unit'                       => $item->unit,
+                        'picture'                    => $item->picture,
+                        'consumable_request_item_id' => $item->id, // Traceability
+                    ];
+                }
             }
+
+            $procurementRequest = ProcurementRequest::create([
+                'no'                    => $validated['no'],
+                'source'                => 'consumable',
+                'date'                  => now()->toDateString(),
+                'department_id'         => $user->department_id,
+                'request_by'            => $user->name,
+                'division'              => $user->department->name ?? '-',
+                'prepared_by'           => $user->name,
+                'description'           => 'Gabungan Consumable Request: ' . $consumableRequests->pluck('subject')->implode(', '),
+                'is_repeat_order'       => true,
+                'is_goods'              => true,
+                'background'            => $validated['background'] ?: 'Konsolidasi otomatis dari ' . $consumableRequests->count() . ' Consumable Request yang sudah approved.',
+                'purpose'               => $validated['purpose'] ?: 'Pemenuhan kebutuhan consumable operasional.',
+                'required_spec'         => null,
+                'item_name'             => '(Multiple Items - Lihat Detail Lampiran)',
+                'item_requirement_note' => '(Multiple Items - Lihat Detail Lampiran)',
+                'quantity'              => $totalQuantity,
+                'pic_name'              => $user->name,
+                'status'                => 'pending',
+                'user_id'               => $user->id,
+            ]);
+
+            foreach ($itemsPayload as $payload) {
+                $procurementRequest->items()->create($payload);
+            }
+
+            ConsumableRequest::whereIn('id', $validated['request_ids'])->update([
+                'status'          => 'converted',
+                'pr_generated_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('procurement.print', $procurementRequest->id)
+                ->with('success', 'Consumable Request berhasil digabungkan menjadi PR.');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Merge Consumable to PR Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menggabungkan Consumable Request: ' . $e->getMessage());
         }
-
-        $procurementRequest = ProcurementRequest::create([
-            'no'                    => $validated['no'],
-            'date'                  => now()->toDateString(),
-            'department_id'         => $user->department_id,
-            'request_by'            => $user->name,
-            'division'              => $user->department->name ?? '-',
-            'prepared_by'           => $user->name,
-            'description'           => 'Gabungan Consumable Request: ' . $consumableRequests->pluck('subject')->implode(', '),
-            'is_repeat_order'       => true,
-            'is_goods'              => true,
-            'background'            => $validated['background'] ?: 'Konsolidasi otomatis dari ' . $consumableRequests->count() . ' Consumable Request yang sudah approved.',
-            'purpose'               => $validated['purpose'] ?: 'Pemenuhan kebutuhan consumable operasional.',
-            'required_spec'         => null,
-            'item_name'             => '(Multiple Items - Lihat Detail Lampiran)',
-            'item_requirement_note' => '(Multiple Items - Lihat Detail Lampiran)',
-            'quantity'              => $totalQuantity,
-            'pic_name'              => $user->name,
-            'created_by'            => $user->id,
-        ]);
-
-        foreach ($itemsPayload as $payload) {
-            $procurementRequest->items()->create($payload);
-        }
-
-        $consumableRequests->each(fn ($cr) => $cr->update(['pr_generated_at' => now()]));
-
-        return redirect()->route('procurement.print', $procurementRequest->id);
     }
 }

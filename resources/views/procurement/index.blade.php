@@ -26,6 +26,27 @@
         </a>
     </div>
 
+    {{-- TAB FILTER SUMBER PR --}}
+    <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+            <a href="{{ route('procurement.index') }}" 
+               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
+                      {{ !request('source') ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                Semua PR
+            </a>
+            <a href="{{ route('procurement.index', ['source' => 'manual']) }}" 
+               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
+                      {{ request('source') == 'manual' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                PR Langsung (Manual)
+            </a>
+            <a href="{{ route('procurement.index', ['source' => 'consumable']) }}" 
+               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
+                      {{ request('source') == 'consumable' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                PR dari Consumable
+            </a>
+        </nav>
+    </div>
+
     {{-- Data Table --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200/80 dark:border-gray-700/80 overflow-hidden">
         <div class="overflow-x-auto">
@@ -60,7 +81,20 @@
                             $currStatus = $r->status ?? 'pending';
                         @endphp
                         <tr class="hover:bg-gray-50/60 dark:hover:bg-gray-700/40 transition">
-                            <td class="px-5 py-4 font-semibold text-gray-900 dark:text-white whitespace-nowrap">{{ $r->no }}</td>
+                            {{-- KOLOM NOMOR PR & BADGE SUMBER --}}
+                            <td class="px-5 py-4 whitespace-nowrap">
+                                <div class="font-semibold text-gray-900 dark:text-white">{{ $r->no }}</div>
+                                @if($r->source === 'consumable')
+                                    <span class="mt-1 inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900/30 dark:text-blue-400">
+                                        CONSUMABLE
+                                    </span>
+                                @else
+                                    <span class="mt-1 inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-700 dark:text-gray-300">
+                                        MANUAL
+                                    </span>
+                                @endif
+                            </td>
+                            
                             <td class="px-5 py-4 whitespace-nowrap">{{ $r->date->format('d/m/Y') }}</td>
                             <td class="px-5 py-4">{{ $r->request_by }}</td>
                             <td class="px-5 py-4">
