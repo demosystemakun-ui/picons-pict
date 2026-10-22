@@ -11,11 +11,19 @@ use Illuminate\Support\Facades\Storage;
 class ProcurementRequestController extends Controller
 {
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Daftar semua PR
+       INDEX — Daftar semua PR & Filter Tab
     ═══════════════════════════════════════════════════════════════ */
-    public function index()
+    public function index(Request $request) // <-- Tambahkan Request $request
     {
-        $requests = ProcurementRequest::latest()->paginate(15);
+        $query = ProcurementRequest::latest();
+
+        // Filter berdasarkan sumber (manual atau consumable)
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
+        $requests = $query->paginate(15)->appends($request->all());
+        
         return view('procurement.index', compact('requests'));
     }
 
@@ -63,6 +71,7 @@ class ProcurementRequestController extends Controller
         $validated['is_goods']        = ($orderType === 'goods');
         $validated['is_services']     = ($orderType === 'services');
         $validated['status']          = 'pending';
+        $validated['source']          = 'manual'; // <-- Pastikan PR buatan sini ditandai manual
 
         unset($validated['order_type']);
 
