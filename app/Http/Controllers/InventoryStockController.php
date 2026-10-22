@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Department;
 use App\Models\DepartmentStock;
 use App\Models\StockUsage;
+use App\Models\StockIn;
 use App\Models\Item;
 use App\Models\Unit;
 use Carbon\Carbon;
@@ -400,8 +401,10 @@ class InventoryStockController extends Controller
 
         $defaultCategoryId = $request->input('default_category_id');
         $defaultUnitId     = $request->input('default_unit_id');
-        $needCategory      = Schema::hasColumn('items', 'category_id');
-        $needUnit          = Schema::hasColumn('items', 'unit_id');
+        
+        // MENGATASI ERROR generation_expression DI MYSQL VERSI LAMA
+        $needCategory = true;
+        $needUnit     = true;
 
         $imported  = 0;
         $newItems  = 0;
@@ -735,37 +738,37 @@ class InventoryStockController extends Controller
     }
 
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'department_id' => 'required|exists:departments,id',
-        'item_id'       => 'required|exists:items,id',
-        'stock'         => 'required|numeric|min:1',
-        'note'          => 'nullable|string|max:255',
-    ]);
-
-    DB::transaction(function () use ($validated) {
-        $departmentStock = DepartmentStock::firstOrCreate(
-            [
-                'department_id' => $validated['department_id'],
-                'item_id'       => $validated['item_id'],
-            ],
-            ['stock' => 0]
-        );
-
-        $departmentStock->stock += $validated['stock'];
-        $departmentStock->save();
-
-        StockIn::create([
-            'department_stock_id' => $departmentStock->id,
-            'user_id'             => auth()->id(),
-            'quantity_in'         => $validated['stock'],
-            'note'                => $validated['note'] ?? null,
+    {
+        $validated = $request->validate([
+            'department_id' => 'required|exists:departments,id',
+            'item_id'       => 'required|exists:items,id',
+            'stock'         => 'required|numeric|min:1',
+            'note'          => 'nullable|string|max:255',
         ]);
-    });
 
-    return redirect()->route('inventory.stock.index')
-        ->with('success', 'Stok masuk berhasil dicatat.');
-}
+        DB::transaction(function () use ($validated) {
+            $departmentStock = DepartmentStock::firstOrCreate(
+                [
+                    'department_id' => $validated['department_id'],
+                    'item_id'       => $validated['item_id'],
+                ],
+                ['stock' => 0]
+            );
+
+            $departmentStock->stock += $validated['stock'];
+            $departmentStock->save();
+
+            StockIn::create([
+                'department_stock_id' => $departmentStock->id,
+                'user_id'             => auth()->id(),
+                'quantity_in'         => $validated['stock'],
+                'note'                => $validated['note'] ?? null,
+            ]);
+        });
+
+        return redirect()->route('inventory.stock.index')
+            ->with('success', 'Stok masuk berhasil dicatat.');
+    }
 
     public function useItemForm($id)
     {
