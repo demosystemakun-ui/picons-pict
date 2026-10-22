@@ -271,7 +271,6 @@
         form.submit();
     });
 </script>
-<!-- hahhahha -->
 {{-- Script modal create & form --}}
 @include('consumable-requests._scripts')
 @endpush
