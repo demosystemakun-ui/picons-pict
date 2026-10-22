@@ -62,16 +62,16 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('signers', SignerController::class)
             ->except(['show', 'create']);
 
-    Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/users/nonaktif', [UserController::class, 'nonaktifIndex'])->name('users.nonaktif.index');
         Route::get('/users/{user}/nonaktif', [UserController::class, 'nonaktif'])->name('users.nonaktif');
-    });
 
         Route::resource('users', UserController::class)->except(['show']);
     });
 
-
-    // ── STATIC ROUTES ──
+    /* ─────────────────────────────────────────────
+       INVENTORY STOCK
+    ───────────────────────────────────────────── */
+    // Static Routes
     Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
         ->name('inventory.stock.index');
 
@@ -81,10 +81,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
         ->name('inventory.stock.use');
 
-        Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])
-    ->name('inventory.stock.items-by-department');
+    Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])
+        ->name('inventory.stock.items-by-department');
 
-    // ── Super Admin only ──
+    // Super Admin only
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])
             ->name('inventory.stock.create');
@@ -99,13 +99,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('inventory.stock.import-process');
     });
 
-      // Rute Pembelian (PO)
-    Route::get('/procurement/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('procurement.purchases.create');
-    Route::post('/procurement/{procurement}/purchases', [PurchaseController::class, 'store'])->name('procurement.purchases.store');
-    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('procurement.purchases.show');
-    Route::post('/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('procurement.purchases.receive');
-});
-    // ── DYNAMIC ROUTES (dengan {id}) ──
+    // Dynamic Routes (dengan {id})
     Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
         ->name('inventory.stock.usage-detail');
 
@@ -193,9 +187,9 @@ Route::middleware(['auth'])->group(function () {
             ]);
     })->name('items.search');
 
-    /* ═══════════════════════════════════════════════════════════════
+    /* ─────────────────────────────────────────────
        PROCUREMENT & VENDOR COMPARISON
-    ═══════════════════════════════════════════════════════════════ */
+    ───────────────────────────────────────────── */
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
         Route::middleware('role:Super Admin')->group(function () {
@@ -228,6 +222,14 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
             ->name('status')
             ->middleware('role:Super Admin');
+            
+        /* ─────────────────────────────────────────────
+           PURCHASE ORDER (PO) & RECEIVING
+        ───────────────────────────────────────────── */
+        Route::get('/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+        Route::post('/{procurement}/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+        Route::post('/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('purchases.receive');
     });
 
     /* ─────────────────────────────────────────────
