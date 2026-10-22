@@ -41,7 +41,9 @@
     ];
 
     $items     = $procurement['purchase_items'] ?? [];
-    $itemCount = max(count($items), 1);
+    
+    // LOGIKA MULTI-KOLOM: Bagi array menjadi 2 kolom
+    $chunkedItems = array_chunk($items, max(1, ceil(count($items) / 2)));
 
     $signatures = $procurement['signatures'] ?? [
         ['role' => 'PIC',         'name' => ''],
@@ -271,32 +273,49 @@
             </tr>
         @endforeach
 
-        {{-- ─── PURCHASE ITEMS ─── --}}
+        {{-- ─── PURCHASE ITEMS (2 KOLOM) ─── --}}
         <tr>
             <th colspan="2" style="text-align: center; font-weight: normal; width: 44%;">
                 Request purchase item
             </th>
-            <th colspan="2" style="text-align: center; font-weight: normal; width: 40%;">
-                (Is it match to our requirement?)
-            </th>
             <th style="text-align: center; font-weight: normal; width: 16%;">
                 Quantity
             </th>
+            <th colspan="2" style="text-align: center; font-weight: normal; width: 40%;">
+                Request purchase item
+            </th>
         </tr>
 
-        @forelse($items as $item)
+        @if(count($items) > 0)
+            @foreach($chunkedItems as $chunk)
+                <tr>
+                    {{-- Kolom Kiri --}}
+                    <td colspan="2" class="item-cell">
+                        {{ $chunk[0]['item'] ?? '-' }}
+                    </td>
+                    <td class="qty">{{ (int) ($chunk[0]['quantity'] ?? 0) }}</td>
+
+                    {{-- Kolom Kanan --}}
+                    @if(isset($chunk[1]))
+                        <td colspan="2" class="item-cell">
+                            {{ $chunk[1]['item'] ?? '-' }}
+                        </td>
+                        {{-- Karena kolom kanan sudah tidak muat untuk Qty ke-2, kita taruh Qty di dalam sel item kanan agar layout seimbang --}}
+                        <td class="qty">{{ (int) ($chunk[1]['quantity'] ?? 0) }}</td>
+                    @else
+                        <td colspan="2" class="item-cell">&nbsp;</td>
+                        <td class="qty">&nbsp;</td>
+                    @endif
+                </tr>
+            @endforeach
+        @else
             <tr>
-                <td colspan="4" class="item-cell">
-                    {{ $item['item'] ?? '-' }}
-                </td>
-                <td class="qty">{{ (int) $item['quantity'] }}</td>
-            </tr>
-        @empty
-            <tr>
-                <td colspan="4" class="item-cell">&nbsp;</td>
+                <td colspan="2" class="item-cell">&nbsp;</td>
+                <td class="qty">&nbsp;</td>
+                <td colspan="2" class="item-cell">&nbsp;</td>
                 <td class="qty">&nbsp;</td>
             </tr>
-        @endforelse
+        @endif
 
         {{-- TARGET PURCHASE --}}
         <tr>
