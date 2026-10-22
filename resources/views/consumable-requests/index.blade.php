@@ -1,209 +1,159 @@
 @extends('layouts.app')
 
 @section('title', 'Daftar Consumable Request')
-@section('page-title', 'Daftar Consumable Request')
+@section('page-title', 'Consumable Request')
 
 @section('content')
-<div class="space-y-6 pb-12">
+<div class="max-w-7xl mx-auto space-y-6 pb-12">
 
     {{-- PAGE HEADER --}}
-    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                Consumable Request
+            <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                Consumable Requests
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Kelola, tinjau, dan konsolidasikan pengajuan barang consumable ke dalam PR.
             </p>
         </div>
 
-        <button type="button" onclick="openCreateModal()"
-                class="inline-flex items-center gap-2 self-start rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Buat Request Baru
-        </button>
+        <div class="flex items-center gap-3">
+            @if(auth()->user()->hasRole('Super Admin'))
+                <button type="button" onclick="submitConsolidation()"
+                        class="inline-flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                    </svg>
+                    Gabungkan ke PR
+                </button>
+            @endif
+
+            <button type="button" onclick="openCreateModal()"
+                    class="inline-flex items-center gap-2 rounded-md bg-slate-900 dark:bg-white px-4 py-2 text-sm font-medium text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-gray-100 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Buat Request
+            </button>
+        </div>
     </div>
 
-    {{-- FORM KONSOLIDASI --}}
-    <form id="consolidationForm"
-          action="{{ route('consumable-requests.consolidation.process') }}"
-          method="POST"
-          class="hidden">
+    {{-- FORM KONSOLIDASI (HIDDEN) --}}
+    <form id="consolidationForm" action="{{ route('consumable-requests.consolidation.process') }}" method="POST" class="hidden">
         @csrf
         <input type="hidden" name="no" id="consolidationNo">
         <div id="consolidationInputs"></div>
     </form>
 
     {{-- MAIN CARD --}}
-    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-
-        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Semua Pengajuan</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Total {{ $requests->total() ?? $requests->count() }} pengajuan tercatat
-                    </p>
-                </div>
-            </div>
-
-            @if(auth()->user()->hasRole('Super Admin'))
-                <button type="button"
-                        onclick="submitConsolidation()"
-                        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                    Gabungkan Terpilih ke PR (Cetak)
-                </button>
-            @endif
-        </header>
-
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+        
+        {{-- Table --}}
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead>
-                    <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
-                        <th class="px-4 py-3.5 text-center w-12">
-                            <input type="checkbox" id="selectAll"
-                                   class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                        <th class="px-4 py-3 w-10 text-center">
+                            <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-slate-600 focus:ring-slate-500 dark:bg-gray-700 dark:border-gray-600">
                         </th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">ID</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pemohon</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Subject</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Aksi</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pemohon</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($requests as $req)
-                        <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                            <td class="px-4 py-4 text-center">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <td class="px-4 py-3 text-center">
                                 @if($req->status == 'approved')
                                     <input type="checkbox" name="request_ids[]" value="{{ $req->id }}"
-                                           class="request-checkbox rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                           class="request-checkbox rounded border-gray-300 text-slate-600 focus:ring-slate-500 dark:bg-gray-700 dark:border-gray-600">
                                 @else
                                     <input type="checkbox" disabled
-                                           class="rounded border-gray-200 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-50"
-                                           title="Hanya status approved yang bisa digabungkan">
+                                           class="rounded border-gray-200 bg-gray-100 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed opacity-50"
+                                           title="Hanya status Approved yang dapat digabungkan">
                                 @endif
                             </td>
 
-                            <td class="px-6 py-4">
-                                <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700/60 px-2 py-1 text-xs font-mono font-semibold text-gray-700 dark:text-gray-300">
-                                    #{{ $req->id }}
+                            <td class="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
+                                #{{ str_pad($req->id, 4, '0', STR_PAD_LEFT) }}
+                            </td>
+
+                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                {{ $req->request_by ?? $req->user->name ?? '-' }}
+                            </td>
+
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+                                {{ $req->subject ?? '-' }}
+                            </td>
+
+                            <td class="px-4 py-3">
+                                @php
+                                    $statusMap = [
+                                        'approved'  => ['bg-emerald-100 text-emerald-800 border-emerald-200', 'Approved'],
+                                        'rejected'  => ['bg-red-100 text-red-800 border-red-200', 'Rejected'],
+                                        'revision'  => ['bg-amber-100 text-amber-800 border-amber-200', 'Revision'],
+                                        'converted' => ['bg-indigo-100 text-indigo-800 border-indigo-200', 'Converted to PR'],
+                                        'pending'   => ['bg-gray-100 text-gray-800 border-gray-200', 'Pending'],
+                                    ];
+                                    $currStatus = $req->status ?? 'pending';
+                                    $statusClass = $statusMap[$currStatus][0] ?? $statusMap['pending'][0];
+                                    $statusLabel = $statusMap[$currStatus][1] ?? 'Pending';
+                                @endphp
+                                <span class="inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium {{ $statusClass }} dark:bg-opacity-20 dark:border-opacity-30">
+                                    {{ $statusLabel }}
                                 </span>
                             </td>
 
-                            <td class="px-6 py-4">
-                                <span class="font-medium text-gray-900 dark:text-white">
-                                    {{ $req->request_by ?? $req->user->name ?? '-' }}
-                                </span>
-                            </td>
-
-                            <td class="px-6 py-4">
-                                <span class="text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $req->subject ?? '-' }}
-                                </span>
-                            </td>
-
-                            <td class="px-6 py-4">
-                                @if($req->status == 'approved')
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                        Approved
-                                    </span>
-                                @elseif($req->status == 'rejected')
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-400 ring-1 ring-inset ring-red-200 dark:ring-red-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                        Rejected
-                                    </span>
-                                @elseif($req->status == 'revision')
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                        Revision
-                                    </span>
-                                @elseif($req->status == 'converted')
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-200 dark:ring-blue-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
-                                        Converted to PR
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                        Pending
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    {{-- Tombol Detail (Mata) --}}
+                                    {{-- Detail --}}
                                     <a href="{{ route('consumable-requests.show', $req->id) }}"
-                                       title="Detail"
-                                       class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition">
+                                       title="Lihat Detail"
+                                       class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
                                     </a>
 
-                                    {{-- Tombol Khusus Super Admin & Status Pending --}}
+                                    {{-- Aksi Cepat Super Admin (Hanya Pending) --}}
                                     @if(auth()->user()->hasRole('Super Admin') && $req->status == 'pending')
+                                        <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         
-                                        {{-- Approve --}}
                                         <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="approved">
-                                            <button type="submit" title="Approve"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                            <button type="submit" title="Setujui"
+                                                    class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                                 </svg>
                                             </button>
                                         </form>
 
-                                        {{-- Minta Revisi --}}
-                                        <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="revision">
-                                            <button type="submit" title="Minta Revisi"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                            </button>
-                                        </form>
-
-                                        {{-- Reject --}}
                                         <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="rejected">
                                             <button type="submit" title="Tolak"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 transition">
+                                                    class="p-1.5 text-gray-400 hover:text-red-600 rounded transition">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                                 </svg>
                                             </button>
                                         </form>
-
                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-16 text-center text-gray-400 text-sm">
-                                Belum ada consumable request tercatat.
+                            <td colspan="6" class="px-4 py-12 text-center text-gray-500 text-sm">
+                                Belum ada data consumable request.
                             </td>
                         </tr>
                     @endforelse
@@ -212,11 +162,11 @@
         </div>
 
         @if($requests->hasPages())
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
                 {{ $requests->links() }}
             </div>
         @endif
-    </section>
+    </div>
 </div>
 
 {{-- Modal Create --}}
@@ -224,27 +174,24 @@
 @endsection
 
 @push('scripts')
-{{-- Script khusus admin: select all & konsolidasi --}}
 <script>
-    // ═══ Select All ═══
+    // Select All
     document.getElementById('selectAll')?.addEventListener('change', function () {
         document.querySelectorAll('.request-checkbox:not(:disabled)').forEach(cb => cb.checked = this.checked);
     });
 
-    // ═══ Submit Konsolidasi — buka modal nomor PR dulu ═══
+    // Submit Konsolidasi
     function submitConsolidation() {
         const checked = document.querySelectorAll('.request-checkbox:checked');
-
         if (checked.length === 0) {
             alert('Pilih minimal 1 request dengan status Approved terlebih dahulu.');
             return;
         }
-
         window.__selectedRequestIds = Array.from(checked).map(cb => cb.value);
         window.dispatchEvent(new CustomEvent('pr-open'));
     }
 
-    // ═══ Setelah user isi form & klik "Lanjut Cetak" ═══
+    // Event listener form konsolidasi
     window.addEventListener('pr-confirm', function (e) {
         const form = document.getElementById('consolidationForm');
         const inputsContainer = document.getElementById('consolidationInputs');
@@ -271,7 +218,5 @@
         form.submit();
     });
 </script>
-{{-- Script modal create & form --}}
 @include('consumable-requests._scripts')
 @endpush
-
