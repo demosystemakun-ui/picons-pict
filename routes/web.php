@@ -253,13 +253,13 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-// ═══════════════════════════════════════════════════════════════
-// RUTE SEMENTARA UNTUK MIGRASI DATABASE SERVER
-// (Hapus rute ini jika tabel sudah berhasil dibuat di server)
-// ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
+   RUTE SEMENTARA UNTUK DEPLOYMENT / MIGRASI (SERVER & LOKAL)
+   Silakan hapus 2 rute di bawah ini jika proses migrasi sudah beres!
+═══════════════════════════════════════════════════════════════════ */
 Route::get('/force-migrate', function () {
     try {
-        // 1. Hapus tabel yang setengah jadi (jika ada error 1050 sebelumnya)
+        // 1. Hapus tabel yang setengah jadi (error 1050)
         \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
         \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
 
@@ -270,4 +270,11 @@ Route::get('/force-migrate', function () {
     } catch (\Exception $e) {
         return '<h3>Error:</h3> ' . $e->getMessage();
     }
+});
+
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    return 'Cache (Route, Config, View) berhasil dibersihkan!';
 });
