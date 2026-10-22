@@ -140,6 +140,7 @@
                     <tr>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Departemen</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Barang / Item</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Stok Awal</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Terpakai</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Sisa Stok</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Update Terakhir</th>
@@ -151,6 +152,7 @@
                         @php
                             $usedStock    = (int) ($stock->used_stock ?? 0);
                             $currentStock = (int) $stock->stock;
+                            $initialStock = $currentStock + $usedStock;
 
                             $isLow      = $currentStock <= 5;
                             $isCritical = $currentStock <= 2;
@@ -177,7 +179,10 @@
                                 <div class="font-medium text-gray-900 dark:text-white max-w-[250px] truncate">{{ $stock->item->item_name ?? '-' }}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{{ $stock->item->item_code ?? '-' }}</div>
                             </td>
-                            <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">
+                            <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300 font-medium">
+                                {{ $initialStock }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-amber-600 dark:text-amber-400 font-medium">
                                 {{ $usedStock }}
                             </td>
                             <td class="px-4 py-3 text-center">
@@ -208,7 +213,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="7" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                 Belum ada data stok.
                             </td>
                         </tr>
