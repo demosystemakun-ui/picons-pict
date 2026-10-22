@@ -59,7 +59,7 @@
                         onclick="submitConsolidation()"
                         class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-6 9l2 2 4-4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                     Gabungkan Terpilih ke PR (Cetak)
                 </button>
@@ -129,9 +129,14 @@
                                         <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                         Revision
                                     </span>
-                                @else
+                                @elseif($req->status == 'converted')
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-200 dark:ring-blue-900/60">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                                        Converted to PR
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-200 dark:ring-amber-900/60">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                         Pending
                                     </span>
                                 @endif
@@ -139,6 +144,7 @@
 
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-1">
+                                    {{-- Tombol Detail (Mata) --}}
                                     <a href="{{ route('consumable-requests.show', $req->id) }}"
                                        title="Detail"
                                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition">
@@ -148,7 +154,10 @@
                                         </svg>
                                     </a>
 
+                                    {{-- Tombol Khusus Super Admin & Status Pending --}}
                                     @if(auth()->user()->hasRole('Super Admin') && $req->status == 'pending')
+                                        
+                                        {{-- Approve --}}
                                         <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PATCH')
@@ -161,26 +170,32 @@
                                             </button>
                                         </form>
 
-                                        <a href="{{ route('consumable-requests.edit', $req->id) }}"
-                                           title="Edit"
-                                           class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                            </svg>
-                                        </a>
-
-                                        <form action="{{ route('consumable-requests.destroy', $req->id) }}"
-                                              method="POST" class="inline"
-                                              data-confirm="Yakin ingin menghapus request ini?">
+                                        {{-- Minta Revisi --}}
+                                        <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
                                             @csrf
-                                            @method('DELETE')
-                                            <button type="submit" title="Hapus"
-                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition">
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="revision">
+                                            <button type="submit" title="Minta Revisi"
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
                                             </button>
                                         </form>
+
+                                        {{-- Reject --}}
+                                        <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="rejected">
+                                            <button type="submit" title="Tolak"
+                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 transition">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+
                                     @endif
                                 </div>
                             </td>
