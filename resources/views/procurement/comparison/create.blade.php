@@ -204,9 +204,7 @@
 
             <div class="p-6 space-y-4">
                 
-                {{-- ═══════════════════════════════════════════════════════════════
-                     TIPE BUDGET (Diletakkan di atas daftar vendor)
-                ═══════════════════════════════════════════════════════════════ --}}
+                {{-- TIPE BUDGET --}}
                 <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                     <div>
                         <label class="block text-sm font-semibold text-gray-800">Tipe Budget Pengadaan</label>
@@ -409,12 +407,24 @@
                 </template>
             </div>
 
-            {{-- Footer: Simpan + Cetak Final --}}
+            {{-- ═══ FOOTER: SIMPAN + CHECKOUT + CETAK FINAL ═══ --}}
             <footer class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <p class="text-xs text-gray-500 order-2 sm:order-1">
                     Sistem otomatis set vendor dengan total harga <strong>terkecil</strong> sebagai pemenang.
                 </p>
-                <div class="flex items-center gap-2 order-1 sm:order-2">
+                <div class="flex flex-wrap items-center gap-2 order-1 sm:order-2">
+                    
+                    {{-- TOMBOL CHECKOUT KE PURCHASE ORDER --}}
+                    @if($hasVendors && $procurement->winnerVendor)
+                        <a href="{{ route('procurement.purchases.create', $procurement->id) }}"
+                           class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                            Lanjut Checkout (PO)
+                        </a>
+                    @endif
+
                     @if($hasVendors && $procurement->winnerVendor)
                         <a href="{{ route('procurement.pdf.final', $procurement) }}"
                            target="_blank"
@@ -425,6 +435,7 @@
                             Cetak PR Final
                         </a>
                     @endif
+                    
                     <button type="submit"
                             class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -447,9 +458,7 @@
     ═══════════════════════════════════════════════════════════════ */
     function vendorForm() {
         return {
-            // TAMBAHAN: Inisialisasi Tipe Budget
             budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}',
-
             vendors: [],
 
             init() {
@@ -585,13 +594,11 @@
             return false;
         }
 
-        // Cari hidden input di dalam form ini
         const hiddenInput = form.querySelector('.hidden-file-input');
         if (hiddenInput) {
             hiddenInput.files = sharedFileBuffer.files;
         }
 
-        // Loading state pada tombol
         const btn = document.getElementById(buttonId);
         if (btn) {
             btn.disabled = true;

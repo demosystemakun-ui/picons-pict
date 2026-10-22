@@ -17,6 +17,7 @@ use App\Http\Controllers\VendorComparisonController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PurchaseController;
 
 /* ═══════════════════════════════════════════════════════════════════
    AUTHENTICATION
@@ -98,6 +99,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('inventory.stock.import-process');
     });
 
+      // Rute Pembelian (PO)
+    Route::get('/procurement/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('procurement.purchases.create');
+    Route::post('/procurement/{procurement}/purchases', [PurchaseController::class, 'store'])->name('procurement.purchases.store');
+    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('procurement.purchases.show');
+    Route::post('/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('procurement.purchases.receive');
+});
     // ── DYNAMIC ROUTES (dengan {id}) ──
     Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
         ->name('inventory.stock.usage-detail');
