@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('procurement_request_id')->constrained()->cascadeOnDelete();
             $table->foreignId('vendor_id')->nullable()->constrained('procurement_vendors')->nullOnDelete();
-            $table->string('po_number')->unique();
+          $table->string('po_number', 100)->unique();
             $table->date('order_date');
             $table->date('estimated_arrival')->nullable();
             $table->string('status')->default('pending'); // pending, ordered, partially_received, completed

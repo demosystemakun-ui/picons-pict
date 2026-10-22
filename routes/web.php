@@ -254,24 +254,30 @@ Route::middleware(['auth'])->group(function () {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   RUTE SEMENTARA UNTUK DEPLOYMENT / MIGRASI (SERVER & LOKAL)
-   Silakan hapus 2 rute di bawah ini jika proses migrasi sudah beres!
+   RUTE SEMENTARA UNTUK DEPLOYMENT / FIX MIGRASI
+   (Silakan hapus 2 rute di bawah ini jika migrasi sudah beres)
 ═══════════════════════════════════════════════════════════════════ */
-Route::get('/force-migrate', function () {
+
+// Rute untuk memperbaiki error "Specified key was too long"
+Route::get('/fix-migration', function () {
     try {
-        // 1. Hapus tabel yang setengah jadi (error 1050)
         \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
         \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
+        
+        // Hapus catatan migrasi sebelumnya agar bisa di-run ulang
+        \Illuminate\Support\Facades\DB::table('migrations')
+            ->where('migration', 'like', '%create_purchases%')
+            ->delete();
 
-        // 2. Jalankan ulang migrasi
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         
-        return '<h3>Migrasi Berhasil!</h3><p>Tabel berhasil dihapus dan dibuat ulang.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+        return '<h3>Perbaikan Berhasil!</h3><p>Tabel sudah dihapus dan dibuat ulang dengan struktur yang benar.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
     } catch (\Exception $e) {
         return '<h3>Error:</h3> ' . $e->getMessage();
     }
 });
 
+// Rute untuk membersihkan cache di server
 Route::get('/clear-cache', function () {
     \Illuminate\Support\Facades\Artisan::call('route:clear');
     \Illuminate\Support\Facades\Artisan::call('config:clear');
