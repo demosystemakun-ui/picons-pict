@@ -91,7 +91,7 @@
     {{-- Notifikasi/Alert --}}
     @include('components.flash-modal')
     @include('components.confirm-modal')
-    @include('components.pr-number-modal')
+   
 
     @stack('scripts')
 </body>
