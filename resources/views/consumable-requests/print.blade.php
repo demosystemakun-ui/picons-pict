@@ -206,7 +206,7 @@
                     {{-- ═══ PICTURE ═══ --}}
                     <td style="text-align: center;">
                         @if(!empty($item['picture']))
-                            <img src="{{ Storage::url($item['picture']) }}"
+                            <img src="{{ Storage::disk('supabase')->url($item['picture']) }}"
                                  alt="Picture"
                                  style="max-width: 80px; max-height: 80px;">
                         @else
