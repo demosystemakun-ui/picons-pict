@@ -206,7 +206,10 @@
                     {{-- ═══ PICTURE ═══ --}}
                     <td style="text-align: center;">
                         @if(!empty($item['picture']))
-                            <img src="{{ Storage::disk('supabase')->url($item['picture']) }}"
+                            @php
+                                $imageUrl = Storage::disk('supabase-consumable_request')->temporaryUrl($item['picture'], now()->addMinutes(60));
+                            @endphp
+                            <img src="{{ $imageUrl }}"
                                  alt="Picture"
                                  style="max-width: 80px; max-height: 80px;">
                         @else
