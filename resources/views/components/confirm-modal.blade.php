@@ -36,12 +36,6 @@
  
 <body> 
     <div id="loader" class="center"></div> 
-    <h1>SistemIT.com</h1> 
-    <h2>Tutorial PHP Pemula Sampai Mahir</h2> 
-    <img src="https://www.sistemit.com/wp-content/uploads/2020/02/SISTEMITCOM-smlest.png"
-        alt="Logo Sistem IT" /> <br>
-    <img src="https://www.sistemit.com/wp-content/uploads/2020/02/Header-Baru-1.png"
-        alt="Logo Sistem IT" /> 
     <script> 
         document.onreadystatechange = function() { 
             if (document.readyState !== "complete") { 
