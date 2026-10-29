@@ -53,8 +53,10 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            // Update status PR jadi approved/processed (opsional)
-            $procurement->update(['status' => 'approved']);
+            if ($procurement->status !== ProcurementRequest::STATUS_APPROVED) {
+                throw new \RuntimeException('Purchase Order hanya dapat dibuat dari pengajuan yang sudah disetujui.');
+            }
+            $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
 
             DB::commit();
             return redirect()->route('procurement.purchases.show', $purchase->id)
@@ -104,6 +106,11 @@ class PurchaseController extends Controller
             $purchase->update([
                 'status' => $allReceived ? 'completed' : 'partially_received'
             ]);
+
+            $procurementRequest = $purchase->procurementRequest;
+            if ($allReceived && $procurementRequest->status === ProcurementRequest::STATUS_PROCESSED) {
+                $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
+            }
 
             DB::commit();
             return back()->with('success', 'Data penerimaan barang berhasil disimpan.');

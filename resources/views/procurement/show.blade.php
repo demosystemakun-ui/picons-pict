@@ -6,10 +6,13 @@
 @php
     /* ═══ STATUS CONFIG ═══ */
     $statusMeta = [
-        'pending'  => ['label' => 'Menunggu',       'bg' => 'bg-amber-50 dark:bg-amber-900/30',   'text' => 'text-amber-700 dark:text-amber-300',   'ring' => 'ring-amber-200 dark:ring-amber-800/60',   'dot' => 'bg-amber-500'],
+        'pending'  => ['label' => 'Pending',       'bg' => 'bg-amber-50 dark:bg-amber-900/30',   'text' => 'text-amber-700 dark:text-amber-300',   'ring' => 'ring-amber-200 dark:ring-amber-800/60',   'dot' => 'bg-amber-500'],
         'approved' => ['label' => 'Disetujui',      'bg' => 'bg-emerald-50 dark:bg-emerald-900/30','text' => 'text-emerald-700 dark:text-emerald-300','ring' => 'ring-emerald-200 dark:ring-emerald-800/60','dot' => 'bg-emerald-500'],
         'rejected' => ['label' => 'Ditolak',        'bg' => 'bg-red-50 dark:bg-red-900/30',        'text' => 'text-red-700 dark:text-red-300',        'ring' => 'ring-red-200 dark:ring-red-800/60',        'dot' => 'bg-red-500'],
         'revision' => ['label' => 'Perlu Revisi',   'bg' => 'bg-orange-50 dark:bg-orange-900/30',  'text' => 'text-orange-700 dark:text-orange-300',  'ring' => 'ring-orange-200 dark:ring-orange-800/60',  'dot' => 'bg-orange-500'],
+        'processed' => ['label' => 'Diproses (Dibeli)', 'bg' => 'bg-blue-50 dark:bg-blue-900/30', 'text' => 'text-blue-700 dark:text-blue-300', 'ring' => 'ring-blue-200 dark:ring-blue-800/60', 'dot' => 'bg-blue-500'],
+        'received' => ['label' => 'Diterima', 'bg' => 'bg-indigo-50 dark:bg-indigo-900/30', 'text' => 'text-indigo-700 dark:text-indigo-300', 'ring' => 'ring-indigo-200 dark:ring-indigo-800/60', 'dot' => 'bg-indigo-500'],
+        'completed' => ['label' => 'Selesai', 'bg' => 'bg-slate-50 dark:bg-slate-800', 'text' => 'text-slate-700 dark:text-slate-300', 'ring' => 'ring-slate-200 dark:ring-slate-700', 'dot' => 'bg-slate-500'],
     ];
 
     $currStatus = $procurementRequest->status ?? 'pending';
@@ -61,6 +64,7 @@
 
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
+            @if($currStatus === 'pending')
             <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST"
                   onsubmit="return confirm('Apakah Anda yakin ingin menyetujui pengajuan ini?')"
                   class="inline">
@@ -87,6 +91,33 @@
                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                 Tolak
             </button>
+            @elseif($currStatus === 'revision')
+            <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="status" value="pending">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
+                    <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                    Ajukan Kembali
+                </button>
+            </form>
+            @elseif($currStatus === 'approved')
+            <a href="{{ route('procurement.purchases.create', $procurementRequest) }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                Buat PO / Proses Pembelian
+            </a>
+            @elseif($currStatus === 'received')
+            <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="status" value="completed">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-slate-700 hover:bg-slate-800 text-white">
+                    <i data-lucide="badge-check" class="w-4 h-4"></i>
+                    Selesaikan Pengajuan
+                </button>
+            </form>
+            @endif
 
             <span class="hidden sm:inline-block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></span>
 

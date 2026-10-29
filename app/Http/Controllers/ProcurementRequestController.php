@@ -339,9 +339,22 @@ class ProcurementRequestController extends Controller
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)
     {
         $validated = $request->validate([
-            'status'       => 'required|in:approved,rejected,revision,pending',
+            'status'       => 'required|in:approved,rejected,revision,pending,processed,received,completed',
             'review_notes' => 'nullable|string|max:1000',
         ]);
+
+        $allowedTransitions = [
+            'pending' => ['approved', 'rejected', 'revision'],
+            'revision' => ['pending'],
+            'approved' => ['processed'],
+            'processed' => ['received'],
+            'received' => ['completed'],
+        ];
+        $targetStatus = $validated['status'];
+
+        if (!in_array($targetStatus, $allowedTransitions[$procurementRequest->status] ?? [], true)) {
+            return back()->with('error', "Status tidak dapat diubah dari {$procurementRequest->status} menjadi {$targetStatus}.");
+        }
 
         $procurementRequest->update([
             'status'       => $validated['status'],
@@ -353,6 +366,9 @@ class ProcurementRequestController extends Controller
             'rejected' => 'Pengajuan telah ditolak.',
             'revision' => 'Pengajuan berhasil dikembalikan untuk revisi.',
             'pending'  => 'Status pengajuan dikembalikan ke pending.',
+            'processed' => 'Pengajuan diproses dan pembelian telah dilakukan.',
+            'received' => 'Barang atau jasa berhasil diterima.',
+            'completed' => 'Pengajuan pengadaan telah selesai.',
         ];
 
         return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');

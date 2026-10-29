@@ -9,6 +9,14 @@ class ProcurementRequest extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_PROCESSED = 'processed';
+    public const STATUS_RECEIVED = 'received';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_REVISION = 'revision';
+    public const STATUS_REJECTED = 'rejected';
+
     /* ═══════════════════════════════════════════════════════════════
        MASS ASSIGNMENT
     ═══════════════════════════════════════════════════════════════ */
