@@ -9,9 +9,9 @@
     <title>Loader Demo</title> 
     <style> 
         #loader { 
-            border: 12px solid #f3f3f3; 
+            border: 12px solid #0823ab; 
             border-radius: 50%; 
-            border-top: 12px solid #444444; 
+            border-top: 12px solid #ff0000; 
             width: 70px; 
             height: 70px; 
             animation: spin 1s linear infinite; 
