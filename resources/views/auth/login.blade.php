@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Consumable Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="{{ asset('logo/pict.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('logo/pict.png') }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
@@ -83,10 +86,8 @@
         <div class="flex flex-col items-center mb-6">
             <div class="relative">
                 <div class="absolute inset-0 bg-blue-400 rounded-2xl blur-xl opacity-50"></div>
-                <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-xl shadow-blue-500/30 border border-blue-300/30">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
+                <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/30 border border-blue-300/30 overflow-hidden">
+                    <img src="{{ asset('logo/pict.png') }}" alt="Logo PICONS" class="w-full h-full object-contain p-1">
                 </div>
             </div>
             <h1 class="mt-4 text-xl font-bold text-white tracking-tight">Consumable Management</h1>
