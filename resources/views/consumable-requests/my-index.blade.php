@@ -71,13 +71,13 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                     @forelse($requests as $req)
                         <tr class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 align-top">
                                 <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700/60 px-2 py-1 text-xs font-mono font-semibold text-gray-700 dark:text-gray-300">
                                     {{ $req->no ?? '#' . $req->id }}
                                 </span>
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 align-top">
                                 <div class="flex items-center gap-3">
                                     <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shrink-0">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -90,7 +90,7 @@
                                 </div>
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 align-top">
                                 <div class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
                                     {{ $req->items->first()->item_name ?? $req->item_name ?? '-' }}
                                 </div>
@@ -99,9 +99,24 @@
                                         {{ $req->items->sum('quantity') ?? $req->quantity }}
                                     </span>
                                 </div>
+                                
+                                {{-- TAMBAHAN: TAMPILKAN CATATAN REVISI DI SINI --}}
+                                @if($req->status === 'revision' && $req->revision_note)
+                                    <div class="mt-2 rounded-md bg-amber-50 dark:bg-amber-900/20 p-2 border border-amber-200 dark:border-amber-800/60 max-w-sm">
+                                        <div class="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                            <svg class="h-3.5 w-3.5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <div>
+                                                <span class="font-semibold block mb-0.5">Catatan Revisi:</span>
+                                                <span class="line-clamp-3 whitespace-pre-line">{{ $req->revision_note }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 align-top">
                                 @if($req->status == 'approved')
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
@@ -125,7 +140,7 @@
                                 @endif
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 align-top">
                                 <div class="flex items-center justify-end gap-1.5 flex-wrap">
                                     <a href="{{ route('consumable-requests.show', $req->id) }}"
                                        class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition">
@@ -136,13 +151,14 @@
                                         Detail
                                     </a>
 
-                                    @if($req->status == 'pending')
+                                    {{-- TAMBAHAN: TOMBOL EDIT/PERBAIKI UNTUK STATUS PENDING & REVISION --}}
+                                    @if(in_array($req->status, ['pending', 'revision']))
                                         <a href="{{ route('consumable-requests.edit', $req->id) }}"
                                            class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
-                                            Edit
+                                            {{ $req->status === 'revision' ? 'Perbaiki' : 'Edit' }}
                                         </a>
                                     @endif
                                 </div>
