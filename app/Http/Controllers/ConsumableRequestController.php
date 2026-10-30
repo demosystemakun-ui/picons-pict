@@ -27,9 +27,6 @@ class ConsumableRequestController extends Controller
         return view('consumable-requests.create');
     }
 
-    /**
-     * Return partial form untuk modal (AJAX)
-     */
     public function createForm()
     {
         return view('consumable-requests._form');
@@ -76,8 +73,6 @@ class ConsumableRequestController extends Controller
             if ($request->hasFile("items.{$index}.picture")) {
                 $pic = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                
-                // Disimpan langsung ke Supabase Storage menggunakan disk supabase-consumable_request
                 $picturePath = $pic->storeAs('attachments/consumable-items', $picName, 'supabase-consumable_request');
             }
 
@@ -121,17 +116,24 @@ class ConsumableRequestController extends Controller
 
     public function edit(ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin') && ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'pending')) {
-            abort(403, 'Unauthorized action.');
+        // Jika bukan Super Admin, pastikan dia adalah pemiliknya DAN statusnya HARUS 'revision'
+        if (!auth()->user()->hasRole('Super Admin')) {
+            if ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'revision') {
+                abort(403, 'Hanya pengajuan dengan status revisi yang dapat diedit.');
+            }
         }
+        
         $consumableRequest->load('items');
         return view('consumable-requests.edit', compact('consumableRequest'));
     }
 
     public function update(Request $request, ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin') && ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'pending')) {
-            abort(403, 'Unauthorized action.');
+        // Validasi akses edit (sama seperti method edit)
+        if (!auth()->user()->hasRole('Super Admin')) {
+            if ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'revision') {
+                abort(403, 'Hanya pengajuan dengan status revisi yang dapat diperbarui.');
+            }
         }
 
         $validated = $request->validate([
@@ -157,13 +159,18 @@ class ConsumableRequestController extends Controller
             'items.*.picture'       => 'nullable|image|max:2048',
         ]);
 
+        // Update data request utama
+        // Status otomatis berubah ke 'pending' dan catatan revisi dibersihkan
         $consumableRequest->update([
-            'date'         => $validated['date'],
-            'subject'      => $validated['subject'],
-            'general_note' => $validated['general_note'] ?? null,
-            'request_by'   => $validated['request_by'] ?? null,
-            'approved_by'  => $validated['approved_by'] ?? null,
-            'verified_by'  => $validated['verified_by'] ?? null,
+            'date'                  => $validated['date'],
+            'subject'               => $validated['subject'],
+            'general_note'          => $validated['general_note'] ?? null,
+            'request_by'            => $validated['request_by'] ?? null,
+            'approved_by'           => $validated['approved_by'] ?? null,
+            'verified_by'           => $validated['verified_by'] ?? null,
+            'status'                => 'pending', // Kembali ke pending
+            'revision_note'         => null,      // Hapus catatan
+            'revision_requested_at' => null,      // Hapus waktu revisi
         ]);
 
         // Hapus file lama di Supabase Storage jika ada
@@ -200,7 +207,7 @@ class ConsumableRequestController extends Controller
 
         return redirect()
             ->route('consumable-requests.show', $consumableRequest)
-            ->with('success', 'Consumable Request berhasil diperbarui.');
+            ->with('success', 'Consumable Request berhasil diperbarui dan diajukan kembali.');
     }
 
     public function destroy(ConsumableRequest $consumableRequest)
@@ -244,48 +251,46 @@ class ConsumableRequestController extends Controller
         $folder   = 'consumable_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        // Disimpan ke Supabase Storage menggunakan disk supabase-consumable_request
         Storage::disk('supabase-consumable_request')->put($filePath, $pdf->output());
 
         return back()->with('success', 'File PDF berhasil disimpan ke Supabase');
     }
 
-public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
-{
-    if (!auth()->user()->hasRole('Super Admin')) {
-        abort(403, 'Unauthorized action.');
+    public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
+    {
+        if (!auth()->user()->hasRole('Super Admin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'status'        => 'required|in:approved,rejected,revision,pending',
+            'revision_note' => 'required_if:status,revision|nullable|string|max:2000',
+        ], [
+            'revision_note.required_if' => 'Catatan revisi wajib diisi ketika memilih status Revisi.',
+            'revision_note.max'         => 'Catatan revisi maksimal 2000 karakter.',
+        ]);
+
+        $payload = ['status' => $validated['status']];
+
+        if ($validated['status'] === 'revision') {
+            $payload['revision_note']         = $validated['revision_note'];
+            $payload['revision_requested_at'] = now();
+        } else {
+            $payload['revision_note']         = null;
+            $payload['revision_requested_at'] = null;
+        }
+
+        $consumableRequest->update($payload);
+
+        $messages = [
+            'approved' => 'Pengajuan berhasil disetujui.',
+            'rejected' => 'Pengajuan telah ditolak.',
+            'revision' => 'Pengajuan dikembalikan untuk revisi. Catatan telah dikirim ke pemohon.',
+            'pending'  => 'Status pengajuan dikembalikan ke pending.',
+        ];
+
+        return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
     }
-
-    $validated = $request->validate([
-        'status'        => 'required|in:approved,rejected,revision,pending',
-        'revision_note' => 'required_if:status,revision|nullable|string|max:2000',
-    ], [
-        'revision_note.required_if' => 'Catatan revisi wajib diisi ketika memilih status Revisi.',
-        'revision_note.max'         => 'Catatan revisi maksimal 2000 karakter.',
-    ]);
-
-    $payload = ['status' => $validated['status']];
-
-    if ($validated['status'] === 'revision') {
-        $payload['revision_note']         = $validated['revision_note'];
-        $payload['revision_requested_at'] = now();
-    } else {
-        // Reset catatan revisi jika status bukan revisi
-        $payload['revision_note']         = null;
-        $payload['revision_requested_at'] = null;
-    }
-
-    $consumableRequest->update($payload);
-
-    $messages = [
-        'approved' => 'Pengajuan berhasil disetujui.',
-        'rejected' => 'Pengajuan telah ditolak.',
-        'revision' => 'Pengajuan dikembalikan untuk revisi. Catatan telah dikirim ke pemohon.',
-        'pending'  => 'Status pengajuan dikembalikan ke pending.',
-    ];
-
-    return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
-}
 
     public function myRequests()
     {
