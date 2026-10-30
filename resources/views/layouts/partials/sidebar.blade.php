@@ -2,12 +2,12 @@
      SIDEBAR — PICONS (Collapsible on Mobile, Fixed on Desktop)
 ══════════════════════════════════════════════════════════════ --}}
 <aside
-    x-show="sidebarOpen"
+    x-show="sidebarOpen || window.innerWidth >= 1024"
     x-cloak
     class="fixed inset-y-0 left-0 z-30 w-64 h-screen bg-blue-900 text-white-300
            transform transition-transform duration-200 ease-in-out
            flex flex-col"
-    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     aria-label="Sidebar navigation">
 
     {{-- ═══ BRAND / LOGO + CLOSE BUTTON ═══ --}}
@@ -16,10 +16,10 @@
              alt="PICONS Logo"
              class="w-36 h-16 object-contain rounded-lg shrink-0">
 
-        {{-- Tombol close — mobile dan desktop --}}
+        {{-- Tombol close — HANYA muncul di mobile --}}
         <button type="button"
                 @click="sidebarOpen = false"
-                class="absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+            class="lg:hidden absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                 aria-label="Close sidebar">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
