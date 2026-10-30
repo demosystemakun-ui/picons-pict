@@ -132,7 +132,7 @@
 
         @include('layouts.partials.sidebar-group', [
             'label'  => 'Procurement',
-            'icon'   => 'latterbox',
+            'icon'   => 'envelope',
             'active' => request()->routeIs(['procurement.*', 'reimbursement.*']),
             'links'  => $procurementLinks,
         ])
