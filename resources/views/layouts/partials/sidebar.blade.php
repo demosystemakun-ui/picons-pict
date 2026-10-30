@@ -2,24 +2,24 @@
      SIDEBAR — PICONS (Collapsible on Mobile, Fixed on Desktop)
 ══════════════════════════════════════════════════════════════ --}}
 <aside
-    x-show="sidebarOpen || window.innerWidth >= 1024"
+    x-show="sidebarOpen"
     x-cloak
     class="fixed inset-y-0 left-0 z-30 w-64 h-screen bg-blue-900 text-white-300
            transform transition-transform duration-200 ease-in-out
            flex flex-col"
-    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
     aria-label="Sidebar navigation">
 
     {{-- ═══ BRAND / LOGO + CLOSE BUTTON ═══ --}}
     <div class="relative flex items-center justify-center h-20 px-5 bg-white border-b border-gray-200 shrink-0">
-        <img src="{{ asset('logo/pict.png') }}"
+        <img src="{{asset('logo/pict.png') }}"
              alt="PICONS Logo"
              class="w-36 h-16 object-contain rounded-lg shrink-0">
 
-        {{-- Tombol close — HANYA muncul di mobile --}}
+        {{-- Tombol close — mobile dan desktop --}}
         <button type="button"
                 @click="sidebarOpen = false"
-            class="lg:hidden absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                class="absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                 aria-label="Close sidebar">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -124,7 +124,6 @@
                 $procurementLinks[] = ['route' => 'procurement.index',              'label' => 'Procurement Request'];
             }
 
-            
             $procurementLinks[] = ['route' => null,                 'label' => 'Cash Advance'];
             $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
             $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
