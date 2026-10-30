@@ -231,4 +231,5 @@
     </div>
 
 </div>
+@include('consumable-requests._revision-modal')
 @endsection

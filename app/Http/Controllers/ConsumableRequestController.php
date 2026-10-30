@@ -250,29 +250,42 @@ class ConsumableRequestController extends Controller
         return back()->with('success', 'File PDF berhasil disimpan ke Supabase');
     }
 
-    public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
-    {
-        if (!auth()->user()->hasRole('Super Admin')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $validated = $request->validate([
-            'status' => 'required|in:approved,rejected,revision,pending',
-        ]);
-
-        $consumableRequest->update([
-            'status' => $validated['status'],
-        ]);
-
-        $messages = [
-            'approved' => 'Pengajuan berhasil disetujui.',
-            'rejected' => 'Pengajuan telah ditolak.',
-            'revision' => 'Pengajuan dikembalikan untuk revisi.',
-            'pending'  => 'Status pengajuan dikembalikan ke pending.',
-        ];
-
-        return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
+public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
+{
+    if (!auth()->user()->hasRole('Super Admin')) {
+        abort(403, 'Unauthorized action.');
     }
+
+    $validated = $request->validate([
+        'status'        => 'required|in:approved,rejected,revision,pending',
+        'revision_note' => 'required_if:status,revision|nullable|string|max:2000',
+    ], [
+        'revision_note.required_if' => 'Catatan revisi wajib diisi ketika memilih status Revisi.',
+        'revision_note.max'         => 'Catatan revisi maksimal 2000 karakter.',
+    ]);
+
+    $payload = ['status' => $validated['status']];
+
+    if ($validated['status'] === 'revision') {
+        $payload['revision_note']         = $validated['revision_note'];
+        $payload['revision_requested_at'] = now();
+    } else {
+        // Reset catatan revisi jika status bukan revisi
+        $payload['revision_note']         = null;
+        $payload['revision_requested_at'] = null;
+    }
+
+    $consumableRequest->update($payload);
+
+    $messages = [
+        'approved' => 'Pengajuan berhasil disetujui.',
+        'rejected' => 'Pengajuan telah ditolak.',
+        'revision' => 'Pengajuan dikembalikan untuk revisi. Catatan telah dikirim ke pemohon.',
+        'pending'  => 'Status pengajuan dikembalikan ke pending.',
+    ];
+
+    return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
+}
 
     public function myRequests()
     {

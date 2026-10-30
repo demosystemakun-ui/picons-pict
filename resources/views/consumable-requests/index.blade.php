@@ -119,34 +119,46 @@
                                         </svg>
                                     </a>
 
-                                    {{-- Aksi Cepat Super Admin (Hanya Pending) --}}
-                                    @if(auth()->user()->hasRole('Super Admin') && $req->status == 'pending')
-                                        <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                                        
-                                        <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="approved">
-                                            <button type="submit" title="Setujui"
-                                                    class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                            </button>
-                                        </form>
+                                   {{-- Aksi Cepat Super Admin (Hanya Pending) --}}
+@if(auth()->user()->hasRole('Super Admin') && $req->status == 'pending')
+    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-                                        <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="rejected">
-                                            <button type="submit" title="Tolak"
-                                                    class="p-1.5 text-gray-400 hover:text-red-600 rounded transition">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    @endif
+    {{-- Approve --}}
+    <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="status" value="approved">
+        <button type="submit" title="Setujui"
+                class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+        </button>
+    </form>
+
+    {{-- Revisi --}}
+    <button type="button"
+            title="Revisi"
+            onclick="openRevisionModal('{{ route('consumable-requests.update-status', $req->id) }}')"
+            class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+    </button>
+
+    {{-- Reject --}}
+    <form action="{{ route('consumable-requests.update-status', $req->id) }}" method="POST" class="inline">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="status" value="rejected">
+        <button type="submit" title="Tolak"
+                class="p-1.5 text-gray-400 hover:text-red-600 rounded transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </form>
+@endif
                                 </div>
                             </td>
                         </tr>
@@ -171,6 +183,7 @@
 
 {{-- Modal Create --}}
 @include('consumable-requests._modal')
+@include('consumable-requests._revision-modal')
 @endsection
 
 @push('scripts')

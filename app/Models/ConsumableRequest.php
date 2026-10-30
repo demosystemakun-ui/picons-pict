@@ -18,11 +18,14 @@ class ConsumableRequest extends Model
         'approved_by',
         'verified_by',
         'status',
+        'revision_note',
+        'revision_requested_at',
         'pr_generated_at',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'revision_requested_at' => 'datetime',
         'pr_generated_at' => 'datetime',
     ];
 
@@ -34,5 +37,13 @@ class ConsumableRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Apakah request sedang dalam status revisi
+     */
+    public function isOnRevision(): bool
+    {
+        return $this->status === 'revision';
     }
 }

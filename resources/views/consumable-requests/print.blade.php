@@ -234,7 +234,7 @@
 
     {{-- NOTE BIASA --}}
     <div class="note">
-        <strong>Note :</strong> {{ $consumable['notes'] ?? 'Request to Elisa' }}
+        <strong>Note :</strong> {{ $consumable['notes'] ?? 'Request to Elsa' }}
     </div>
 
     {{-- TANDA TANGAN --}}
