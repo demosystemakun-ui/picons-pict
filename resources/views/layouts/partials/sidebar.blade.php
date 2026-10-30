@@ -120,18 +120,19 @@
         {{-- ─── Procurement ─── --}}
         @php
             $procurementLinks = [];
-            if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
+            if (auth()->check() && auth()->user()->hasRole('Super Admin',)) {
                 $procurementLinks[] = ['route' => 'procurement.index',              'label' => 'Procurement Request'];
             }
 
             
             $procurementLinks[] = ['route' => null,                 'label' => 'Cash Advance'];
             $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
+            $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
         @endphp
 
         @include('layouts.partials.sidebar-group', [
             'label'  => 'Procurement',
-            'icon'   => 'shopping-cart',
+            'icon'   => 'latterbox',
             'active' => request()->routeIs(['procurement.*', 'reimbursement.*']),
             'links'  => $procurementLinks,
         ])
