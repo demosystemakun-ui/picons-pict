@@ -38,8 +38,10 @@
         $deptList = $deptList->prepend($deptCurrent);
     }
 
-    // Cek Role Admin
-    $isAdmin = auth()->check() && auth()->user()->role === 'Super Admin';
+    // Cek Role: Mendukung 'Super Admin' dan 'Admin'
+    $user = auth()->user();
+    $roleName = $user ? ($user->role->name ?? $user->role ?? '') : ''; // Mengakomodasi relasi objek atau string
+    $isAdmin = in_array($roleName, ['Super Admin', 'Admin']);
 
     $in   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
     $inSm = 'w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
