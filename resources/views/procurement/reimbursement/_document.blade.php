@@ -14,7 +14,7 @@
     $blank     = max(0, $minRows - $itemCount);
     
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
-               . ($reimbursement->period_end ? ' - ' . $reimbursement->period_end->format('M j, Y') : '');
+               . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
     // Logika penggabungan sel DATE untuk baris data asli
     $dates = $items->map(fn ($it) => $it->date_display)->all();
