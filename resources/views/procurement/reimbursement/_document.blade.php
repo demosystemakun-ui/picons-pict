@@ -23,7 +23,7 @@
         $to   = $it->date_to ? date('M j, Y', strtotime($it->date_to)) : '';
         
         if ($from && $to && $from !== $to) {
-            return $from . ' Until ' . $to;
+            return $from . ' - ' . $to;
         }
         return $from ?: $to;
     })->all();
