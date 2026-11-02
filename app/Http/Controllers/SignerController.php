@@ -1,29 +1,67 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
+namespace App\Http\Controllers;
 
-return new class extends Migration
+use Illuminate\Http\Request;
+use App\Models\Signer; // Pastikan Anda sudah punya Model Signer
+use Illuminate\Validation\Rule;
+
+class SignerController extends Controller
 {
-    public function up(): void
+    /**
+     * Menampilkan daftar signer.
+     */
+    public function index()
     {
-        // Opsi A: Jika Anda ingin tetap menggunakan ENUM, tambahkan 'revision'
-        // Pastikan semua opsi ENUM yang lama ditulis ulang agar tidak hilang
-        DB::statement("ALTER TABLE procurement_requests MODIFY COLUMN status ENUM('pending', 'approved', 'rejected', 'revision') NOT NULL DEFAULT 'pending'");
-        
-        // --- ATAU ---
-
-        // Opsi B: Ubah menjadi VARCHAR (lebih fleksibel untuk ke depannya)
-        // Schema::table('procurement_requests', function (Blueprint $table) {
-        //     $table->string('status')->change();
-        // });
+        $signers = Signer::orderBy('name')->paginate(10);
+        return view('signers.index', compact('signers'));
     }
 
-    public function down(): void
+    /**
+     * Menyimpan signer baru ke database.
+     */
+    public function store(Request $request)
     {
-        // Kembalikan ke struktur semula jika di-rollback
-        DB::statement("ALTER TABLE procurement_requests MODIFY COLUMN status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'");
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'title' => 'required|string|max:255',
+        ]);
+
+        Signer::create($validated);
+
+        return redirect()->route('signers.index')->with('success', 'Signer berhasil ditambahkan.');
     }
-};
+
+    /**
+     * Menampilkan form edit (jika menggunakan modal, ini mungkin tidak diperlukan).
+     */
+    public function edit(Signer $signer)
+    {
+        // Jika Anda menggunakan modal, kembalikan JSON atau langsung view
+        return view('signers.edit', compact('signer')); 
+    }
+
+    /**
+     * Memperbarui data signer.
+     */
+    public function update(Request $request, Signer $signer)
+    {
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'title' => 'required|string|max:255',
+        ]);
+
+        $signer->update($validated);
+
+        return redirect()->route('signers.index')->with('success', 'Signer berhasil diperbarui.');
+    }
+
+    /**
+     * Menghapus signer.
+     */
+    public function destroy(Signer $signer)
+    {
+        $signer->delete();
+        return redirect()->route('signers.index')->with('success', 'Signer berhasil dihapus.');
+    }
+}
