@@ -238,6 +238,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reimbursement/{reimbursement}/print', [ReimbursementController::class, 'print'])->name('reimbursement.print');
     Route::get('reimbursement/{reimbursement}/pdf', [ReimbursementController::class, 'pdf'])->name('reimbursement.pdf');
     Route::resource('reimbursement', ReimbursementController::class);
+    Route::post('reimbursement/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursement.approve');
 
     /* ─────────────────────────────────────────────
        DEBUG LOG (hapus jika sudah tidak diperlukan)
