@@ -1,13 +1,11 @@
 {{--
   Dokumen Claim Reimbursement Form (layout berbasis <table> agar aman untuk DomPDF & browser print)
-  Variabel: $reimbursement, $logo (path/URL logo)
 --}}
 @php
     \Carbon\Carbon::setLocale('id');
     $rp        = fn ($n) => 'Rp' . number_format($n, 0, ',', '.');
     $rpDec     = fn ($n) => 'Rp' . number_format($n, 2, ',', '.');
     $d         = fn ($date) => $date ? $date->translatedFormat('j F Y') : '';
-    // Penandatangan opsional: kosong = kotak tanpa nama
     $sg        = fn ($key, $field) => data_get($reimbursement->signers ?? [], "$key.$field") ?? '';
     
     $minRows   = 12;
@@ -15,16 +13,26 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
-    // Format Period menggunakan " Until " (Menggunakan format Inggris: Oct)
+    // Format Period (Header atas)
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
-    // Logika penggabungan sel DATE untuk baris data asli
-    $dates = $items->map(fn ($it) => $it->date_display)->all();
+    // Buat format teks rentang tanggal untuk tiap baris (Contoh: Oct 1, 2026 Until Oct 30, 2026)
+    $rowDates = $items->map(function($it) {
+        $from = $it->date_from ? date('M j, Y', strtotime($it->date_from)) : '';
+        $to   = $it->date_to ? date('M j, Y', strtotime($it->date_to)) : '';
+        
+        if ($from && $to && $from !== $to) {
+            return $from . ' Until ' . $to;
+        }
+        return $from ?: $to;
+    })->all();
+
+    // Logika penggabungan sel DATE (Rowspan) jika tanggal di baris berurutan sama persis
     $spans = [];
-    for ($i = 0, $n = count($dates); $i < $n; ) {
+    for ($i = 0, $n = count($rowDates); $i < $n; ) {
         $j = $i;
-        while ($j + 1 < $n && $dates[$i] !== '' && $dates[$j + 1] === $dates[$i]) {
+        while ($j + 1 < $n && $rowDates[$i] !== '' && $rowDates[$j + 1] === $rowDates[$i]) {
             $j++;
         }
         $spans[$i] = $j - $i + 1;
@@ -76,7 +84,6 @@
     .crf .sign .gap { border: none; width: 1.25%; }
     .crf .sign .name { font-size: 9px; font-weight: bold; }
 
-    /* Memastikan warna background hijau ikut tercetak di browser */
     @media print {
         .crf .green {
             -webkit-print-color-adjust: exact !important;
@@ -91,14 +98,11 @@
     {{-- KOP SURAT --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
-            {{-- Kolom Logo --}}
             <td style="width: 20%; vertical-align: middle; text-align: left; padding-left: 0;">
                 @if(!empty($logo)) 
                     <img src="{{ $logo }}" style="width: 170px; height: auto;"> 
                 @endif
             </td>
-            
-            {{-- Kolom Teks --}}
             <td style="width: 80%; vertical-align: middle; text-align: left; padding-left: 10px;">
                 <div class="company">PT PATIMBAN INTERNATIONAL CAR TERMINAL</div>
                 <div class="addr">
@@ -144,7 +148,6 @@
 
     {{-- TABEL ITEM + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
-        {{-- Header Tabel --}}
         <tr class="green c b">
             <th rowspan="2" style="width:4%;">NO</th>
             <th colspan="2">ITEM DESCRIPTION</th>
@@ -160,17 +163,14 @@
             <th style="width:20%;">DETAILS</th>
         </tr>
 
-        {{-- BARIS DATA ASLI (Dengan logika rowspan date) --}}
+        {{-- BARIS DATA ASLI --}}
         @foreach($items as $i => $item)
             <tr>
                 <td class="c">{{ $i + 1 }}</td>
                 
                 @if(isset($spans[$i]) && $spans[$i] > 0)
-                    {{-- Memaksa format tanggal jadi English (Oct 1, 2026) --}}
-                    @php
-                        $engDate = $item->date ? \Carbon\Carbon::parse($item->date)->locale('en')->format('M j, Y') : $item->date_display;
-                    @endphp
-                    <td class="c" rowspan="{{ $spans[$i] }}">{{ $engDate }}</td>
+                    {{-- Menampilkan format rentang tanggal bahasa Inggris --}}
+                    <td class="c" rowspan="{{ $spans[$i] }}">{{ $rowDates[$i] }}</td>
                 @endif
                 
                 <td>{{ $item->description }}</td>
@@ -183,22 +183,15 @@
             </tr>
         @endforeach
 
-        {{-- BARIS KOSONG (Tepat 9 kolom, TIDAK menggunakan rowspan) --}}
+        {{-- BARIS KOSONG --}}
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
-                <td></td> {{-- DATE --}}
-                <td></td> {{-- DETAILS --}}
-                <td></td> {{-- RECEIPT --}}
-                <td></td> {{-- PURPOSE --}}
-                <td></td> {{-- QTY --}}
-                <td></td> {{-- UNIT --}}
-                <td></td> {{-- PRICE --}}
-                <td></td> {{-- TOTAL PRICE --}}
+                <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td>
             </tr>
         @endfor
 
-        {{-- TOTAL (colspan 7 karena total kolom ada 9) --}}
+        {{-- TOTAL --}}
         <tr>
             <td colspan="7" style="border:none; background:none;"></td>
             <td class="green c b">TOTAL</td>
