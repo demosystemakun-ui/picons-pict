@@ -35,19 +35,26 @@
 <style>
     .crf, .crf table { font-family: Helvetica, Arial, sans-serif; font-size: 9.5px; color: #000; }
     .crf table { border-collapse: collapse; width: 100%; }
-    .crf td, .crf th { padding: 2px 4px; vertical-align: middle; }
+    .crf td, .crf th { padding: 4px 5px; vertical-align: middle; }
     .crf .bd  td, .crf .bd th { border: 1px solid #000; }
     .crf .green { background-color: #92d050 !important; }
+    
+    /* Penebalan Teks (Bold) */
     .crf .b { font-weight: bold; }
     .crf .c { text-align: center; }
     .crf .r { text-align: right; }
+    
     .crf .title { font-size: 17px; font-weight: bold; text-align: center; }
     .crf .company { font-size: 19px; font-weight: bold; color: #1f3864; text-align: center; letter-spacing: .5px; line-height: 1.15; }
     .crf .addr { font-size: 10px; font-weight: bold; letter-spacing: 1.6px; color: #1f3864; text-align: center; line-height: 1.5; margin-top: 4px; }
-    .crf .items td { height: 15px; }
-    .crf .sign td { border: 1px solid #000; height: 105px; width: 19%; text-align: center; vertical-align: top; padding: 3px; }
+    
+    /* Styling Khusus Tabel Item */
+    .crf .items th { font-weight: bold; text-align: center; }
+    .crf .items td { height: 18px; font-weight: bold; } /* Semua isi item dibuat bold */
+    
+    .crf .sign td { border: 1px solid #000; height: 105px; width: 19%; text-align: center; vertical-align: top; padding: 5px; }
     .crf .sign .gap { border: none; width: 1.25%; }
-    .crf .sign .name { font-size: 9px; }
+    .crf .sign .name { font-size: 9px; font-weight: bold; }
 
     /* Memastikan warna background hijau ikut tercetak di browser */
     @media print {
@@ -90,37 +97,41 @@
     {{-- INFO --}}
     <table class="bd">
         <tr>
-            <td class="b" style="width:14%;">REQUEST DATE</td><td style="width:2%;">:</td>
-            <td style="width:34%;">{{ $d($reimbursement->request_date) }}</td>
-            <td class="b" style="width:14%;">POSITION</td><td style="width:2%;">:</td>
-            <td>{{ $reimbursement->position }}</td>
+            <td class="b" style="width:14%;">REQUEST DATE</td><td class="b" style="width:2%;">:</td>
+            <td class="b" style="width:34%;">{{ $d($reimbursement->request_date) }}</td>
+            <td class="b" style="width:14%;">POSITION</td><td class="b" style="width:2%;">:</td>
+            <td class="b">{{ $reimbursement->position }}</td>
         </tr>
         <tr>
-            <td class="b">REQUESTED BY</td><td>:</td>
+            <td class="b">REQUESTED BY</td><td class="b">:</td>
             <td class="b">{{ $reimbursement->requested_by }}</td>
-            <td class="b">DEPARTMENT</td><td>:</td>
-            <td>{{ $reimbursement->department }}</td>
+            <td class="b">DEPARTMENT</td><td class="b">:</td>
+            <td class="b">{{ $reimbursement->department }}</td>
         </tr>
         <tr>
-            <td class="b">NIK</td><td>:</td>
-            <td>{{ $reimbursement->nik }}</td>
-            <td class="b">PERIOD</td><td>:</td>
-            <td>{{ $period }}</td>
+            <td class="b">NIK</td><td class="b">:</td>
+            <td class="b">{{ $reimbursement->nik }}</td>
+            <td class="b">PERIOD</td><td class="b">:</td>
+            <td class="b">{{ $period }}</td>
         </tr>
     </table>
 
     {{-- TABEL ITEM + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
+        {{-- Header Tabel (Disesuaikan dengan Gambar) --}}
         <tr class="green c b">
-            <th style="width:3%;">NO</th>
-            <th style="width:15%;">DATE</th>
-            <th style="width:18%;">DETAILS</th>
-            <th style="width:9%;">RECEIPT No</th>
-            <th style="width:20%;">PURPOSE</th>
-            <th style="width:4%;">QTY</th>
-            <th style="width:5%;">UNIT</th>
-            <th style="width:11%;">PRICE</th>
-            <th style="width:15%;">TOTAL PRICE</th>
+            <th rowspan="2" style="width:4%;">NO</th>
+            <th colspan="2">ITEM DESCRIPTION</th>
+            <th rowspan="2" style="width:10%;">RECEIPT No</th>
+            <th rowspan="2" style="width:22%;">PURPOSE</th>
+            <th rowspan="2" style="width:5%;">QTY</th>
+            <th rowspan="2" style="width:6%;">UNIT</th>
+            <th rowspan="2" style="width:12%;">PRICE</th>
+            <th rowspan="2" style="width:15%;">TOTAL PRICE</th>
+        </tr>
+        <tr class="green c b">
+            <th style="width:12%;">DATE</th>
+            <th style="width:20%;">DETAILS</th>
         </tr>
 
         @foreach($items as $i => $item)
@@ -130,7 +141,7 @@
                     <td class="c" rowspan="{{ $spans[$i] }}">{{ $item->date_display }}</td>
                 @endif
                 <td>{{ $item->description }}</td>
-                <td>{{ $item->receipt_no }}</td>
+                <td class="c">{{ $item->receipt_no }}</td>
                 <td class="c">{{ $item->purpose }}</td>
                 <td class="c">{{ $item->qty }}</td>
                 <td class="c">{{ $item->unit }}</td>
@@ -143,7 +154,7 @@
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
         @endfor
 
@@ -161,7 +172,7 @@
             <td style="width:58%; vertical-align:top; padding:0;">
                 <table class="bd">
                     <tr><td class="c b" style="height:18px;">Notes</td></tr>
-                    <tr><td style="height:34px; vertical-align:top;">{!! nl2br(e($reimbursement->notes)) !!}</td></tr>
+                    <tr><td class="b" style="height:34px; vertical-align:top;">{!! nl2br(e($reimbursement->notes)) !!}</td></tr>
                 </table>
             </td>
             <td style="width:2%;"></td>
@@ -169,9 +180,9 @@
                 <table class="bd">
                     <tr class="green"><td class="c b">Payment Info:</td></tr>
                     <tr>
-                        <td style="height:34px; vertical-align:top;">
+                        <td class="b" style="height:34px; vertical-align:top;">
                             Bank Name : {{ $reimbursement->bank_name }}<br>
-                            Acc Name : <b>{{ $reimbursement->account_name }}</b><br>
+                            Acc Name : {{ $reimbursement->account_name }}<br>
                             Acc No. : {{ $reimbursement->account_number }}
                         </td>
                     </tr>
@@ -193,7 +204,7 @@
                     }
                 @endphp
                 <td>
-                    <div>{{ $label }}</div>
+                    <div class="b">{{ $label }}</div>
                     <div style="height:62px;"></div>
                     <div class="name">
                         {{ $sName }}@if($sName !== '' && $sTitle !== '')<br>@endif{{ $sTitle }}
@@ -205,6 +216,6 @@
     </table>
 
     <table style="margin-top:8px; width:19%;">
-        <tr><td style="border:1px solid #000; height:34px; vertical-align:top;">Legalized Form :</td></tr>
+        <tr><td class="b" style="border:1px solid #000; height:34px; vertical-align:top;">Legalized Form :</td></tr>
     </table>
 </div>
