@@ -1,11 +1,13 @@
 {{--
   Dokumen Claim Reimbursement Form (layout berbasis <table> agar aman untuk DomPDF & browser print)
+  Variabel: $reimbursement, $logo (path/URL logo)
 --}}
 @php
     \Carbon\Carbon::setLocale('id');
     $rp        = fn ($n) => 'Rp' . number_format($n, 0, ',', '.');
     $rpDec     = fn ($n) => 'Rp' . number_format($n, 2, ',', '.');
     $d         = fn ($date) => $date ? $date->translatedFormat('j F Y') : '';
+    // Penandatangan opsional: kosong = kotak tanpa nama
     $sg        = fn ($key, $field) => data_get($reimbursement->signers ?? [], "$key.$field") ?? '';
     
     $minRows   = 12;
@@ -13,6 +15,7 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
+    // Perubahan: Tanda strip diganti " Until "
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
@@ -39,39 +42,70 @@
     .crf .bd  td, .crf .bd th { border: 1px solid #000; }
     .crf .green { background-color: #92d050 !important; }
     
+    /* Penebalan Teks (Bold) */
     .crf .b { font-weight: bold; }
     .crf .c { text-align: center; }
     .crf .r { text-align: right; }
     
+    /* Styling KOP Surat */
     .crf .title { font-size: 17px; font-weight: bold; text-align: center; }
-    .crf .company { font-size: 19px; font-weight: bold; color: #1f3864; text-align: center; letter-spacing: .5px; line-height: 1.15; }
-    .crf .addr { font-size: 10px; font-weight: bold; letter-spacing: 1.6px; color: #1f3864; text-align: center; line-height: 1.5; margin-top: 4px; }
+    .crf .company { 
+        font-size: 20px; 
+        font-weight: bold; 
+        color: #1f3864; 
+        text-align: left; 
+        letter-spacing: .5px; 
+        line-height: 1.2; 
+        margin-bottom: 4px;
+    }
+    .crf .addr { 
+        font-size: 10px; 
+        font-weight: bold; 
+        letter-spacing: 1.5px; 
+        color: #1f3864; 
+        text-align: left; 
+        line-height: 1.5; 
+    }
     
+    /* Styling Khusus Tabel Item */
     .crf .items th { font-weight: bold; text-align: center; }
-    .crf .items td { height: 18px; font-weight: bold; }
+    .crf .items td { height: 18px; font-weight: bold; } 
     
     .crf .sign td { border: 1px solid #000; height: 105px; width: 19%; text-align: center; vertical-align: top; padding: 5px; }
     .crf .sign .gap { border: none; width: 1.25%; }
     .crf .sign .name { font-size: 9px; font-weight: bold; }
 
+    /* Memastikan warna background hijau ikut tercetak di browser */
     @media print {
-        .crf .green { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background-color: #92d050 !important; }
+        .crf .green {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            background-color: #92d050 !important;
+        }
     }
 </style>
 
 <div class="crf">
 
-    {{-- KOP --}}
-    <table>
+    {{-- KOP SURAT (Disesuaikan dengan Format Excel) --}}
+    <table style="width: 100%; border: none;">
         <tr>
-            <td style="width:22%; vertical-align:middle;">
-                @if(!empty($logo)) <img src="{{ $logo }}" style="width:150px; height:auto;"> @endif
+            {{-- Kolom Logo --}}
+            <td style="width: 25%; vertical-align: middle; text-align: left; padding-left: 0;">
+                @if(!empty($logo)) 
+                    <img src="{{ $logo }}" style="width: 180px; height: auto;"> 
+                @endif
             </td>
-            <td style="vertical-align:middle; text-align:center;">
+            
+            {{-- Kolom Teks --}}
+            <td style="width: 75%; vertical-align: middle; text-align: left;">
                 <div class="company">PT PATIMBAN INTERNATIONAL CAR TERMINAL</div>
                 <div class="addr">
-                    Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab. Subang,<br>
-                    Jawa Barat - Indonesia (41255)
+                    {{-- Menggunakan div dengan padding-left agar teks address menjorok sejajar teks atasnya --}}
+                    <div style="padding-left: 50px;">
+                        Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab. Subang,<br>
+                        Jawa Barat - Indonesia (41255)
+                    </div>
                 </div>
             </td>
         </tr>
@@ -111,7 +145,7 @@
 
     {{-- TABEL ITEM + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
-        {{-- Header --}}
+        {{-- Header Tabel --}}
         <tr class="green c b">
             <th rowspan="2" style="width:4%;">NO</th>
             <th colspan="2">ITEM DESCRIPTION</th>
@@ -146,7 +180,7 @@
             </tr>
         @endforeach
 
-        {{-- BARIS KOSONG (Harus tepat 8 kolom, TIDAK menggunakan rowspan) --}}
+        {{-- BARIS KOSONG (Tepat 9 kolom, TIDAK menggunakan rowspan) --}}
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
@@ -161,9 +195,9 @@
             </tr>
         @endfor
 
-        {{-- TOTAL --}}
+        {{-- TOTAL (colspan 7 karena total kolom ada 9) --}}
         <tr>
-            <td colspan="7" style="border:none; background:none;"></td> {{-- 7 kolom dikosongkan --}}
+            <td colspan="7" style="border:none; background:none;"></td>
             <td class="green c b">TOTAL</td>
             <td class="green r b">{{ $rp($reimbursement->total) }}</td>
         </tr>
