@@ -9,6 +9,7 @@
     </style>
 </head>
 <body>
-    {{-- DomPDF butuh path file lokal untuk gambar --}}
-@include('procurement.reimbursement._document', ['logo' => asset('logo/pict.png')])</body>
+    {{-- PERUBAHAN: Gunakan public_path agar DomPDF bisa membaca gambar lokal --}}
+    @include('procurement.reimbursement._document', ['logo' => public_path('logo/pict.png')])
+</body>
 </html>

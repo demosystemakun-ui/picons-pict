@@ -1,5 +1,5 @@
 {{--
-  Dokumen Claim Reimbursement Form (layout berbasis <table> agar aman untuk DomPDF & browser print)
+  Dokumen Claim Reimbursement Form
 --}}
 @php
     \Carbon\Carbon::setLocale('id');
@@ -13,22 +13,22 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
-    // Format Period (Header atas)
+    // Format Period (Header atas) - Menggunakan Until
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
-    // Buat format teks rentang tanggal untuk tiap baris (Contoh: Oct 1, 2026 Until Oct 30, 2026)
+    // Format Tanggal di Tabel (Rentang From - To)
     $rowDates = $items->map(function($it) {
         $from = $it->date_from ? date('M j, Y', strtotime($it->date_from)) : '';
         $to   = $it->date_to ? date('M j, Y', strtotime($it->date_to)) : '';
         
         if ($from && $to && $from !== $to) {
-            return $from . ' - ' . $to;
+            return $from . ' - ' . $to; 
         }
         return $from ?: $to;
     })->all();
 
-    // Logika penggabungan sel DATE (Rowspan) jika tanggal di baris berurutan sama persis
+    // Logika penggabungan sel DATE (Rowspan)
     $spans = [];
     for ($i = 0, $n = count($rowDates); $i < $n; ) {
         $j = $i;
@@ -98,17 +98,21 @@
     {{-- KOP SURAT --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
+            {{-- Kolom Logo --}}
             <td style="width: 20%; vertical-align: middle; text-align: left; padding-left: 0;">
-                @if(!empty($logo)) 
+                @if(!empty($logo) && file_exists($logo)) 
+                    {{-- Menggunakan base64 atau path file yang sudah di set dari file pembungkus --}}
                     <img src="{{ $logo }}" style="width: 170px; height: auto;"> 
                 @endif
             </td>
+            
+            {{-- Kolom Teks --}}
             <td style="width: 80%; vertical-align: middle; text-align: left; padding-left: 10px;">
                 <div class="company">PT PATIMBAN INTERNATIONAL CAR TERMINAL</div>
                 <div class="addr">
-                    Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab.<br>
-                    Subang,<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jawa Barat - Indonesia (41255)
+                    {{-- Teks dirapikan agar sesuai dengan gambar Excel --}}
+                    Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab. Subang,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jawa Barat - Indonesia (41255)
                 </div>
             </td>
         </tr>
@@ -169,7 +173,6 @@
                 <td class="c">{{ $i + 1 }}</td>
                 
                 @if(isset($spans[$i]) && $spans[$i] > 0)
-                    {{-- Menampilkan format rentang tanggal bahasa Inggris --}}
                     <td class="c" rowspan="{{ $spans[$i] }}">{{ $rowDates[$i] }}</td>
                 @endif
                 
