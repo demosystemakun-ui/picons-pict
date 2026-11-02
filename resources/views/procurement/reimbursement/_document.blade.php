@@ -15,7 +15,7 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
-    // Format Period menggunakan " Until "
+    // Format Period menggunakan " Until " (Menggunakan format Inggris: Oct)
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
@@ -54,7 +54,7 @@
         font-size: 20px; 
         font-weight: bold; 
         color: #1f3864; 
-        text-align: left; /* Rata kiri */
+        text-align: left; 
         letter-spacing: 0.5px; 
         line-height: 1.1; 
         margin-bottom: 2px;
@@ -64,7 +64,7 @@
         font-weight: bold; 
         letter-spacing: 1.5px; 
         color: #1f3864; 
-        text-align: left; /* Rata kiri */
+        text-align: left; 
         line-height: 1.4; 
     }
     
@@ -88,7 +88,7 @@
 
 <div class="crf">
 
-    {{-- KOP SURAT (Format Rapi Seperti Excel) --}}
+    {{-- KOP SURAT --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
             {{-- Kolom Logo --}}
@@ -166,7 +166,11 @@
                 <td class="c">{{ $i + 1 }}</td>
                 
                 @if(isset($spans[$i]) && $spans[$i] > 0)
-                    <td class="c" rowspan="{{ $spans[$i] }}">{{ $item->date_display }}</td>
+                    {{-- Memaksa format tanggal jadi English (Oct 1, 2026) --}}
+                    @php
+                        $engDate = $item->date ? \Carbon\Carbon::parse($item->date)->locale('en')->format('M j, Y') : $item->date_display;
+                    @endphp
+                    <td class="c" rowspan="{{ $spans[$i] }}">{{ $engDate }}</td>
                 @endif
                 
                 <td>{{ $item->description }}</td>
