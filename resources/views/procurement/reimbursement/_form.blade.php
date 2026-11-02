@@ -38,10 +38,14 @@
         $deptList = $deptList->prepend($deptCurrent);
     }
 
-    // Cek Role: Mendukung 'Super Admin' dan 'Admin'
-    $user = auth()->user();
-    $roleName = $user ? ($user->role->name ?? $user->role ?? '') : ''; // Mengakomodasi relasi objek atau string
-    $isAdmin = in_array($roleName, ['Super Admin', 'Admin']);
+    // Cek Role berdasarkan ID (1 = Super Admin, 8 = Admin)
+    // Sesuaikan nama kolomnya, misal: role_id, id_role, atau role
+    $userRoleId = auth()->user()->role_id ?? null; 
+    
+    // Jika ternyata kolom di database Anda bernama 'role' dan isinya angka, gunakan baris di bawah ini:
+    // $userRoleId = auth()->user()->role ?? null; 
+
+    $isAdmin = in_array((int) $userRoleId, [1, 8]);
 
     $in   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
     $inSm = 'w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
