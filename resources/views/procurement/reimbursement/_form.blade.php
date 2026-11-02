@@ -38,6 +38,9 @@
         $deptList = $deptList->prepend($deptCurrent);
     }
 
+    // Cek Role Admin
+    $isAdmin = auth()->check() && auth()->user()->role === 'Super Admin';
+
     $in   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
     $inSm = 'w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
     $lb   = 'mb-1 block text-sm font-medium text-gray-700';
@@ -60,7 +63,16 @@
     <div class="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
         <div>
             <label class="{{ $lb }}">Form No.</label>
-            <input type="text" name="number" class="{{ $in }}" value="{{ $val('number', $number ?? '') }}" required>
+            <input type="text" name="number" 
+                   class="{{ $in }} {{ !$isAdmin ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" 
+                   value="{{ $val('number', $number ?? '') }}" 
+                   {{ !$isAdmin ? 'readonly' : '' }} 
+                   required 
+                   title="{{ !$isAdmin ? 'Nomor form akan diisi oleh Admin saat disetujui' : '' }}">
+            
+            @if(!$isAdmin)
+                <p class="mt-1 text-xs text-gray-500">Nomor form akan di-generate otomatis dan diisi oleh Admin saat disetujui.</p>
+            @endif
         </div>
         <div>
             <label class="{{ $lb }}">Request Date</label>
