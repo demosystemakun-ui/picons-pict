@@ -17,7 +17,7 @@ class ReimbursementController extends Controller
         return view('procurement.reimbursement.index', compact('reimbursements'));
     }
 
-     public function create()
+    public function create()
     {
         return view('procurement.reimbursement.create', array_merge(
             ['number' => Reimbursement::generateNumber()],
@@ -25,7 +25,7 @@ class ReimbursementController extends Controller
         ));
     }
 
-      private function formData(): array
+    private function formData(): array
     {
         return [
             'departments'   => Department::orderBy('name')->pluck('name'),
@@ -40,12 +40,16 @@ class ReimbursementController extends Controller
         $reimbursement = DB::transaction(function () use ($data) {
             $items = $data['items'];
             unset($data['items']);
+            
+            // Set status default ke pending saat dibuat
+            $data['status'] = 'pending'; 
+            
             $r = Reimbursement::create($data);
             $r->items()->createMany(array_values($items));
             return $r;
         });
 
-        return redirect()->route('reimbursement.show', $reimbursement)->with('success', 'Form reimbursement dibuat.');
+        return redirect()->route('reimbursement.show', $reimbursement)->with('success', 'Form reimbursement dibuat. Menunggu persetujuan Admin.');
     }
 
     public function show(Reimbursement $reimbursement)
@@ -54,7 +58,7 @@ class ReimbursementController extends Controller
         return view('procurement.reimbursement.show', compact('reimbursement'));
     }
 
-  public function edit(Reimbursement $reimbursement)
+    public function edit(Reimbursement $reimbursement)
     {
         $reimbursement->load('items');
         return view('procurement.reimbursement.edit', array_merge(
@@ -84,6 +88,28 @@ class ReimbursementController extends Controller
         return redirect()->route('reimbursement.index')->with('success', 'Form reimbursement dihapus.');
     }
 
+    /**
+     * FITUR BARU: Approve oleh Admin & Input Nomor Surat
+     */
+    public function approve(Request $request, Reimbursement $reimbursement)
+    {
+        // Validasi wajib isi nomor surat
+        $request->validate([
+            'number' => 'required|string|unique:reimbursements,number,' . $reimbursement->id,
+        ], [
+            'number.required' => 'Nomor surat wajib diisi sebelum approve.',
+            'number.unique'   => 'Nomor surat ini sudah digunakan.',
+        ]);
+
+        $reimbursement->update([
+            'number'      => $request->number,
+            'status'      => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Reimbursement berhasil di-approve dengan nomor surat: ' . $request->number);
+    }
+
     public function print(Reimbursement $reimbursement)
     {
         $reimbursement->load('items');
@@ -102,7 +128,8 @@ class ReimbursementController extends Controller
     private function validated(Request $request, $ignoreId = null): array
     {
         return $request->validate([
-            'number'          => 'required|string|unique:reimbursements,number' . ($ignoreId ? ",$ignoreId" : ''),
+            // 'number' dibuat nullable karena diisi manual oleh Admin saat Approve
+            'number'          => 'nullable|string|unique:reimbursements,number' . ($ignoreId ? ",$ignoreId" : ''),
             'request_date'    => 'required|date',
             'requested_by'    => 'required|string|max:150',
             'nik'             => 'nullable|string|max:50',
