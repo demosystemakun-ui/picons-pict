@@ -1,22 +1,22 @@
 {{--
   Dokumen Claim Reimbursement Form (layout berbasis <table> agar aman untuk DomPDF & browser print)
-  Variabel: $reimbursement, $logo (path/URL logo)
 --}}
 @php
     \Carbon\Carbon::setLocale('id');
     $rp        = fn ($n) => 'Rp' . number_format($n, 0, ',', '.');
     $rpDec     = fn ($n) => 'Rp' . number_format($n, 2, ',', '.');
     $d         = fn ($date) => $date ? $date->translatedFormat('j F Y') : '';
-    // Penandatangan opsional: kosong = kotak tanpa nama
     $sg        = fn ($key, $field) => data_get($reimbursement->signers ?? [], "$key.$field") ?? '';
+    
     $minRows   = 12;
     $items     = $reimbursement->items->values();
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
+    
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' - ' . $reimbursement->period_end->format('M j, Y') : '');
 
-    // Gabungkan sel DATE untuk baris berurutan yang tanggalnya sama (rowspan)
+    // Logika penggabungan sel DATE untuk baris data asli
     $dates = $items->map(fn ($it) => $it->date_display)->all();
     $spans = [];
     for ($i = 0, $n = count($dates); $i < $n; ) {
@@ -24,9 +24,9 @@
         while ($j + 1 < $n && $dates[$i] !== '' && $dates[$j + 1] === $dates[$i]) {
             $j++;
         }
-        $spans[$i] = $j - $i + 1;              // baris pertama grup: rowspan
+        $spans[$i] = $j - $i + 1;
         for ($k = $i + 1; $k <= $j; $k++) {
-            $spans[$k] = 0;                    // baris berikutnya: sel DATE dilewati
+            $spans[$k] = 0;
         }
         $i = $j + 1;
     }
@@ -39,7 +39,6 @@
     .crf .bd  td, .crf .bd th { border: 1px solid #000; }
     .crf .green { background-color: #92d050 !important; }
     
-    /* Penebalan Teks (Bold) */
     .crf .b { font-weight: bold; }
     .crf .c { text-align: center; }
     .crf .r { text-align: right; }
@@ -48,21 +47,15 @@
     .crf .company { font-size: 19px; font-weight: bold; color: #1f3864; text-align: center; letter-spacing: .5px; line-height: 1.15; }
     .crf .addr { font-size: 10px; font-weight: bold; letter-spacing: 1.6px; color: #1f3864; text-align: center; line-height: 1.5; margin-top: 4px; }
     
-    /* Styling Khusus Tabel Item */
     .crf .items th { font-weight: bold; text-align: center; }
-    .crf .items td { height: 18px; font-weight: bold; } /* Semua isi item dibuat bold */
+    .crf .items td { height: 18px; font-weight: bold; }
     
     .crf .sign td { border: 1px solid #000; height: 105px; width: 19%; text-align: center; vertical-align: top; padding: 5px; }
     .crf .sign .gap { border: none; width: 1.25%; }
     .crf .sign .name { font-size: 9px; font-weight: bold; }
 
-    /* Memastikan warna background hijau ikut tercetak di browser */
     @media print {
-        .crf .green {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            background-color: #92d050 !important;
-        }
+        .crf .green { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background-color: #92d050 !important; }
     }
 </style>
 
@@ -118,7 +111,7 @@
 
     {{-- TABEL ITEM + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
-        {{-- Header Tabel (Sesuai Gambar) --}}
+        {{-- Header --}}
         <tr class="green c b">
             <th rowspan="2" style="width:4%;">NO</th>
             <th colspan="2">ITEM DESCRIPTION</th>
@@ -134,9 +127,11 @@
             <th style="width:20%;">DETAILS</th>
         </tr>
 
+        {{-- BARIS DATA ASLI (Dengan logika rowspan date) --}}
         @foreach($items as $i => $item)
             <tr>
                 <td class="c">{{ $i + 1 }}</td>
+                
                 @if(isset($spans[$i]) && $spans[$i] > 0)
                     <td class="c" rowspan="{{ $spans[$i] }}">{{ $item->date_display }}</td>
                 @endif
@@ -151,23 +146,24 @@
             </tr>
         @endforeach
 
-        {{-- Baris kosong (8 kolom) --}}
+        {{-- BARIS KOSONG (Harus tepat 8 kolom, TIDAK menggunakan rowspan) --}}
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
-                <td></td> {{-- Gabungan Date & Detail --}}
-                <td></td> {{-- Receipt --}}
-                <td></td> {{-- Purpose --}}
-                <td></td> {{-- Qty --}}
-                <td></td> {{-- Unit --}}
-                <td></td> {{-- Price --}}
-                <td></td> {{-- Total Price --}}
+                <td></td> {{-- DATE --}}
+                <td></td> {{-- DETAILS --}}
+                <td></td> {{-- RECEIPT --}}
+                <td></td> {{-- PURPOSE --}}
+                <td></td> {{-- QTY --}}
+                <td></td> {{-- UNIT --}}
+                <td></td> {{-- PRICE --}}
+                <td></td> {{-- TOTAL PRICE --}}
             </tr>
         @endfor
 
-        {{-- TOTAL (colspan 6 karena total kolom ada 8) --}}
+        {{-- TOTAL --}}
         <tr>
-            <td colspan="6" style="border:none; background:none;"></td>
+            <td colspan="7" style="border:none; background:none;"></td> {{-- 7 kolom dikosongkan --}}
             <td class="green c b">TOTAL</td>
             <td class="green r b">{{ $rp($reimbursement->total) }}</td>
         </tr>
