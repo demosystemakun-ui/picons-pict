@@ -15,7 +15,7 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
-    // Perubahan: Tanda strip diganti " Until "
+    // Format Period menggunakan " Until "
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
@@ -49,22 +49,23 @@
     
     /* Styling KOP Surat */
     .crf .title { font-size: 17px; font-weight: bold; text-align: center; }
+    
     .crf .company { 
         font-size: 20px; 
         font-weight: bold; 
         color: #1f3864; 
-        text-align: left; 
-        letter-spacing: .5px; 
-        line-height: 1.2; 
-        margin-bottom: 4px;
+        text-align: left; /* Rata kiri */
+        letter-spacing: 0.5px; 
+        line-height: 1.1; 
+        margin-bottom: 2px;
     }
     .crf .addr { 
         font-size: 10px; 
         font-weight: bold; 
         letter-spacing: 1.5px; 
         color: #1f3864; 
-        text-align: left; 
-        line-height: 1.5; 
+        text-align: left; /* Rata kiri */
+        line-height: 1.4; 
     }
     
     /* Styling Khusus Tabel Item */
@@ -87,25 +88,23 @@
 
 <div class="crf">
 
-    {{-- KOP SURAT (Disesuaikan dengan Format Excel) --}}
-    <table style="width: 100%; border: none;">
+    {{-- KOP SURAT (Format Rapi Seperti Excel) --}}
+    <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
             {{-- Kolom Logo --}}
-            <td style="width: 25%; vertical-align: middle; text-align: left; padding-left: 0;">
+            <td style="width: 20%; vertical-align: middle; text-align: left; padding-left: 0;">
                 @if(!empty($logo)) 
-                    <img src="{{ $logo }}" style="width: 180px; height: auto;"> 
+                    <img src="{{ $logo }}" style="width: 170px; height: auto;"> 
                 @endif
             </td>
             
             {{-- Kolom Teks --}}
-            <td style="width: 75%; vertical-align: middle; text-align: left;">
+            <td style="width: 80%; vertical-align: middle; text-align: left; padding-left: 10px;">
                 <div class="company">PT PATIMBAN INTERNATIONAL CAR TERMINAL</div>
                 <div class="addr">
-                    {{-- Menggunakan div dengan padding-left agar teks address menjorok sejajar teks atasnya --}}
-                    <div style="padding-left: 50px;">
-                        Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab. Subang,<br>
-                        Jawa Barat - Indonesia (41255)
-                    </div>
+                    Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab.<br>
+                    Subang,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jawa Barat - Indonesia (41255)
                 </div>
             </td>
         </tr>
