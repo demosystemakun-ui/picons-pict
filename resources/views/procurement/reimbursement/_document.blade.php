@@ -118,7 +118,7 @@
 
     {{-- TABEL ITEM + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
-        {{-- Header Tabel (Disesuaikan dengan Gambar) --}}
+        {{-- Header Tabel (Sesuai Gambar) --}}
         <tr class="green c b">
             <th rowspan="2" style="width:4%;">NO</th>
             <th colspan="2">ITEM DESCRIPTION</th>
@@ -137,9 +137,10 @@
         @foreach($items as $i => $item)
             <tr>
                 <td class="c">{{ $i + 1 }}</td>
-                @if($spans[$i] > 0)
+                @if(isset($spans[$i]) && $spans[$i] > 0)
                     <td class="c" rowspan="{{ $spans[$i] }}">{{ $item->date_display }}</td>
                 @endif
+                
                 <td>{{ $item->description }}</td>
                 <td class="c">{{ $item->receipt_no }}</td>
                 <td class="c">{{ $item->purpose }}</td>
@@ -150,17 +151,23 @@
             </tr>
         @endforeach
 
-        {{-- Baris kosong --}}
+        {{-- Baris kosong (8 kolom) --}}
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
-                <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td></td> {{-- Gabungan Date & Detail --}}
+                <td></td> {{-- Receipt --}}
+                <td></td> {{-- Purpose --}}
+                <td></td> {{-- Qty --}}
+                <td></td> {{-- Unit --}}
+                <td></td> {{-- Price --}}
+                <td></td> {{-- Total Price --}}
             </tr>
         @endfor
 
-        {{-- TOTAL --}}
+        {{-- TOTAL (colspan 6 karena total kolom ada 8) --}}
         <tr>
-            <td colspan="7" style="border:none; background:none;"></td>
+            <td colspan="6" style="border:none; background:none;"></td>
             <td class="green c b">TOTAL</td>
             <td class="green r b">{{ $rp($reimbursement->total) }}</td>
         </tr>
@@ -191,7 +198,7 @@
         </tr>
     </table>
 
-    {{-- TANDA TANGAN (opsional: kosong = kotak tanpa nama) --}}
+    {{-- TANDA TANGAN --}}
     <table class="sign" style="margin-top:10px;">
         <tr>
             @foreach(['requested' => 'REQUESTED BY', 'checked' => 'CHECKED', 'acknowledge' => 'ACKNOWLEDGE', 'verified' => 'VERIFIED', 'approved' => 'APPROVED'] as $key => $label)
