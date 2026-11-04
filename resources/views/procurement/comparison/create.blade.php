@@ -170,7 +170,7 @@
          LIST VENDOR + FORM INPUT MANUAL
     ═══════════════════════════════════════════════════════════════ --}}
     <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST"
-          x-data="vendorForm()">
+          x-data="vendorForm()" id="mainVendorForm"> {{-- TAMBAHKAN ID --}}
         @csrf
 
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -429,6 +429,7 @@
                     
                     {{-- TAMPILAN JIKA BELUM DIVALIDASI (Status = approved) --}}
                     @if($procurement->status === 'approved')
+                        {{-- TOMBOL SIMPAN (type submit untuk form utama) --}}
                         <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -446,18 +447,13 @@
                                 Cetak PR Final
                             </a>
 
-                            {{-- Form Validasi TTD Manual --}}
-                            <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST"
-                                  onsubmit="return confirm('Pastikan PR Final sudah ditandatangani oleh Manajer. Lanjutkan validasi?')">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                    Validasi TTD
-                                </button>
-                            </form>
+                            {{-- TOMBOL VALIDASI (Menggunakan JavaScript untuk submit form terpisah) --}}
+                            <button type="button" onclick="validateSignature()" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                Validasi TTD
+                            </button>
                         @endif
 
                     {{-- TAMPILAN JIKA SUDAH DIVALIDASI (Status = processed) --}}
@@ -474,11 +470,25 @@
             </footer>
         </section>
     </form>
+
+    {{-- ═══ FORM VALIDASI TTD TERPISAH (DILUAR FORM UTAMA) ═══ --}}
+    <form id="validateSignatureForm" action="{{ route('procurement.validate-signature', $procurement) }}" method="POST" class="hidden">
+        @csrf
+        @method('PATCH')
+    </form>
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
+    // Fungsi untuk memunculkan konfirmasi dan submit form validasi
+    function validateSignature() {
+        if (confirm('Pastikan PR Final sudah ditandatangani oleh Manajer. Lanjutkan validasi?')) {
+            document.getElementById('validateSignatureForm').submit();
+        }
+    }
+
     function vendorForm() {
         return {
             budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}',
