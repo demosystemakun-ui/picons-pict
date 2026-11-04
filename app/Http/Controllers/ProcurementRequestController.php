@@ -32,7 +32,11 @@ class ProcurementRequestController extends Controller
     public function create()
     {
         $suggestedNo = ProcurementRequest::generateNumber();
-        return view('procurement.create', compact('suggestedNo'));
+        
+        // Ambil semua departemen dari master data
+        $departments = Department::orderBy('name')->get(); 
+
+        return view('procurement.create', compact('suggestedNo', 'departments'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -43,9 +47,8 @@ class ProcurementRequestController extends Controller
         $validated = $request->validate([
             'no'                    => 'required|string|unique:procurement_requests,no',
             'date'                  => 'required|date',
-            'department_id'         => 'nullable|exists:departments,id',
+            'department_id'         => 'required|exists:departments,id',
             'request_by'            => 'required|string|max:255',
-            'division'              => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
@@ -64,7 +67,11 @@ class ProcurementRequestController extends Controller
 
         $orderType = $request->input('order_type');
 
+        // Ambil data departemen untuk disimpan di kolom 'division'
+        $department = Department::findOrFail($validated['department_id']);
+
         $validated['user_id']         = auth()->id();
+        $validated['division']        = $department->name; // Generate dari department_id
         $validated['is_new_order']    = ($orderType === 'new_order');
         $validated['is_repeat_order'] = ($orderType === 'repeat_order');
         $validated['is_goods']        = ($orderType === 'goods');
@@ -96,7 +103,7 @@ class ProcurementRequestController extends Controller
     public function edit(ProcurementRequest $procurementRequest)
     {
         $procurementRequest->load('items');
-        $departments = Department::orderBy('name')->get();
+        $departments = Department::orderBy('name')->get(); 
 
         return view('procurement.edit', compact('procurementRequest', 'departments'));
     }
@@ -108,9 +115,8 @@ class ProcurementRequestController extends Controller
     {
         $validated = $request->validate([
             'date'                  => 'required|date',
-            'department_id'         => 'nullable|exists:departments,id',
+            'department_id'         => 'required|exists:departments,id',
             'request_by'            => 'required|string|max:255',
-            'division'              => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
@@ -133,6 +139,10 @@ class ProcurementRequestController extends Controller
         ]);
 
         $orderType = $request->input('order_type');
+
+        // ── FIX BUG: Definisikan variabel $department ──
+        $department = Department::findOrFail($validated['department_id']);
+        $validated['division'] = $department->name; 
 
         $validated['is_new_order']    = ($orderType === 'new_order');
         $validated['is_repeat_order'] = ($orderType === 'repeat_order');
@@ -315,21 +325,18 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       VALIDASI TANDA TANGAN MANUAL (BARU)
+       VALIDASI TANDA TANGAN MANUAL
     ═══════════════════════════════════════════════════════════════ */
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
     {
-        // Validasi 1: pastikan sudah ada vendor pemenang
         if (!$procurementRequest->winnerVendor) {
             return back()->with('error', 'Tidak ada vendor pemenang. Silakan pilih vendor terlebih dahulu.');
         }
 
-        // Validasi 2: pastikan status masih approved
         if ($procurementRequest->status !== 'approved') {
             return back()->with('error', 'Status PR tidak valid untuk divalidasi. Status saat ini: ' . $procurementRequest->status);
         }
 
-        // Update status
         $procurementRequest->update([
             'status'       => 'processed',
             'review_notes' => 'PR Final telah ditandatangani manual oleh Manajer. Divalidasi oleh Admin: ' . auth()->user()->name,

@@ -16,12 +16,12 @@
             ],
         ]);
 
-    $activeOrderType = collect([
-        'new_order'    => $procurementRequest->is_new_order,
-        'repeat_order' => $procurementRequest->is_repeat_order,
-        'goods'        => $procurementRequest->is_goods,
-        'services'     => $procurementRequest->is_services,
-    ])->search(fn ($v) => (bool) $v) ?: null;
+    // Perbaikan logika pencarian order type
+    $activeOrderType = null;
+    if ($procurementRequest->is_new_order) $activeOrderType = 'new_order';
+    elseif ($procurementRequest->is_repeat_order) $activeOrderType = 'repeat_order';
+    elseif ($procurementRequest->is_goods) $activeOrderType = 'goods';
+    elseif ($procurementRequest->is_services) $activeOrderType = 'services';
 @endphp
 
 @section('content')
@@ -73,12 +73,12 @@
                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Departemen</label>
-                    <select name="department_id" class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
+                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Departemen <span class="text-red-500">*</span></label>
+                    <select name="department_id" required class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
                         <option value="">— Pilih Departemen —</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}" {{ old('department_id', $procurementRequest->department_id) == $dept->id ? 'selected' : '' }}>
-                                {{ $dept->name }}
+                                {{ $dept->name }} ({{ $dept->code ?? '-' }})
                             </option>
                         @endforeach
                     </select>
@@ -86,11 +86,6 @@
                 <div>
                     <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Diajukan Oleh <span class="text-red-500">*</span></label>
                     <input type="text" name="request_by" required value="{{ old('request_by', $procurementRequest->request_by) }}"
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Divisi <span class="text-red-500">*</span></label>
-                    <input type="text" name="division" required value="{{ old('division', $procurementRequest->division) }}"
                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
                 </div>
                 <div>

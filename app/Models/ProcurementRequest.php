@@ -17,47 +17,38 @@ class ProcurementRequest extends Model
     public const STATUS_REVISION = 'revision';
     public const STATUS_REJECTED = 'rejected';
 
-    /* ═══════════════════════════════════════════════════════════════
-       MASS ASSIGNMENT
-    ═══════════════════════════════════════════════════════════════ */
     protected $fillable = [
         'no',
         'date',
-        'department_id',
+        'department_id', // <-- Ini akan menampung ID dari tabel departments
         'request_by',
-        'division',
+        'division',      // <-- Menampung nama departemen (string) untuk cetak PDF
         'prepared_by',
         'description',
-        'source', // Penanda PR: 'manual' atau 'consumable'
+        'source',
 
-        // Order type (boolean)
         'is_new_order',
         'is_repeat_order',
         'is_goods',
         'is_services',
 
-        // Detail kebutuhan
         'background',
         'purpose',
         'required_spec',
 
-        // Item ringkasan (legacy)
         'item_name',
         'item_requirement_note',
         'quantity',
         'target_purchase',
 
-        // Approval chain
         'pic_name',
         'ops_manager_name',
         'fem_manager_name',
         'coo_name',
 
-        // Status
         'status',
         'review_notes',
 
-        // ═══ Comparison & Final Decision ═══
         'budget_type',
         'reason_choose_vendor',
         'final_vendor_id',
@@ -66,15 +57,11 @@ class ProcurementRequest extends Model
         'ceo_name',
         'cfo_name',
 
-        // Relasi user
         'user_id',
     ];
 
-    /* ═══════════════════════════════════════════════════════════════
-       CASTS
-    ═══════════════════════════════════════════════════════════════ */
     protected $casts = [
-        'date'              => 'datetime', // Diubah dari 'date' ke 'datetime' untuk mencegah error ->format()
+        'date'              => 'datetime',
         'is_new_order'      => 'boolean',
         'is_repeat_order'   => 'boolean',
         'is_goods'          => 'boolean',
@@ -85,93 +72,58 @@ class ProcurementRequest extends Model
     /* ═══════════════════════════════════════════════════════════════
        RELATIONS
     ═══════════════════════════════════════════════════════════════ */
-
-    /**
-     * Item-item detail PR (multiple items).
-     */
     public function items()
     {
         return $this->hasMany(ProcurementRequestItem::class);
     }
 
-    /**
-     * Semua vendor comparison untuk PR ini (urut dari termurah).
-     */
     public function vendors()
     {
-        return $this->hasMany(ProcurementVendor::class)
-            ->orderBy('total_price');
+        return $this->hasMany(ProcurementVendor::class)->orderBy('total_price');
     }
 
-    /**
-     * Vendor pemenang (harga terendah).
-     */
     public function winnerVendor()
     {
-        return $this->hasOne(ProcurementVendor::class)
-            ->where('is_winner', true);
+        return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
     }
 
-    /**
-     * Comparison lama (legacy).
-     */
     public function comparisons()
     {
-        return $this->hasMany(ProcurementComparison::class)
-            ->orderBy('sort_order');
+        return $this->hasMany(ProcurementComparison::class)->orderBy('sort_order');
     }
 
-    /**
-     * Selected comparison (legacy).
-     */
     public function selectedComparison()
     {
-        return $this->hasOne(ProcurementComparison::class)
-            ->where('is_selected', true);
+        return $this->hasOne(ProcurementComparison::class)->where('is_selected', true);
     }
 
-    /**
-     * Final vendor via FK (legacy).
-     */
     public function finalVendor()
     {
         return $this->belongsTo(ProcurementComparison::class, 'final_vendor_id');
     }
 
-    /**
-     * Vendor comparison lama (legacy).
-     */
     public function vendorComparisons()
     {
         return $this->hasMany(VendorComparison::class);
     }
 
-    /**
-     * User yang membuat PR.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Departemen pemohon.
-     */
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    /**
-     * Dokumen arsip (seperti hasil scan AI, invoice, dll).
-     */
     public function documents()
     {
         return $this->morphMany(DocumentArchive::class, 'documentable');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       BOOT — Auto-normalize order type (hanya 1 yang boleh true)
+       BOOT
     ═══════════════════════════════════════════════════════════════ */
     protected static function booted()
     {
@@ -183,13 +135,11 @@ class ProcurementRequest extends Model
                 'is_services'     => $model->is_services,
             ])->search(fn ($value) => $value === true || $value === 1 || $value === '1');
 
-            // Reset semua
             $model->is_new_order    = false;
             $model->is_repeat_order = false;
             $model->is_goods        = false;
             $model->is_services     = false;
 
-            // Set satu yang aktif
             if ($activeType) {
                 $model->{$activeType} = true;
             }
@@ -199,12 +149,6 @@ class ProcurementRequest extends Model
     /* ═══════════════════════════════════════════════════════════════
        HELPERS
     ═══════════════════════════════════════════════════════════════ */
-
-    /**
-     * Generate nomor PR otomatis.
-     * Format: /PR/{DIVISION}/{PREFIX}-{ROMAN_MONTH}-{YEAR}
-     * Contoh: /PR/OPS/PICT-IX-2026
-     */
     public static function generateNumber(string $division = 'OPS', string $prefix = 'PICT'): string
     {
         $romans = [

@@ -88,13 +88,28 @@
                         <input type="text" id="request_by" name="request_by" value="{{ old('request_by') }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
+                    
+                    {{-- DROPDOWN DEPARTEMEN --}}
                     <div>
-                        <label for="division" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Division <span class="text-red-500">*</span>
+                        <label for="department_id" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                            Divisi / Departemen <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="division" name="division" value="{{ old('division') }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                        <select name="department_id" id="department_id" required
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition @error('department_id') border-red-500 @enderror">
+                            <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>— Pilih Departemen —</option>
+                            
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}" {{ old('department_id') == $dept->id ? 'selected' : '' }}>
+                                    {{ $dept->name }} ({{ $dept->code ?? '-' }})
+                                </option>
+                            @endforeach
+                            
+                        </select>
+                        @error('department_id')
+                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                        @enderror
                     </div>
+
                     <div>
                         <label for="prepared_by" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                             Prepared By <span class="text-red-500">*</span>
