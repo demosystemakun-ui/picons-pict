@@ -10,6 +10,31 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
+
+public function index(Request $request)
+{
+    // Ambil semua PO, urutkan dari yang terbaru
+    $query = Purchase::with(['vendor', 'procurementRequest.department'])->latest();
+
+    // Fitur Filter Status
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    // Fitur Pencarian
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('po_number', 'like', "%{$search}%")
+              ->orWhereHas('vendor', fn($v) => $v->where('vendor_name', 'like', "%{$search}%"));
+        });
+    }
+
+    $purchases = $query->paginate(15)->appends($request->all());
+
+    // Pastikan file view ini ada: resources/views/procurement/purchase/index.blade.php
+    return view('procurement.purchase.index', compact('purchases'));
+}
     // Halaman Form Checkout (Pembuatan PO)
     public function create(ProcurementRequest $procurement)
     {
