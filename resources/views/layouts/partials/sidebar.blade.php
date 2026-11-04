@@ -120,8 +120,12 @@
         {{-- ─── Procurement ─── --}}
         @php
             $procurementLinks = [];
-            if (auth()->check() && auth()->user()->hasRole('Super Admin',)) {
-                $procurementLinks[] = ['route' => 'procurement.index',              'label' => 'Procurement Request'];
+            if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
+                // Menu 1: Procurement Request
+                $procurementLinks[] = ['route' => 'procurement.index', 'label' => 'Procurement Request'];
+                
+                // 🌟 Menu 2: Purchase Orders (PO) - BARU
+                $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];
             }
 
             $procurementLinks[] = ['route' => null,                 'label' => 'Cash Advance'];
