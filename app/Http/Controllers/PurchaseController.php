@@ -13,6 +13,13 @@ class PurchaseController extends Controller
     // Halaman Form Checkout (Pembuatan PO)
     public function create(ProcurementRequest $procurement)
     {
+        // Validasi: Pastikan PR sudah siap untuk PO (approved atau processed)
+        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+            return redirect()
+                ->route('procurement.show', $procurement)
+                ->with('error', 'Purchase Order hanya dapat dibuat dari pengajuan yang sudah disetujui/divalidasi.');
+        }
+
         $procurement->load('vendors.items');
         return view('procurement.purchase.create', compact('procurement'));
     }
@@ -20,6 +27,14 @@ class PurchaseController extends Controller
     // Proses Simpan PO
     public function store(Request $request, ProcurementRequest $procurement)
     {
+        // ═══ 1. VALIDASI STATUS (DILAKUKAN DI AWAL) ═══
+        // Izinkan jika status masih 'approved' (belum divalidasi TTD) 
+        // ATAU 'processed' (sudah divalidasi TTD manual)
+        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+            return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
+        }
+
+        // ═══ 2. VALIDASI INPUT FORM ═══
         $validated = $request->validate([
             'vendor_id'         => 'required|exists:procurement_vendors,id',
             'po_number'         => 'required|string|unique:purchases,po_number',
@@ -32,7 +47,7 @@ class PurchaseController extends Controller
         try {
             $vendor = $procurement->vendors()->findOrFail($validated['vendor_id']);
 
-            // Buat Purchase Record
+            // ═══ 3. BUAT PURCHASE RECORD ═══
             $purchase = Purchase::create([
                 'procurement_request_id' => $procurement->id,
                 'vendor_id'              => $vendor->id,
@@ -43,7 +58,7 @@ class PurchaseController extends Controller
                 'notes'                  => $validated['notes'] ?? null,
             ]);
 
-            // Copy item dari Vendor Comparison ke Purchase Items
+            // ═══ 4. COPY ITEM DARI VENDOR COMPARISON KE PURCHASE ITEMS ═══
             foreach ($vendor->items as $item) {
                 PurchaseItem::create([
                     'purchase_id'  => $purchase->id,
@@ -53,13 +68,16 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            if ($procurement->status !== ProcurementRequest::STATUS_APPROVED) {
-                throw new \RuntimeException('Purchase Order hanya dapat dibuat dari pengajuan yang sudah disetujui.');
+            // ═══ 5. UPDATE STATUS PR MENJADI PROCESSED ═══
+            // (Jika sebelumnya masih 'approved', ubah ke 'processed'. Jika sudah 'processed', biarkan)
+            if ($procurement->status === ProcurementRequest::STATUS_APPROVED) {
+                $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
             }
-            $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
 
             DB::commit();
-            return redirect()->route('procurement.purchases.show', $purchase->id)
+            
+            return redirect()
+                ->route('procurement.purchases.show', $purchase->id)
                 ->with('success', 'Purchase Order berhasil dibuat. Menunggu barang datang.');
                 
         } catch (\Throwable $e) {
@@ -82,7 +100,7 @@ class PurchaseController extends Controller
             'items' => 'required|array',
             'items.*.id' => 'required|exists:purchase_items,id',
             'items.*.qty_received' => 'required|integer|min:0',
-            'items.*.qty_damaged' => 'required|integer|min:0|lte:items.*.qty_received', // Rusak tidak boleh > diterima
+            'items.*.qty_damaged' => 'required|integer|min:0|lte:items.*.qty_received',
         ]);
 
         DB::beginTransaction();
