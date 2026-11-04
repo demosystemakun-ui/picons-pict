@@ -165,6 +165,10 @@ Route::middleware(['auth'])->group(function () {
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING
         ───────────────────────────────────────────── */
+        
+        // 🌟 ROUTE BARU UNTUK MENU DAFTAR PO DI SIDEBAR 🌟
+        Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+
         Route::get('/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/{procurement}/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
         Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
@@ -206,4 +210,4 @@ Route::get('/clear-cache', function () {
     \Illuminate\Support\Facades\Artisan::call('config:clear');
     \Illuminate\Support\Facades\Artisan::call('view:clear');
     return 'Cache (Route, Config, View) berhasil dibersihkan!';
-});
+}); 
