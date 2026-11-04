@@ -1,157 +1,163 @@
-@extends('layouts.app')
+<?php
 
-@section('title', 'Detail Purchase Order')
+namespace App\Http\Controllers;
 
-@section('content')
-<div class="max-w-5xl mx-auto space-y-6 pb-24">
-    
-    {{-- ═══ ALERT SUCCESS & ERROR ═══ --}}
-    @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl flex items-center gap-3">
-            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
+use App\Models\ProcurementRequest;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
+use App\Models\Department;
+use App\Models\InventoryStock; // Pastikan model ini ada
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
-    @if(session('error') || $errors->any())
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl">
-            <div class="flex items-center gap-3 mb-2">
-                <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span class="font-bold">Terjadi Kesalahan</span>
-            </div>
-            <ul class="list-disc list-inside text-sm ml-8">
-                @if(session('error'))
-                    <li>{{ session('error') }}</li>
-                @endif
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+class PurchaseController extends Controller
+{
+    // Halaman Form Checkout (Pembuatan PO)
+    public function create(ProcurementRequest $procurement)
+    {
+        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+            return redirect()
+                ->route('procurement.show', $procurement)
+                ->with('error', 'Purchase Order hanya dapat dibuat dari pengajuan yang sudah disetujui/divalidasi.');
+        }
 
-    {{-- ═══ INFO PO ═══ --}}
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
-            <div>
-                <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ $purchase->po_number }}</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-1">
-                    PR: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $purchase->procurementRequest->no }}</span> 
-                    | Vendor: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $purchase->vendor->vendor_name }}</span>
-                </p>
-            </div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                @if($purchase->status === 'ordered') bg-blue-100 text-blue-800 ring-1 ring-blue-200
-                @elseif($purchase->status === 'partially_received') bg-amber-100 text-amber-800 ring-1 ring-amber-200
-                @else bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200 @endif">
-                {{ str_replace('_', ' ', $purchase->status) }}
-            </span>
-        </div>
-        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span class="text-gray-500 block text-xs uppercase tracking-wider mb-1">Tgl Order</span> 
-                <span class="font-semibold text-gray-900 dark:text-white">{{ \Carbon\Carbon::parse($purchase->order_date)->format('d F Y') }}</span>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span class="text-gray-500 block text-xs uppercase tracking-wider mb-1">Estimasi Datang</span> 
-                <span class="font-semibold text-gray-900 dark:text-white">{{ $purchase->estimated_arrival ? \Carbon\Carbon::parse($purchase->estimated_arrival)->format('d F Y') : '-' }}</span>
-            </div>
-        </div>
-    </div>
+        $procurement->load('vendors.items');
+        return view('procurement.purchase.create', compact('procurement'));
+    }
 
-    {{-- ═══ FORM PENERIMAAN BARANG ═══ --}}
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
-            <h2 class="font-bold text-gray-900 dark:text-white">Form Penerimaan Barang</h2>
-            @if($purchase->status === 'completed')
-                <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Selesai</span>
-            @endif
-        </div>
+    // Proses Simpan PO
+    public function store(Request $request, ProcurementRequest $procurement)
+    {
+        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+            return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
+        }
 
-        {{-- Kondisi: Jika PO sudah complete, tampilkan tabel read-only --}}
-        @if($purchase->status === 'completed')
-            <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-900/30">
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="px-4 py-3 text-gray-600 dark:text-gray-400 font-semibold">Nama Barang</th>
-                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-semibold">Qty Dipesan</th>
-                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-semibold">Total Diterima</th>
-                        <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-semibold">Total Rusak</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach($purchase->items as $item)
-                    <tr>
-                        <td class="px-4 py-3 text-gray-900 dark:text-white">{{ $item->product_name }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-gray-900 dark:text-white">{{ $item->qty_ordered }}</td>
-                        <td class="px-4 py-3 text-center font-bold text-emerald-600">{{ $item->qty_received }}</td>
-                        <td class="px-4 py-3 text-center font-bold {{ $item->qty_damaged > 0 ? 'text-rose-600' : 'text-gray-400' }}">{{ $item->qty_damaged }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @else
-            {{-- Form Input Aktual --}}
-            <form action="{{ route('procurement.purchases.receive', $purchase->id) }}" method="POST">
-                @csrf
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-900/30">
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="px-4 py-3 text-gray-600 dark:text-gray-400 font-semibold">Nama Barang</th>
-                                <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-semibold">Qty Dipesan</th>
-                                <th class="px-4 py-3 text-center text-gray-600 dark:text-gray-400 font-semibold">Sudah Diterima</th>
-                                <th class="px-4 py-3 text-center text-teal-600 font-semibold w-32">Qty Datang (Baru)</th>
-                                <th class="px-4 py-3 text-center text-rose-600 font-semibold w-32">Qty Rusak</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach($purchase->items as $item)
-                            @php
-                                $remaining = $item->qty_ordered - $item->qty_received;
-                            @endphp
-                            <tr>
-                                <td class="px-4 py-3 text-gray-900 dark:text-white">
-                                    {{ $item->product_name }}
-                                    <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
-                                </td>
-                                <td class="px-4 py-3 text-center font-bold text-gray-900 dark:text-white">{{ $item->qty_ordered }}</td>
-                                <td class="px-4 py-3 text-center text-gray-700 dark:text-gray-300">{{ $item->qty_received }}</td>
-                                <td class="px-4 py-3 text-center">
-                                    @if($remaining > 0)
-                                        <input type="number" 
-                                               name="items[{{ $loop->index }}][qty_received]" 
-                                               value="{{ $remaining }}" 
-                                               min="0" 
-                                               max="{{ $remaining }}" 
-                                               required
-                                               class="w-full text-center rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 focus:border-teal-500 focus:ring-teal-500">
-                                    @else
-                                        <span class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">Lunas</span>
-                                        <input type="hidden" name="items[{{ $loop->index }}][qty_received]" value="0">
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <input type="number" 
-                                           name="items[{{ $loop->index }}][qty_damaged]" 
-                                           value="0" 
-                                           min="0" 
-                                           max="{{ $remaining }}"
-                                           class="w-full text-center rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 focus:border-rose-500 focus:ring-rose-500">
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end bg-gray-50/50 dark:bg-gray-900/20">
-                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        Konfirmasi Penerimaan
-                    </button>
-                </div>
-            </form>
-        @endif
-    </div>
-</div>
-@endsection
+        $validated = $request->validate([
+            'vendor_id'         => 'required|exists:procurement_vendors,id',
+            'po_number'         => 'required|string|unique:purchases,po_number',
+            'order_date'        => 'required|date',
+            'estimated_arrival' => 'nullable|date|after_or_equal:order_date',
+            'notes'             => 'nullable|string',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $vendor = $procurement->vendors()->findOrFail($validated['vendor_id']);
+
+            $purchase = Purchase::create([
+                'procurement_request_id' => $procurement->id,
+                'vendor_id'              => $vendor->id,
+                'po_number'              => $validated['po_number'],
+                'order_date'             => $validated['order_date'],
+                'estimated_arrival'      => $validated['estimated_arrival'],
+                'status'                 => 'ordered',
+                'notes'                  => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($vendor->items as $item) {
+                PurchaseItem::create([
+                    'purchase_id'  => $purchase->id,
+                    'product_name' => $item->product_name,
+                    'qty_ordered'  => $item->quantity,
+                    'unit_price'   => $item->unit_price,
+                ]);
+            }
+
+            if ($procurement->status === ProcurementRequest::STATUS_APPROVED) {
+                $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
+            }
+
+            DB::commit();
+            
+            return redirect()
+                ->route('procurement.purchases.show', $purchase->id)
+                ->with('success', 'Purchase Order berhasil dibuat. Menunggu barang datang.');
+                
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal membuat PO: ' . $e->getMessage());
+        }
+    }
+
+    // Halaman Detail PO & Form Penerimaan Barang
+    public function show(Purchase $purchase)
+    {
+        $purchase->load('items', 'procurementRequest.items.department', 'vendor');
+        return view('procurement.purchase.show', compact('purchase'));
+    }
+
+    // Proses Penerimaan Barang
+    public function receive(Request $request, Purchase $purchase)
+    {
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:purchase_items,id',
+            'items.*.qty_received' => 'required|integer|min:0',
+            'items.*.qty_damaged' => 'required|integer|min:0',
+            'items.*.breakdowns' => 'nullable|array',
+            'items.*.breakdowns.*.department_id' => 'required_with:items.*.breakdowns|exists:departments,id',
+            'items.*.breakdowns.*.qty_received' => 'required_with:items.*.breakdowns|integer|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $allReceived = true;
+
+            foreach ($validated['items'] as $data) {
+                $item = PurchaseItem::findOrFail($data['id']);
+                $qtyReceived = (int) $data['qty_received'];
+                $qtyDamaged = (int) $data['qty_damaged'];
+
+                // Update item PO
+                $item->qty_received += $qtyReceived;
+                $item->qty_damaged += $qtyDamaged;
+                $item->save();
+
+                if ($item->qty_received < $item->qty_ordered) {
+                    $allReceived = false;
+                }
+
+                // Proses Distribusi ke Departemen
+                if (!empty($data['breakdowns'])) {
+                    $totalAlokasi = collect($data['breakdowns'])->sum('qty_received');
+
+                    // Validasi: Total alokasi harus sama dengan total barang datang (fisik)
+                    if ($totalAlokasi !== $qtyReceived) {
+                        throw new \Exception("Total alokasi per departemen ({$totalAlokasi}) tidak sama dengan Qty Datang Fisik ({$qtyReceived}) untuk item {$item->product_name}.");
+                    }
+
+                    foreach ($data['breakdowns'] as $bd) {
+                        if ($bd['qty_received'] > 0) {
+                            // Simpan ke Inventory / Stok Departemen
+                            // Asumsi: Ada model InventoryStock dengan kolom department_id, item_name, quantity, type, notes
+                            InventoryStock::create([
+                                'department_id' => $bd['department_id'],
+                                'item_name'     => $item->product_name,
+                                'quantity'      => $bd['qty_received'],
+                                'type'          => 'in',
+                                'notes'         => 'Penerimaan PO ' . $purchase->po_number,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Update Status PO
+            $purchase->update([
+                'status' => $allReceived ? 'completed' : 'partially_received'
+            ]);
+
+            // Update Status PR
+            $procurementRequest = $purchase->procurementRequest;
+            if ($allReceived && $procurementRequest->status === ProcurementRequest::STATUS_PROCESSED) {
+                $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Data penerimaan barang berhasil disimpan dan didistribusikan ke departemen.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memproses penerimaan: ' . $e->getMessage())->withInput();
+        }
+    }
+}
