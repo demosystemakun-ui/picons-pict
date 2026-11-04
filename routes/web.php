@@ -135,7 +135,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
 
-        // ═══ COMPARISON ROUTES (sudah lengkap) ═══
+        // ═══ COMPARISON ROUTES ═══
         Route::get('/{procurement}/comparisons', [VendorComparisonController::class, 'index'])->name('comparisons.index');
         Route::post('/{procurement}/comparisons', [VendorComparisonController::class, 'store'])->name('comparisons.store');
         Route::post('/{procurement}/comparisons/scan', [VendorComparisonController::class, 'scanImage'])->name('comparisons.scan');
@@ -144,21 +144,23 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurement}/comparisons/{comparison}/select', [VendorComparisonController::class, 'selectVendor'])->name('comparisons.select');
         Route::delete('/comparisons/{comparison}', [VendorComparisonController::class, 'destroy'])->name('comparisons.destroy');
 
-        Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
+        // ═══ VALIDASI TTD (PATCH) — Diletakkan sebelum route dinamis GET/PUT ═══
+        Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
+            ->name('validate-signature')
+            ->middleware('role:Super Admin');
 
+        Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
+            ->name('status')
+            ->middleware('role:Super Admin');
+
+        // ═══ PDF & DETAIL PR ═══
+        Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
         Route::get('/{procurementRequest}', [ProcurementRequestController::class, 'show'])->name('show');
         Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');
         Route::put('/{procurementRequest}', [ProcurementRequestController::class, 'update'])->name('update');
         Route::delete('/{procurementRequest}', [ProcurementRequestController::class, 'destroy'])->name('destroy');
         Route::get('/{procurementRequest}/print', [ProcurementRequestController::class, 'print'])->name('print');
         Route::get('/{procurementRequest}/pdf', [ProcurementRequestController::class, 'pdf'])->name('pdf');
-
-        Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
-            ->name('status')
-            ->middleware('role:Super Admin');
-            Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
-    ->name('validate-signature')
-    ->middleware('role:Super Admin'); // Pastikan hanya admin yang bisa
 
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING

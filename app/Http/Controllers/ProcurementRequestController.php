@@ -13,11 +13,10 @@ class ProcurementRequestController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        INDEX — Daftar semua PR & Filter Tab
     ═══════════════════════════════════════════════════════════════ */
-    public function index(Request $request) // <-- Tambahkan Request $request
+    public function index(Request $request)
     {
         $query = ProcurementRequest::latest();
 
-        // Filter berdasarkan sumber (manual atau consumable)
         if ($request->filled('source')) {
             $query->where('source', $request->source);
         }
@@ -71,7 +70,7 @@ class ProcurementRequestController extends Controller
         $validated['is_goods']        = ($orderType === 'goods');
         $validated['is_services']     = ($orderType === 'services');
         $validated['status']          = 'pending';
-        $validated['source']          = 'manual'; // <-- Pastikan PR buatan sini ditandai manual
+        $validated['source']          = 'manual';
 
         unset($validated['order_type']);
 
@@ -82,44 +81,15 @@ class ProcurementRequestController extends Controller
             ->with('success', 'Procurement Request berhasil dibuat.');
     }
 
-    // Tambahkan method ini di ProcurementRequestController.php
-
-public function createPO(ProcurementRequest $procurementRequest)
-{
-    // 1. Cek apakah PR sudah disetujui
-    if ($procurementRequest->status !== 'approved') {
-        return back()->with('error', 'Hanya PR yang sudah disetujui yang dapat diproses ke PO.');
-    }
-
-    // 2. Cek apakah sudah ada perbandingan harga (comparison)
-    if ($procurementRequest->comparisons()->count() === 0) {
-        return redirect()
-            ->route('procurement.comparisons.create', $procurementRequest)
-            ->with('info', 'Silakan input perbandingan harga vendor terlebih dahulu sebelum membuat PO.');
-    }
-
-    // 3. Cek apakah sudah ada vendor pemenang yang dipilih
-    if (!$procurementRequest->final_vendor_id) {
-        return redirect()
-            ->route('procurement.comparisons.create', $procurementRequest)
-            ->with('info', 'Silakan pilih vendor pemenang terlebih dahulu sebelum membuat PO.');
-    }
-
-    // 4. Jika lolos semua pengecekan, baru arahkan ke form PO (atau logic pembuatan PO)
-    // return view('procurement.po.create', compact('procurementRequest'));
-    
-    return back()->with('success', 'Lolos validasi, siap membuat PO.'); 
-}
-
     /* ═══════════════════════════════════════════════════════════════
        SHOW — Detail PR
     ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
-{
-    // Ganti 'comparisons' → 'vendors', 'winnerVendor'
-    $procurementRequest->load('items', 'vendors', 'winnerVendor');
-    return view('procurement.show', compact('procurementRequest'));
-}
+    {
+        $procurementRequest->load('items', 'vendors', 'winnerVendor');
+        return view('procurement.show', compact('procurementRequest'));
+    }
+
     /* ═══════════════════════════════════════════════════════════════
        EDIT — Form edit PR
     ═══════════════════════════════════════════════════════════════ */
@@ -172,7 +142,6 @@ public function createPO(ProcurementRequest $procurementRequest)
         $items = $validated['items'];
         unset($validated['order_type'], $validated['items']);
 
-        /* ═══ Ringkasan legacy untuk kolom item_name / quantity ═══ */
         $validated['item_name'] = count($items) > 1
             ? '(Multiple Items - Lihat Detail Lampiran)'
             : $items[0]['item_name'];
@@ -185,14 +154,12 @@ public function createPO(ProcurementRequest $procurementRequest)
 
         $procurementRequest->update($validated);
 
-        /* ═══ Hapus file lama di Supabase Storage jika ada perubahan ═══ */
         foreach ($procurementRequest->items as $oldItem) {
             if ($oldItem->picture && Storage::disk('supabase-procurement_request')->exists($oldItem->picture)) {
                 Storage::disk('supabase-procurement_request')->delete($oldItem->picture);
             }
         }
 
-        /* ═══ Replace items ═══ */
         $procurementRequest->items()->delete();
 
         foreach ($request->items as $index => $itemData) {
@@ -205,7 +172,6 @@ public function createPO(ProcurementRequest $procurementRequest)
 
                 $pic     = $request->file("items.{$index}.picture");
                 $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                // Disimpan langsung ke disk Supabase Storage
                 $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement_request');
             }
 
@@ -241,7 +207,7 @@ public function createPO(ProcurementRequest $procurementRequest)
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       PRINT — Preview print (HTML)
+       PRINT & PDF
     ═══════════════════════════════════════════════════════════════ */
     public function print(ProcurementRequest $procurementRequest)
     {
@@ -249,9 +215,6 @@ public function createPO(ProcurementRequest $procurementRequest)
         return view('procurement.print', compact('procurement'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       PDF — Generate PDF (tanpa comparison)
-    ═══════════════════════════════════════════════════════════════ */
     public function pdf(ProcurementRequest $procurementRequest)
     {
         $procurement = $this->mapToPrintData($procurementRequest);
@@ -264,11 +227,9 @@ public function createPO(ProcurementRequest $procurementRequest)
         $folder   = 'procurement_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        // Simpan PDF ke Supabase Storage
         Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
-        // --- PERBAIKAN URL PUBLIK SUPABASE ---
-        $projectId = 'thlvvgolwryzhdxjgyvz'; // Sesuaikan dengan Project ID Anda
+        $projectId = 'thlvvgolwryzhdxjgyvz';
         $bucket    = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
         
         $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
@@ -276,32 +237,11 @@ public function createPO(ProcurementRequest $procurementRequest)
         return redirect()->away($pdfUrl);
     }
 
-
-    public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
-{
-    // Pastikan vendor sudah dipilih sebelum validasi
-    if (!$procurementRequest->winnerVendor) {
-        return back()->with('error', 'Pilih vendor pemenang terlebih dahulu.');
-    }
-
-    // Ubah status menjadi 'processed' (atau status khusus 'ready_for_po' jika ada)
-    $procurementRequest->update([
-        'status' => 'processed',
-        'review_notes' => 'PR Final telah ditandatangani secara manual oleh Manajer. (Divalidasi oleh Admin: ' . auth()->user()->name . ')'
-    ]);
-
-    return back()->with('success', 'Validasi tanda tangan berhasil. Silakan lanjut ke proses PO.');
-}
-
-    /* ═══════════════════════════════════════════════════════════════
-       PDF FINAL — Generate PDF Final (dengan comparison vendor)
-    ═══════════════════════════════════════════════════════════════ */
     public function pdfFinal(ProcurementRequest $procurementRequest)
     {
         $procurement = $this->mapToPrintData($procurementRequest);
         $procurementRequest->load('vendors.items', 'winnerVendor');
 
-        /* ═══ Semua vendor (urut dari termurah) ═══ */
         $procurement['vendors'] = $procurementRequest->vendors()
             ->orderBy('total_price')
             ->get()
@@ -332,7 +272,6 @@ public function createPO(ProcurementRequest $procurementRequest)
             ])
             ->toArray();
 
-        /* ═══ Vendor pemenang ═══ */
         $winner = $procurementRequest->winnerVendor;
 
         $procurement['winner'] = $winner ? [
@@ -351,14 +290,12 @@ public function createPO(ProcurementRequest $procurementRequest)
             'tax_note'            => $winner->tax_note,
         ] : null;
 
-        /* ═══ Field tambahan untuk PDF ═══ */
         $procurement['budget_type']          = $procurementRequest->budget_type;
         $procurement['reason_choose_vendor'] = $procurementRequest->reason_choose_vendor;
         $procurement['accounting_mgr_name']  = $procurementRequest->accounting_mgr_name;
         $procurement['ceo_name']             = $procurementRequest->ceo_name;
         $procurement['cfo_name']             = $procurementRequest->cfo_name;
 
-        /* ═══ Render PDF ═══ */
         $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement'))
             ->setPaper('a4', 'portrait');
 
@@ -367,16 +304,40 @@ public function createPO(ProcurementRequest $procurementRequest)
         $folder   = 'procurement_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        // Simpan PDF Final ke Supabase Storage
         Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
 
-        // --- PERBAIKAN URL PUBLIK SUPABASE ---
-        $projectId = 'thlvvgolwryzhdxjgyvz'; // Sesuaikan dengan Project ID Anda
+        $projectId = 'thlvvgolwryzhdxjgyvz';
         $bucket    = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
         
         $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
 
         return redirect()->away($pdfUrl);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       VALIDASI TANDA TANGAN MANUAL (BARU)
+    ═══════════════════════════════════════════════════════════════ */
+    public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
+    {
+        // Validasi 1: pastikan sudah ada vendor pemenang
+        if (!$procurementRequest->winnerVendor) {
+            return back()->with('error', 'Tidak ada vendor pemenang. Silakan pilih vendor terlebih dahulu.');
+        }
+
+        // Validasi 2: pastikan status masih approved
+        if ($procurementRequest->status !== 'approved') {
+            return back()->with('error', 'Status PR tidak valid untuk divalidasi. Status saat ini: ' . $procurementRequest->status);
+        }
+
+        // Update status
+        $procurementRequest->update([
+            'status'       => 'processed',
+            'review_notes' => 'PR Final telah ditandatangani manual oleh Manajer. Divalidasi oleh Admin: ' . auth()->user()->name,
+        ]);
+
+        return redirect()
+            ->route('procurement.comparisons.index', $procurementRequest)
+            ->with('success', 'Validasi tanda tangan berhasil. Anda sekarang dapat melanjutkan ke proses PO.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -427,7 +388,6 @@ public function createPO(ProcurementRequest $procurementRequest)
     {
         $model->loadMissing('items');
 
-        /* ═══ Bangun REQUIRED SPEC dari detail item ═══ */
         $specBlocks = [];
         $itemCount  = $model->items->count();
 
