@@ -1,25 +1,21 @@
 <?php
+// ProcurementComparisonController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\ProcurementRequest;
-use App\Models\ProcurementComparison;
+use App\Models\ProcurementVendor;
 use Illuminate\Http\Request;
 
 class ProcurementComparisonController extends Controller
 {
-    /**
-     * Form input comparison vendor untuk PR tertentu.
-     */
     public function create(ProcurementRequest $procurementRequest)
     {
-        $comparisons = $procurementRequest->comparisons()->get();
-        return view('procurement.comparison.create', compact('procurementRequest', 'comparisons'));
+        // Ambil dari sistem baru
+        $vendors = $procurementRequest->vendors()->get();
+        return view('procurement.comparison.create', compact('procurementRequest', 'vendors'));
     }
 
-    /**
-     * Simpan comparison baru (bisa banyak sekaligus dari form).
-     */
     public function store(Request $request, ProcurementRequest $procurementRequest)
     {
         $validated = $request->validate([
@@ -28,35 +24,31 @@ class ProcurementComparisonController extends Controller
             'vendors.*.company_name' => 'nullable|string|max:255',
             'vendors.*.total_price'  => 'required|numeric|min:0',
             'vendors.*.tax_note'     => 'nullable|string|max:50',
-            'vendors.*.reason'       => 'nullable|string',
         ]);
 
-        // Hapus yang lama (kalau admin re-input)
-        $procurementRequest->comparisons()->delete();
+        // Hapus vendor lama jika admin re-input
+        $procurementRequest->vendors()->delete();
 
         foreach ($validated['vendors'] as $index => $vendor) {
-            $procurementRequest->comparisons()->create([
+            $procurementRequest->vendors()->create([
                 'vendor_name'  => $vendor['vendor_name'],
                 'company_name' => $vendor['company_name'] ?? null,
                 'total_price'  => $vendor['total_price'],
                 'tax_note'     => $vendor['tax_note'] ?? null,
-                'reason'       => $vendor['reason'] ?? null,
                 'sort_order'   => $index + 1,
+                'is_winner'    => false, // default
             ]);
         }
 
         return redirect()
-            ->route('procurement.comparisons.create', $procurementRequest)
-            ->with('success', 'Comparison vendor berhasil disimpan.');
+            ->route('procurement.show', $procurementRequest)
+            ->with('success', 'Perbandingan vendor berhasil disimpan. Silakan pilih pemenang.');
     }
 
-    /**
-     * Pilih 1 vendor sebagai pemenang + input reason.
-     */
     public function select(Request $request, ProcurementRequest $procurementRequest)
     {
         $validated = $request->validate([
-            'comparison_id'         => 'required|exists:procurement_comparisons,id',
+            'vendor_id'             => 'required|exists:procurement_vendors,id',
             'reason_choose_vendor'  => 'required|string|max:2000',
             'budget_type'           => 'nullable|in:budgeted,non_budgeted',
             'accounting_mgr_name'   => 'nullable|string|max:255',
@@ -64,25 +56,26 @@ class ProcurementComparisonController extends Controller
             'cfo_name'              => 'nullable|string|max:255',
         ]);
 
-        // Reset semua comparison → set 1 sebagai selected
-        $procurementRequest->comparisons()->update(['is_selected' => false]);
+        // Reset semua vendor → bukan pemenang
+        $procurementRequest->vendors()->update(['is_winner' => false]);
 
-        $selected = $procurementRequest->comparisons()->findOrFail($validated['comparison_id']);
-        $selected->update(['is_selected' => true]);
+        // Set 1 vendor sebagai pemenang
+        $winner = $procurementRequest->vendors()->findOrFail($validated['vendor_id']);
+        $winner->update(['is_winner' => true]);
 
         // Update PR
         $procurementRequest->update([
-            'final_vendor_id'       => $selected->id,
-            'final_total_price'     => $selected->total_price,
-            'reason_choose_vendor'  => $validated['reason_choose_vendor'],
-            'budget_type'           => $validated['budget_type'] ?? $procurementRequest->budget_type,
-            'accounting_mgr_name'   => $validated['accounting_mgr_name'] ?? $procurementRequest->accounting_mgr_name,
-            'ceo_name'              => $validated['ceo_name'] ?? $procurementRequest->ceo_name,
-            'cfo_name'              => $validated['cfo_name'] ?? $procurementRequest->cfo_name,
+            'final_vendor_id'      => null, // Kosongkan legacy FK
+            'final_total_price'    => $winner->total_price,
+            'reason_choose_vendor' => $validated['reason_choose_vendor'],
+            'budget_type'          => $validated['budget_type'] ?? $procurementRequest->budget_type,
+            'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? $procurementRequest->accounting_mgr_name,
+            'ceo_name'             => $validated['ceo_name'] ?? $procurementRequest->ceo_name,
+            'cfo_name'             => $validated['cfo_name'] ?? $procurementRequest->cfo_name,
         ]);
 
         return redirect()
             ->route('procurement.show', $procurementRequest)
-            ->with('success', 'Vendor berhasil dipilih sebagai pemenang.');
+            ->with('success', 'Vendor pemenang berhasil dipilih.');
     }
 }

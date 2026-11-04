@@ -82,15 +82,44 @@ class ProcurementRequestController extends Controller
             ->with('success', 'Procurement Request berhasil dibuat.');
     }
 
+    // Tambahkan method ini di ProcurementRequestController.php
+
+public function createPO(ProcurementRequest $procurementRequest)
+{
+    // 1. Cek apakah PR sudah disetujui
+    if ($procurementRequest->status !== 'approved') {
+        return back()->with('error', 'Hanya PR yang sudah disetujui yang dapat diproses ke PO.');
+    }
+
+    // 2. Cek apakah sudah ada perbandingan harga (comparison)
+    if ($procurementRequest->comparisons()->count() === 0) {
+        return redirect()
+            ->route('procurement.comparisons.create', $procurementRequest)
+            ->with('info', 'Silakan input perbandingan harga vendor terlebih dahulu sebelum membuat PO.');
+    }
+
+    // 3. Cek apakah sudah ada vendor pemenang yang dipilih
+    if (!$procurementRequest->final_vendor_id) {
+        return redirect()
+            ->route('procurement.comparisons.create', $procurementRequest)
+            ->with('info', 'Silakan pilih vendor pemenang terlebih dahulu sebelum membuat PO.');
+    }
+
+    // 4. Jika lolos semua pengecekan, baru arahkan ke form PO (atau logic pembuatan PO)
+    // return view('procurement.po.create', compact('procurementRequest'));
+    
+    return back()->with('success', 'Lolos validasi, siap membuat PO.'); 
+}
+
     /* ═══════════════════════════════════════════════════════════════
        SHOW — Detail PR
     ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
-    {
-        $procurementRequest->load('items', 'comparisons');
-        return view('procurement.show', compact('procurementRequest'));
-    }
-
+{
+    // Ganti 'comparisons' → 'vendors', 'winnerVendor'
+    $procurementRequest->load('items', 'vendors', 'winnerVendor');
+    return view('procurement.show', compact('procurementRequest'));
+}
     /* ═══════════════════════════════════════════════════════════════
        EDIT — Form edit PR
     ═══════════════════════════════════════════════════════════════ */

@@ -102,11 +102,29 @@
                 </button>
             </form>
             @elseif($currStatus === 'approved')
-            <a href="{{ route('procurement.purchases.create', $procurementRequest) }}"
-               class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
-                <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                Buat PO / Proses Pembelian
-            </a>
+            
+                {{-- ═══ LOGIKA BARU: CEK COMPARISON & VENDOR PEMENANG ═══ --}}
+@if($procurementRequest->vendors->isEmpty())
+                    <a href="{{ route('procurement.comparisons.create', $procurementRequest) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
+                        <i data-lucide="scale" class="w-4 h-4"></i>
+                        Buat Perbandingan Harga
+                    </a>
+@elseif(!$procurementRequest->winnerVendor)
+                    <a href="{{ route('procurement.comparisons.create', $procurementRequest) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+                        <i data-lucide="check-square" class="w-4 h-4"></i>
+                        Pilih Vendor Pemenang
+                    </a>
+                @else
+                    <a href="{{ route('procurement.purchases.create', $procurementRequest) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                        Buat PO / Proses Pembelian
+                    </a>
+                @endif
+                {{-- ═══ END LOGIKA BARU ═══ --}}
+
             @elseif($currStatus === 'received')
             <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
                 @csrf
@@ -133,23 +151,26 @@
                 Unduh PDF
             </a>
 
-            <a href="{{ route('procurement.edit', $procurementRequest) }}"
-               class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-                Edit
-            </a>
+            {{-- Sembunyikan tombol Edit & Hapus jika status sudah disetujui/diproses --}}
+            @if(in_array($currStatus, ['pending', 'revision']))
+                <a href="{{ route('procurement.edit', $procurementRequest) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                    Edit
+                </a>
 
-            <form action="{{ route('procurement.destroy', $procurementRequest) }}" method="POST"
-                  onsubmit="return confirm('Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.')"
-                  class="inline">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    Hapus
-                </button>
-            </form>
+                <form action="{{ route('procurement.destroy', $procurementRequest) }}" method="POST"
+                      onsubmit="return confirm('Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.')"
+                      class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        Hapus
+                    </button>
+                </form>
+            @endif
         </div>
     </div>
 
