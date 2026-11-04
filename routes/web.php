@@ -45,129 +45,64 @@ Route::middleware(['auth'])->group(function () {
        MASTER DATA
     ───────────────────────────────────────────── */
     Route::resource('items', ItemController::class);
-
-    Route::resource('categories', CategoryController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
-
-    Route::resource('units', UnitController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
-
-    Route::resource('vendors', VendorController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
-
-    Route::resource('departments', DepartmentController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('units', UnitController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('vendors', VendorController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('departments', DepartmentController::class)->only(['index', 'store', 'update', 'destroy']);
 
     Route::middleware(['role:Super Admin'])->group(function () {
-        Route::resource('signers', SignerController::class)
-            ->except(['show', 'create']);
-
+        Route::resource('signers', SignerController::class)->except(['show', 'create']);
         Route::get('/users/nonaktif', [UserController::class, 'nonaktifIndex'])->name('users.nonaktif.index');
         Route::get('/users/{user}/nonaktif', [UserController::class, 'nonaktif'])->name('users.nonaktif');
-
         Route::resource('users', UserController::class)->except(['show']);
     });
 
     /* ─────────────────────────────────────────────
        INVENTORY STOCK
     ───────────────────────────────────────────── */
-    // Static Routes
-    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])
-        ->name('inventory.stock.index');
+    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])->name('inventory.stock.index');
+    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])->name('inventory.stock.export-usage');
+    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])->name('inventory.stock.use');
+    Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])->name('inventory.stock.items-by-department');
 
-    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])
-        ->name('inventory.stock.export-usage');
-
-    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])
-        ->name('inventory.stock.use');
-
-    Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])
-        ->name('inventory.stock.items-by-department');
-
-    // Super Admin only
     Route::middleware(['role:Super Admin'])->group(function () {
-        Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])
-            ->name('inventory.stock.create');
-
-        Route::post('/inventory/stock', [InventoryStockController::class, 'store'])
-            ->name('inventory.stock.store');
-
-        Route::post('/inventory/stock/import-analyze', [InventoryStockController::class, 'importAnalyze'])
-            ->name('inventory.stock.import-analyze');
-
-        Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])
-            ->name('inventory.stock.import-process');
+        Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])->name('inventory.stock.create');
+        Route::post('/inventory/stock', [InventoryStockController::class, 'store'])->name('inventory.stock.store');
+        Route::post('/inventory/stock/import-analyze', [InventoryStockController::class, 'importAnalyze'])->name('inventory.stock.import-analyze');
+        Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])->name('inventory.stock.import-process');
     });
 
-    // Dynamic Routes (dengan {id})
-    Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])
-        ->name('inventory.stock.usage-detail');
-
-    Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])
-        ->name('inventory.stock.use.item');
-
-    Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])
-        ->name('inventory.stock.process-use');
+    Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])->name('inventory.stock.usage-detail');
+    Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
+    Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
 
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
     ───────────────────────────────────────────── */
-    Route::get('/my-consumable-requests', [ConsumableRequestController::class, 'myRequests'])
-        ->name('consumable-requests.my-index');
+    Route::get('/my-consumable-requests', [ConsumableRequestController::class, 'myRequests'])->name('consumable-requests.my-index');
+    Route::get('/consumable-requests/create-form', [ConsumableRequestController::class, 'createForm'])->name('consumable-requests.create-form');
+    Route::get('/consumable-requests/create', [ConsumableRequestController::class, 'create'])->name('consumable-requests.create');
+    Route::post('/consumable-requests', [ConsumableRequestController::class, 'store'])->name('consumable-requests.store');
+    Route::get('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'show'])->name('consumable-requests.show');
+    Route::get('/consumable-requests/{consumableRequest}/edit', [ConsumableRequestController::class, 'edit'])->name('consumable-requests.edit');
+    Route::put('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'update'])->name('consumable-requests.update');
+    Route::get('/consumable-requests/{consumableRequest}/print', [ConsumableRequestController::class, 'print'])->name('consumable-requests.print');
+    Route::get('/consumable-requests/{consumableRequest}/pdf', [ConsumableRequestController::class, 'pdf'])->name('consumable-requests.pdf');
 
-    Route::get('/consumable-requests/create-form', [ConsumableRequestController::class, 'createForm'])
-        ->name('consumable-requests.create-form');
-
-    Route::get('/consumable-requests/create', [ConsumableRequestController::class, 'create'])
-        ->name('consumable-requests.create');
-
-    Route::post('/consumable-requests', [ConsumableRequestController::class, 'store'])
-        ->name('consumable-requests.store');
-
-    Route::get('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'show'])
-        ->name('consumable-requests.show');
-
-    Route::get('/consumable-requests/{consumableRequest}/edit', [ConsumableRequestController::class, 'edit'])
-        ->name('consumable-requests.edit');
-
-    Route::put('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'update'])
-        ->name('consumable-requests.update');
-
-    Route::get('/consumable-requests/{consumableRequest}/print', [ConsumableRequestController::class, 'print'])
-        ->name('consumable-requests.print');
-
-    Route::get('/consumable-requests/{consumableRequest}/pdf', [ConsumableRequestController::class, 'pdf'])
-        ->name('consumable-requests.pdf');
-
-    // Super Admin only
     Route::middleware(['role:Super Admin'])->group(function () {
-        Route::get('/consumable-requests', [ConsumableRequestController::class, 'index'])
-            ->name('consumable-requests.index');
-
-        Route::get('consumable-requests/consolidation', [ConsumableRequestController::class, 'consolidationIndex'])
-            ->name('consumable-requests.consolidation');
-
-        Route::post('consumable-requests/consolidation/process', [ConsumableRequestController::class, 'processConsolidation'])
-            ->name('consumable-requests.consolidation.process');
-
-        Route::patch('consumable-requests/{consumableRequest}/status', [ConsumableRequestController::class, 'updateStatus'])
-            ->name('consumable-requests.update-status');
-
-        Route::delete('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'destroy'])
-            ->name('consumable-requests.destroy');
-
-        Route::post('/consumable-requests/{consumableRequest}/approve', [ConsumableRequestController::class, 'approve'])
-            ->name('consumable-requests.approve');
-
-        Route::post('/consumable-requests/{consumableRequest}/reject', [ConsumableRequestController::class, 'reject'])
-            ->name('consumable-requests.reject');
+        Route::get('/consumable-requests', [ConsumableRequestController::class, 'index'])->name('consumable-requests.index');
+        Route::get('consumable-requests/consolidation', [ConsumableRequestController::class, 'consolidationIndex'])->name('consumable-requests.consolidation');
+        Route::post('consumable-requests/consolidation/process', [ConsumableRequestController::class, 'processConsolidation'])->name('consumable-requests.consolidation.process');
+        Route::patch('consumable-requests/{consumableRequest}/status', [ConsumableRequestController::class, 'updateStatus'])->name('consumable-requests.update-status');
+        Route::delete('/consumable-requests/{consumableRequest}', [ConsumableRequestController::class, 'destroy'])->name('consumable-requests.destroy');
+        Route::post('/consumable-requests/{consumableRequest}/approve', [ConsumableRequestController::class, 'approve'])->name('consumable-requests.approve');
+        Route::post('/consumable-requests/{consumableRequest}/reject', [ConsumableRequestController::class, 'reject'])->name('consumable-requests.reject');
     });
 
     /* ─────────────────────────────────────────────
        API — Item Lookup & Search
     ───────────────────────────────────────────── */
-    Route::get('/api/items/lookup/{barcode}', [ItemLookupController::class, 'byBarcode'])
-        ->name('items.lookup');
+    Route::get('/api/items/lookup/{barcode}', [ItemLookupController::class, 'byBarcode'])->name('items.lookup');
 
     Route::get('/api/items/search', function (Request $request) {
         $q = $request->query('q');
@@ -200,13 +135,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
 
+        // ═══ COMPARISON ROUTES (sudah lengkap) ═══
         Route::get('/{procurement}/comparisons', [VendorComparisonController::class, 'index'])->name('comparisons.index');
         Route::post('/{procurement}/comparisons', [VendorComparisonController::class, 'store'])->name('comparisons.store');
-
         Route::post('/{procurement}/comparisons/scan', [VendorComparisonController::class, 'scanImage'])->name('comparisons.scan');
         Route::post('/{procurement}/comparisons/scan-monotaro', [VendorComparisonController::class, 'scanMonotaro'])->name('comparisons.scan.monotaro');
         Route::post('/{procurement}/comparisons/scan-others', [VendorComparisonController::class, 'scanOthers'])->name('comparisons.scan.others');
-
         Route::patch('/{procurement}/comparisons/{comparison}/select', [VendorComparisonController::class, 'selectVendor'])->name('comparisons.select');
         Route::delete('/comparisons/{comparison}', [VendorComparisonController::class, 'destroy'])->name('comparisons.destroy');
 
@@ -222,7 +156,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
             ->name('status')
             ->middleware('role:Super Admin');
-            
+
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING
         ───────────────────────────────────────────── */
@@ -239,40 +173,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reimbursement/{reimbursement}/pdf', [ReimbursementController::class, 'pdf'])->name('reimbursement.pdf');
     Route::resource('reimbursement', ReimbursementController::class);
     Route::post('reimbursement/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursement.approve');
-
-    /* ─────────────────────────────────────────────
-       DEBUG LOG (hapus jika sudah tidak diperlukan)
-    ───────────────────────────────────────────── */
-    Route::get('/debug-log', function () {
-        return [
-            'count'    => \App\Models\StockLog::count(),
-            'last'     => \App\Models\StockLog::latest()->first(),
-            'fillable' => (new \App\Models\StockLog)->getFillable(),
-            'table'    => (new \App\Models\StockLog)->getTable(),
-            'now'      => now()->toDateTimeString(),
-        ];
-    });
 });
 
 /* ═══════════════════════════════════════════════════════════════
    RUTE SEMENTARA UNTUK DEPLOYMENT / FIX MIGRASI
-   (Silakan hapus 2 rute di bawah ini jika migrasi sudah beres)
 ═══════════════════════════════════════════════════════════════════ */
-
-// Rute untuk menjalankan migrasi baru dengan aman
 Route::get('/jalankan-migrasi-baru', function () {
     try {
-        // 1. Hapus paksa semua tabel yang terkait
         \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
         \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
         
-        // 2. Hapus SEMUA riwayat migrasi terkait purchases lama
         \Illuminate\Support\Facades\DB::table('migrations')
             ->where('migration', 'like', '%create_purchases%')
             ->orWhere('migration', 'like', '%fix_purchases%')
             ->delete();
 
-        // 3. Jalankan migrasi
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         
         return '<h3>Berhasil!</h3><p>Migrasi baru sudah berjalan.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
@@ -281,7 +196,6 @@ Route::get('/jalankan-migrasi-baru', function () {
     }
 });
 
-// Rute untuk membersihkan cache di server
 Route::get('/clear-cache', function () {
     \Illuminate\Support\Facades\Artisan::call('route:clear');
     \Illuminate\Support\Facades\Artisan::call('config:clear');
