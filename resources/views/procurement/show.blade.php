@@ -104,14 +104,16 @@
             @elseif($currStatus === 'approved')
             
                 {{-- ═══ LOGIKA BARU: CEK COMPARISON & VENDOR PEMENANG ═══ --}}
-@if($procurementRequest->vendors->isEmpty())
-                    <a href="{{ route('procurement.comparisons.create', $procurementRequest) }}"
+                @if($procurementRequest->vendors->isEmpty())
+                    {{-- Ganti route menjadi procurement.comparisons.index --}}
+                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
                         <i data-lucide="scale" class="w-4 h-4"></i>
                         Buat Perbandingan Harga
                     </a>
-@elseif(!$procurementRequest->winnerVendor)
-                    <a href="{{ route('procurement.comparisons.create', $procurementRequest) }}"
+                @elseif(!$procurementRequest->winnerVendor)
+                    {{-- Ganti route menjadi procurement.comparisons.index --}}
+                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
                         <i data-lucide="check-square" class="w-4 h-4"></i>
                         Pilih Vendor Pemenang
