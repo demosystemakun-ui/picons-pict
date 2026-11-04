@@ -156,6 +156,9 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
             ->name('status')
             ->middleware('role:Super Admin');
+            Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
+    ->name('validate-signature')
+    ->middleware('role:Super Admin'); // Pastikan hanya admin yang bisa
 
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING

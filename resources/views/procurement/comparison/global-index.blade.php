@@ -6,6 +6,9 @@
 @php
     // Cek apakah sudah ada vendor terpilih
     $hasSelectedVendor = isset($procurement) && $comparisons->where('is_selected', true)->count() > 0;
+    
+    // Cek status PR untuk validasi manual
+    $isProcessed = isset($procurement) && $procurement->status === 'processed';
 @endphp
 
 @section('content')
@@ -25,25 +28,13 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-start">
-            {{-- ✅ Tombol Cetak PR Final — HANYA muncul jika sudah ada vendor terpilih --}}
-            @if($hasSelectedVendor)
-                <a href="{{ route('procurement.pdf.final', $procurement) }}"
-                   target="_blank"
-                   class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:from-teal-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Cetak PR Final
-                </a>
-            @endif
-
             {{-- Tombol Kembali --}}
-            <a href="{{ route('procurement.index') }}"
+            <a href="{{ route('procurement.show', $procurement) }}"
                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Kembali ke Daftar PR
+                Kembali ke Detail PR
             </a>
         </div>
     </div>
@@ -97,7 +88,7 @@
     @endisset
 
     {{-- ============================================================
-         SUCCESS ALERT
+         SUCCESS & ERROR ALERT
     ============================================================ --}}
     @if(session('success'))
         <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 px-5 py-4">
@@ -110,9 +101,6 @@
         </div>
     @endif
 
-    {{-- ============================================================
-         ERROR ALERT
-    ============================================================ --}}
     @if ($errors->any())
         <div class="rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/60 px-5 py-4">
             <div class="flex gap-3">
@@ -134,9 +122,10 @@
     @endif
 
     {{-- ============================================================
-         UPLOAD & SCAN AI
+         UPLOAD & SCAN AI (Hanya tampil jika belum diproses)
     ============================================================ --}}
     @isset($procurement)
+        @if($procurement->status === 'approved')
         <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
@@ -199,6 +188,7 @@
                 </form>
             </div>
         </section>
+        @endif
     @endisset
 
     {{-- ============================================================
@@ -363,7 +353,7 @@
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                         Dipilih
                                     </span>
-                                @elseif(isset($procurement))
+                                @elseif(isset($procurement) && $procurement->status === 'approved')
                                     <form action="{{ route('procurement.comparisons.select', [$procurement, $comp]) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
@@ -382,19 +372,23 @@
 
                             @isset($procurement)
                                 <td class="px-5 py-4 text-right whitespace-nowrap">
-                                    <form action="{{ route('procurement.comparisons.destroy', $comp) }}" method="POST"
-                                          class="inline-block"
-                                          onsubmit="return confirm('Hapus data vendor {{ $comp->vendor_name }}?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
-                                                title="Hapus">
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </form>
+                                    @if($procurement->status === 'approved')
+                                        <form action="{{ route('procurement.comparisons.destroy', $comp) }}" method="POST"
+                                              class="inline-block"
+                                              onsubmit="return confirm('Hapus data vendor {{ $comp->vendor_name }}?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
+                                                    title="Hapus">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-gray-400 dark:text-gray-500 italic">Locked</span>
+                                    @endif
                                 </td>
                             @endisset
                         </tr>
@@ -424,33 +418,71 @@
         </div>
 
         {{-- ============================================================
-             FOOTER: Tombol Cetak PR Final (muncul jika sudah ada vendor terpilih)
+             FOOTER: Aksi Lanjutan (Validasi & Checkout)
         ============================================================ --}}
         @if($hasSelectedVendor)
             <footer class="px-6 py-5 border-t border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg {{ $isProcessed ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' }} shrink-0">
+                        @if($isProcessed)
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        @else
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        @endif
                     </div>
                     <div>
                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                            Vendor sudah dipilih
+                            {{ $isProcessed ? 'PR Final Telah Divalidasi' : 'Vendor sudah dipilih' }}
                         </div>
                         <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                            Lanjutkan dengan mencetak PR Final yang berisi perbandingan vendor dan keputusan akhir.
+                            @if($isProcessed)
+                                Tanda tangan manajer telah dikonfirmasi. Anda sekarang dapat melanjutkan ke proses PO.
+                            @else
+                                Cetak PR Final, minta tanda tangan manajer, lalu validasi di sini untuk membuka proses PO.
+                            @endif
                         </div>
                     </div>
                 </div>
-                <a href="{{ route('procurement.pdf.final', $procurement) }}"
-                   target="_blank"
-                   class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-teal-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition shrink-0">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Cetak PR Final
-                </a>
+                
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    {{-- Tombol Cetak PR Final (Hanya jika belum divalidasi) --}}
+                    @if(!$isProcessed)
+                        <a href="{{ route('procurement.pdf.final', $procurement) }}"
+                           target="_blank"
+                           class="inline-flex items-center gap-2 rounded-lg border border-teal-600 text-teal-700 bg-teal-50 px-4 py-2 text-sm font-semibold hover:bg-teal-100 transition">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Cetak PR Final
+                        </a>
+
+                        {{-- Tombol Validasi TTD --}}
+                        <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST"
+                              onsubmit="return confirm('Pastikan PR Final sudah ditandatangani oleh Manajer. Lanjutkan validasi?')">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                Validasi TTD Manajer
+                            </button>
+                        </form>
+                    @else
+                        {{-- Tombol Checkout PO (Aktif jika sudah divalidasi) --}}
+                        <a href="{{ route('procurement.purchases.create', $procurement) }}"
+                           class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Lanjut Checkout (PO)
+                        </a>
+                    @endif
+                </div>
             </footer>
         @endif
     </section>
@@ -462,7 +494,7 @@
 <script>
     let selectedFilesBuffer = new DataTransfer();
 
-    document.getElementById('multiScreenshotInput').addEventListener('change', function (e) {
+    document.getElementById('multiScreenshotInput')?.addEventListener('change', function (e) {
         const input = this;
         for (let i = 0; i < input.files.length; i++) {
             selectedFilesBuffer.items.add(input.files[i]);
@@ -484,14 +516,16 @@
 
     function showLoadingState(form) {
         const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerHTML = `
-            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
-            AI sedang memproses...
-        `;
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                AI sedang memproses...
+            `;
+        }
     }
 </script>
 @endpush

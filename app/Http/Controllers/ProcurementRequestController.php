@@ -276,6 +276,23 @@ public function createPO(ProcurementRequest $procurementRequest)
         return redirect()->away($pdfUrl);
     }
 
+
+    public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
+{
+    // Pastikan vendor sudah dipilih sebelum validasi
+    if (!$procurementRequest->winnerVendor) {
+        return back()->with('error', 'Pilih vendor pemenang terlebih dahulu.');
+    }
+
+    // Ubah status menjadi 'processed' (atau status khusus 'ready_for_po' jika ada)
+    $procurementRequest->update([
+        'status' => 'processed',
+        'review_notes' => 'PR Final telah ditandatangani secara manual oleh Manajer. (Divalidasi oleh Admin: ' . auth()->user()->name . ')'
+    ]);
+
+    return back()->with('success', 'Validasi tanda tangan berhasil. Silakan lanjut ke proses PO.');
+}
+
     /* ═══════════════════════════════════════════════════════════════
        PDF FINAL — Generate PDF Final (dengan comparison vendor)
     ═══════════════════════════════════════════════════════════════ */
