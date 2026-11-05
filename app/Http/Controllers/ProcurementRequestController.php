@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class ProcurementRequestController extends Controller
 {
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — List of all PRs & Filter Tabs
+       INDEX
     ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
@@ -417,9 +417,10 @@ class ProcurementRequestController extends Controller
             'review_notes' => 'PR Final signed by Manager. Final Number: ' . $validated['final_number'],
         ]);
 
+        // ✅ PERBAIKAN: Arahkan langsung ke PDF Final
         return redirect()
-            ->route('procurement.show', $procurementRequest)
-            ->with('success', 'PR Final validated with number: ' . $validated['final_number'] . '. You can now create PO/Cash Advance.');
+            ->route('procurement.pdf.final', $procurementRequest)
+            ->with('success', 'PR Final validated with number: ' . $validated['final_number']);
     }
 
     /* ═══════════════════════════════════════════════════════════════
