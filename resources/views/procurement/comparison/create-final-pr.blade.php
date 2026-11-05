@@ -11,7 +11,7 @@
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Create Final PR</h1>
             <p class="mt-1 text-sm text-gray-500">
-                Initial PR: <span class="font-mono font-medium text-gray-700">{{ $procurement->no }}</span>
+                PR Awal: <span class="font-mono font-medium text-gray-700">{{ $procurement->no }}</span>
                 — {{ $procurement->description }}
             </p>
         </div>
@@ -50,18 +50,18 @@
             </div>
             <div>
                 <h2 class="text-sm font-semibold text-gray-900">Procurement Request Info</h2>
-                <p class="text-xs text-gray-500">Data from Initial PR &amp; winning vendor</p>
+                <p class="text-xs text-gray-500">Data dari PR Awal &amp; vendor winner</p>
             </div>
         </header>
         <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
             <dl class="space-y-2.5">
                 <div class="flex justify-between gap-4">
-                    <dt class="text-gray-500">Initial PR Number</dt>
-                    <dd class="font-semibold text-gray-900 font-mono">{{ $procurement->no ?? '-' }}</dd>
+                    <dt class="text-gray-500">PR Number</dt>
+                    <dd class="font-semibold text-gray-900 font-mono">{{ $procurement->no }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Description</dt>
-                    <dd class="text-gray-700 text-right">{{ $procurement->description ?? '-' }}</dd>
+                    <dd class="text-gray-700 text-right">{{ $procurement->description }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Department</dt>
@@ -74,8 +74,8 @@
             </dl>
             <dl class="space-y-2.5">
                 <div class="flex justify-between gap-4">
-                    <dt class="text-gray-500">Winning Vendor</dt>
-                    <dd class="font-semibold text-emerald-600">{{ $procurement->winnerVendor->vendor_name ?? '-' }}</dd>
+                    <dt class="text-gray-500">Winner Vendor</dt>
+                    <dd class="font-semibold text-emerald-600">{{ $procurement->winnerVendor->vendor_name }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Marketplace</dt>
@@ -83,7 +83,7 @@
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Total Price</dt>
-                    <dd class="font-bold text-emerald-600">Rp {{ number_format($procurement->winnerVendor->total_price ?? 0, 0, ',', '.') }}</dd>
+                    <dd class="font-bold text-emerald-600">Rp {{ number_format($procurement->winnerVendor->total_price, 0, ',', '.') }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Est. Delivery</dt>
@@ -105,8 +105,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Final PR Details</h2>
-                    <p class="text-xs text-gray-500">Complete the data to generate the Final PR PDF</p>
+                    <h2 class="text-sm font-semibold text-gray-900">Final PR Data</h2>
+                    <p class="text-xs text-gray-500">Lengkapi data untuk generate Final PR PDF</p>
                 </div>
             </header>
 
@@ -204,23 +204,23 @@
                            placeholder="e.g. 07/PR/OPS-PICT/XI-2026"
                            class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 font-mono focus:border-teal-500 focus:ring-teal-500 @error('final_number') border-rose-400 @enderror"
                            required>
-                    <p class="mt-1.5 text-xs text-gray-500">The month and year format are generated automatically. You only need to adjust the sequence number at the front (e.g., 07).</p>
+                    <p class="mt-1.5 text-xs text-gray-500">Format bulan dan tahun sudah otomatis. Anda hanya perlu menyesuaikan nomor urutnya di depan (contoh: 07).</p>
                     @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
-                        Reason for Choosing Vendor <span class="text-rose-500">*</span>
+                        Reason Choose Vendor <span class="text-rose-500">*</span>
                     </label>
                     <textarea name="reason_choose_vendor" rows="3" maxlength="2000"
-                              placeholder="Example: This vendor offers the lowest price with specifications matching the requirements."
+                              placeholder="Contoh: Vendor ini menawarkan harga terendah dengan spesifikasi sesuai kebutuhan."
                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('reason_choose_vendor') border-rose-400 @enderror"
                               required>{{ old('reason_choose_vendor', $procurement->reason_choose_vendor) }}</textarea>
                     @error('reason_choose_vendor')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="pt-2 border-t border-gray-100">
-                    <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Approver Names (Optional)</h3>
+                    <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Approver Names (optional)</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5">Accounting Manager</label>
@@ -248,8 +248,8 @@
         {{-- ═══ WINNER ITEMS (READ-ONLY) ═══ --}}
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                <h2 class="text-sm font-semibold text-gray-900">Winning Items</h2>
-                <p class="text-xs text-gray-500">{{ $procurement->winnerVendor->items->count() }} item(s) — auto-populated from winning vendor</p>
+                <h2 class="text-sm font-semibold text-gray-900">Winner Items</h2>
+                <p class="text-xs text-gray-500">{{ $procurement->winnerVendor->items->count() }} item(s) — auto dari vendor winner</p>
             </header>
 
             <div class="overflow-x-auto">
@@ -284,25 +284,25 @@
                     <tfoot class="bg-gray-50/80">
                         <tr class="border-t border-gray-200">
                             <th colspan="4" class="px-5 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Subtotal</th>
-                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->subtotal ?? 0, 0, ',', '.') }}</th>
+                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->subtotal, 0, ',', '.') }}</th>
                         </tr>
                         <tr>
                             <th colspan="4" class="px-5 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Shipping</th>
-                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->shipping_cost ?? 0, 0, ',', '.') }}</th>
+                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->shipping_cost, 0, ',', '.') }}</th>
                         </tr>
-                        @if(($procurement->winnerVendor->discount_voucher ?? 0) > 0)
+                        @if($procurement->winnerVendor->discount_voucher > 0)
                         <tr>
                             <th colspan="4" class="px-5 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Discount</th>
                             <th class="px-5 py-2 text-right text-sm font-medium text-rose-600">- Rp {{ number_format($procurement->winnerVendor->discount_voucher, 0, ',', '.') }}</th>
                         </tr>
                         @endif
                         <tr>
-                            <th colspan="4" class="px-5 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Tax (VAT)</th>
-                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->tax_ppn ?? 0, 0, ',', '.') }}</th>
+                            <th colspan="4" class="px-5 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Tax (PPN)</th>
+                            <th class="px-5 py-2 text-right text-sm font-medium">Rp {{ number_format($procurement->winnerVendor->tax_ppn, 0, ',', '.') }}</th>
                         </tr>
                         <tr class="border-t-2 border-gray-300">
                             <th colspan="4" class="px-5 py-3 text-right text-xs font-bold text-gray-900 uppercase">Total</th>
-                            <th class="px-5 py-3 text-right text-base font-bold text-emerald-600">Rp {{ number_format($procurement->winnerVendor->total_price ?? 0, 0, ',', '.') }}</th>
+                            <th class="px-5 py-3 text-right text-base font-bold text-emerald-600">Rp {{ number_format($procurement->winnerVendor->total_price, 0, ',', '.') }}</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -330,5 +330,3 @@
     </form>
 </div>
 @endsection
-
-<!-- baarjrwrw -->
