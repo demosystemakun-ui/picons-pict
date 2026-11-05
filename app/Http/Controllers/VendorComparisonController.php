@@ -74,10 +74,12 @@ class VendorComparisonController extends Controller
         // ═══ GENERATE FORMAT OTOMATIS ═══
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
-        $prCode      = $procurement->no ?? 'OPS-PICT'; 
         
-        // Format: /PR/OPS-PICT/XI-2026 (Angka depannya diisi manual oleh admin)
-        $suggestedFinalNumber = '/PR/' . $prCode . '/' . $bulanRomawi . '-' . $tahun;
+        // Mengambil kode PR awal, misal dari "78/PR/OPS/PICT" menjadi "OPS/PICT"
+        $prCode = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
+        
+        // Format akhir: 08/PR/OPS/PICT-XI-2026
+        $suggestedFinalNumber = '08/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
@@ -96,10 +98,10 @@ class VendorComparisonController extends Controller
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
             'reason_choose_vendor' => 'required|string|max:2000',
-            'request_date'         => 'required|date',           // TAMBAHAN
-            'request_by'           => 'required|string|max:255', // TAMBAHAN
-            'division'             => 'required|string|max:255', // TAMBAHAN
-            'prepared_by'          => 'required|string|max:255', // TAMBAHAN
+            'request_date'         => 'required|date',           
+            'request_by'           => 'required|string|max:255', 
+            'division'             => 'required|string|max:255', 
+            'prepared_by'          => 'required|string|max:255', 
             'accounting_mgr_name'  => 'nullable|string|max:255',
             'cfo_name'             => 'nullable|string|max:255',
             'ceo_name'             => 'nullable|string|max:255',
@@ -110,10 +112,10 @@ class VendorComparisonController extends Controller
             'description'          => $validated['final_description'],
             'final_number'         => $validated['final_number'],
             'reason_choose_vendor' => $validated['reason_choose_vendor'],
-            'request_date'         => $validated['request_date'],   // TAMBAHAN
-            'request_by'           => $validated['request_by'],     // TAMBAHAN
-            'division'             => $validated['division'],       // TAMBAHAN
-            'prepared_by'          => $validated['prepared_by'],    // TAMBAHAN
+            'request_date'         => $validated['request_date'],   
+            'request_by'           => $validated['request_by'],     
+            'division'             => $validated['division'],       
+            'prepared_by'          => $validated['prepared_by'],    
             'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
             'cfo_name'             => $validated['cfo_name'] ?? null,
             'ceo_name'             => $validated['ceo_name'] ?? null,
@@ -146,7 +148,6 @@ class VendorComparisonController extends Controller
 
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
-        // ... (KODE PROCESS SCAN TETAP SAMA SEPERTI SEBELUMNYA) ...
         $request->validate([
             'screenshots'   => 'required|array|min:1',
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -307,7 +308,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE VENDOR & LAINNYA (TIDAK BERUBAH)
+       STORE VENDOR & LAINNYA
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
