@@ -18,11 +18,9 @@ class ProcurementRequestController extends Controller
         $user  = auth()->user();
         $query = ProcurementRequest::latest();
 
-        // RBAC: Admin Departemen only sees their own department's PRs
         if ($user->hasRole('Admin Departemen')) {
             $query->where('department_id', $user->department_id);
         }
-        // Super Admin & Admin can see all
 
         if ($request->filled('source')) {
             $query->where('source', $request->source);
@@ -34,7 +32,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE — Form for new PR
+       CREATE
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
@@ -45,7 +43,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE — Save new PR
+       STORE
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request)
     {
@@ -56,7 +54,7 @@ class ProcurementRequestController extends Controller
             'request_by'            => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
-            'procurement_method'    => 'required|in:po,cash_advance,reimbursement', // NEW
+            'procurement_method'    => 'required|in:po,cash_advance,reimbursement',
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
@@ -71,7 +69,7 @@ class ProcurementRequestController extends Controller
             'coo_name'              => 'nullable|string|max:255',
         ]);
 
-        $orderType = $request->input('order_type');
+        $orderType  = $request->input('order_type');
         $department = Department::findOrFail($validated['department_id']);
 
         $validated['user_id']         = auth()->id();
@@ -93,7 +91,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SHOW — PR Detail
+       SHOW
     ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
     {
@@ -108,7 +106,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       EDIT — PR Edit Form
+       EDIT
     ═══════════════════════════════════════════════════════════════ */
     public function edit(ProcurementRequest $procurementRequest)
     {
@@ -125,7 +123,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       UPDATE — Save PR Changes
+       UPDATE
     ═══════════════════════════════════════════════════════════════ */
     public function update(Request $request, ProcurementRequest $procurementRequest)
     {
@@ -141,7 +139,7 @@ class ProcurementRequestController extends Controller
             'request_by'            => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
-            'procurement_method'    => 'required|in:po,cash_advance,reimbursement', // NEW
+            'procurement_method'    => 'required|in:po,cash_advance,reimbursement',
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
@@ -222,7 +220,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       DESTROY — Delete PR
+       DESTROY
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementRequest $procurementRequest)
     {
@@ -371,7 +369,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       MANUAL SIGNATURE VALIDATION
+       VALIDATE SIGNATURE (PR AWAL — Tahap 1)
     ═══════════════════════════════════════════════════════════════ */
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
     {
@@ -385,16 +383,47 @@ class ProcurementRequestController extends Controller
 
         $procurementRequest->update([
             'status'       => 'processed',
-            'review_notes' => 'Final PR has been manually signed by Manager. Validated by Admin: ' . auth()->user()->name,
+            'review_notes' => 'PR Awal signed by Manager. Validated by Admin: ' . auth()->user()->name,
         ]);
 
         return redirect()
             ->route('procurement.comparisons.index', $procurementRequest)
-            ->with('success', 'Signature validation successful. You can now proceed to PO process.');
+            ->with('success', 'PR Awal validation successful. You can now create PR Final.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       UPDATE STATUS — Approve / Reject / Revision
+       VALIDATE FINAL SIGNATURE (PR FINAL — Tahap 2)
+    ═══════════════════════════════════════════════════════════════ */
+    public function validateFinalSignature(Request $request, ProcurementRequest $procurementRequest)
+    {
+        $validated = $request->validate([
+            'final_number' => 'required|string|unique:procurement_requests,final_number,' . $procurementRequest->id,
+        ], [
+            'final_number.required' => 'Final PR number is required.',
+            'final_number.unique'   => 'This final number is already used.',
+        ]);
+
+        if ($procurementRequest->status !== 'processed') {
+            return back()->with('error', 'PR Final can only be validated after PR Awal is processed.');
+        }
+
+        if (!$procurementRequest->winnerVendor) {
+            return back()->with('error', 'No winning vendor. Please select a vendor first.');
+        }
+
+        $procurementRequest->update([
+            'status'       => 'final_approved',
+            'final_number' => $validated['final_number'],
+            'review_notes' => 'PR Final signed by Manager. Final Number: ' . $validated['final_number'],
+        ]);
+
+        return redirect()
+            ->route('procurement.show', $procurementRequest)
+            ->with('success', 'PR Final validated with number: ' . $validated['final_number'] . '. You can now create PO/Cash Advance.');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       UPDATE STATUS
     ═══════════════════════════════════════════════════════════════ */
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)
     {
@@ -405,16 +434,17 @@ class ProcurementRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'status'       => 'required|in:approved,rejected,revision,pending,processed,received,completed',
+            'status'       => 'required|in:approved,rejected,revision,pending,processed,final_approved,received,completed',
             'review_notes' => 'nullable|string|max:1000',
         ]);
 
         $allowedTransitions = [
-            'pending' => ['approved', 'rejected', 'revision'],
-            'revision' => ['pending'],
-            'approved' => ['processed'],
-            'processed' => ['received'],
-            'received' => ['completed'],
+            'pending'       => ['approved', 'rejected', 'revision'],
+            'revision'      => ['pending'],
+            'approved'      => ['processed'],
+            'processed'     => ['final_approved'],
+            'final_approved'=> ['received'],
+            'received'      => ['completed'],
         ];
         $targetStatus = $validated['status'];
 
@@ -428,13 +458,14 @@ class ProcurementRequestController extends Controller
         ]);
 
         $messages = [
-            'approved'  => 'Request has been approved.',
-            'rejected'  => 'Request has been rejected.',
-            'revision'  => 'Request has been returned for revision.',
-            'pending'   => 'Request status has been reset to pending.',
-            'processed' => 'Request has been processed and purchased.',
-            'received'  => 'Goods or services have been received.',
-            'completed' => 'Procurement request has been completed.',
+            'approved'       => 'Request has been approved.',
+            'rejected'       => 'Request has been rejected.',
+            'revision'       => 'Request has been returned for revision.',
+            'pending'        => 'Request status has been reset to pending.',
+            'processed'      => 'PR Awal has been processed.',
+            'final_approved' => 'PR Final has been validated.',
+            'received'       => 'Goods or services have been received.',
+            'completed'      => 'Procurement request has been completed.',
         ];
 
         return back()->with('success', $messages[$validated['status']] ?? 'Status updated successfully.');
@@ -479,7 +510,8 @@ class ProcurementRequestController extends Controller
             : $autoSpec;
 
         return [
-            'no'          => ltrim($model->no ?? '', '/'),
+            // Gunakan final_number jika ada, fallback ke no
+            'no'          => ltrim($model->final_number ?? $model->no ?? '', '/'),
             'date'        => optional($model->date)->format('d F Y'),
             'request_by'  => $model->request_by,
             'division'    => $model->division,

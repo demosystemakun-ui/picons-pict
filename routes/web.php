@@ -175,6 +175,9 @@ Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pd
         Route::get('/{procurementRequest}/print', [ProcurementRequestController::class, 'print'])->name('print');
         Route::get('/{procurementRequest}/pdf', [ProcurementRequestController::class, 'pdf'])->name('pdf');
 
+        Route::patch('/{procurementRequest}/validate-final-signature', [ProcurementRequestController::class, 'validateFinalSignature'])
+    ->name('validate-final-signature')
+    ->middleware('role:Super Admin');
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING
         ───────────────────────────────────────────── */
