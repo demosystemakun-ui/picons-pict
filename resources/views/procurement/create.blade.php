@@ -18,9 +18,24 @@
         </div>
         <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-primary-50 dark:bg-primary-900/30 px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 ring-1 ring-inset ring-primary-200 dark:ring-primary-800">
             <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span>
-            New Draft
+            {{ isset($prefill) ? 'Merged Draft' : 'New Draft' }}
         </span>
     </div>
+
+    {{-- Alert jika ini dari Consumable Request --}}
+    @if(isset($prefill))
+        <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 px-5 py-4 flex items-start gap-3">
+            <svg class="h-5 w-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300">Data Otomatis Dimuat</h3>
+                <p class="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                    Form ini telah diisi otomatis dari <strong>Consolidation Consumable Request</strong>. Silakan periksa kembali data dan barang bawaan sebelum menyimpan PR.
+                </p>
+            </div>
+        </div>
+    @endif
 
     {{-- Error Alert --}}
     @if ($errors->any())
@@ -46,6 +61,13 @@
     <form method="POST" action="{{ route('procurement.store') }}" class="space-y-6">
         @csrf
 
+        {{-- Hidden input untuk menyimpan ID CR yang digabungkan --}}
+        @if(isset($prefill['request_ids']))
+            @foreach($prefill['request_ids'] as $id)
+                <input type="hidden" name="consumable_request_ids[]" value="{{ $id }}">
+            @endforeach
+        @endif
+
         {{-- SECTION 1: General Information --}}
         <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
@@ -68,14 +90,16 @@
                         <label for="no" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                             Reference No. <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="no" name="no" value="{{ old('no', $suggestedNo) }}" required
+                        <input type="text" id="no" name="no" 
+                               value="{{ old('no', $prefill['no'] ?? $suggestedNo) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                     <div>
                         <label for="date" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                             Date <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" id="date" name="date" value="{{ old('date', date('Y-m-d')) }}" required
+                        <input type="date" id="date" name="date" 
+                               value="{{ old('date', date('Y-m-d')) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                 </div>
@@ -85,7 +109,8 @@
                         <label for="request_by" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                             Request By <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="request_by" name="request_by" value="{{ old('request_by') }}" required
+                        <input type="text" id="request_by" name="request_by" 
+                               value="{{ old('request_by', auth()->user()->name) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                     
@@ -96,10 +121,10 @@
                         </label>
                         <select name="department_id" id="department_id" required
                                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition @error('department_id') border-red-500 @enderror">
-                            <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>— Select Department —</option>
+                            <option value="" disabled {{ old('department_id', auth()->user()->department_id ?? '') ? '' : 'selected' }}>— Select Department —</option>
                             
                             @foreach($departments as $dept)
-                                <option value="{{ $dept->id }}" {{ old('department_id') == $dept->id ? 'selected' : '' }}>
+                                <option value="{{ $dept->id }}" {{ old('department_id', auth()->user()->department_id ?? '') == $dept->id ? 'selected' : '' }}>
                                     {{ $dept->name }} ({{ $dept->code ?? '-' }})
                                 </option>
                             @endforeach
@@ -114,7 +139,8 @@
                         <label for="prepared_by" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                             Prepared By <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="prepared_by" name="prepared_by" value="{{ old('prepared_by') }}" required
+                        <input type="text" id="prepared_by" name="prepared_by" 
+                               value="{{ old('prepared_by', auth()->user()->name) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                 </div>
@@ -123,7 +149,8 @@
                     <label for="description" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                         Description <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="description" name="description" value="{{ old('description') }}" required
+                    <input type="text" id="description" name="description" 
+                           value="{{ old('description', isset($prefill) ? 'Consolidation of Consumable Requests' : '') }}" required
                            placeholder="A short summary of this procurement request"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                 </div>
@@ -141,7 +168,7 @@
                         ] as $value => $text)
                             <label class="relative flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300 has-[:checked]:ring-2 has-[:checked]:ring-primary-500/20">
                                 <input type="radio" name="order_type" value="{{ $value }}"
-                                       {{ old('order_type', isset($procurementRequest) ? $procurementRequest->order_type : '') === $value ? 'checked' : '' }}
+                                       {{ old('order_type', 'goods') === $value ? 'checked' : '' }}
                                        class="sr-only">
                                 {{ $text }}
                             </label>
@@ -149,7 +176,7 @@
                     </div>
                 </div>
 
-                {{-- 🌟 NEW: PROCUREMENT METHOD --}}
+                {{-- PROCUREMENT METHOD --}}
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
                         Procurement Method <span class="text-red-500">*</span>
@@ -162,7 +189,7 @@
                         ] as $value => $text)
                             <label class="relative flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300 has-[:checked]:ring-2 has-[:checked]:ring-primary-500/20">
                                 <input type="radio" name="procurement_method" value="{{ $value }}"
-                                       {{ old('procurement_method', $procurementRequest->procurement_method ?? 'po') === $value ? 'checked' : '' }}
+                                       {{ old('procurement_method', 'po') === $value ? 'checked' : '' }}
                                        class="sr-only">
                                 {{ $text }}
                             </label>
@@ -195,7 +222,7 @@
                     </label>
                     <textarea id="background" name="background" rows="3"
                               placeholder="Why would you like to purchase?"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('background') }}</textarea>
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('background', $prefill['background'] ?? '') }}</textarea>
                 </div>
 
                 <div>
@@ -204,7 +231,7 @@
                     </label>
                     <textarea id="purpose" name="purpose" rows="3"
                               placeholder="What is the effect of purchasing it? What if it is not purchased?"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('purpose') }}</textarea>
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('purpose', $prefill['purpose'] ?? '') }}</textarea>
                 </div>
 
                 <div>
@@ -213,7 +240,7 @@
                     </label>
                     <textarea id="required_spec" name="required_spec" rows="4"
                               placeholder="Details and reason of it"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('required_spec') }}</textarea>
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('required_spec', $prefill['required_spec'] ?? '') }}</textarea>
                 </div>
             </div>
         </section>
@@ -235,29 +262,71 @@
             </header>
 
             <div class="p-6 space-y-5">
-                <div class="grid sm:grid-cols-6 gap-5">
-                    <div class="sm:col-span-3">
-                        <label for="item_name" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Request Purchase Item <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="item_name" name="item_name" value="{{ old('item_name') }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                
+                {{-- KONDISI 1: JIKA DARI MERGE CONSUMABLE (BANYAK ITEM) --}}
+                @if(isset($prefill['items']) && count($prefill['items']) > 0)
+                    <div class="space-y-3">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Barang-barang di bawah ini ditarik otomatis dari Consumable Request:</p>
+                        @foreach($prefill['items'] as $index => $item)
+                            <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                                <div class="grid sm:grid-cols-6 gap-4">
+                                    <div class="sm:col-span-4">
+                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Item Name</label>
+                                        <input type="text" name="items[{{ $index }}][item_name]" value="{{ $item['item_name'] }}" required
+                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                    </div>
+                                    <div class="sm:col-span-1">
+                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Qty</label>
+                                        <input type="number" name="items[{{ $index }}][quantity]" value="{{ $item['quantity'] }}" min="0.01" step="any" required
+                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                    </div>
+                                    <div class="sm:col-span-1">
+                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Unit</label>
+                                        <input type="text" name="items[{{ $index }}][unit]" value="{{ $item['unit'] ?? 'Pcs' }}"
+                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                    </div>
+                                    <div class="sm:col-span-6">
+                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Requirement / Specification</label>
+                                        <input type="text" name="items[{{ $index }}][item_requirement_note]" value="{{ $item['item_requirement_note'] ?? '' }}"
+                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                    <div class="sm:col-span-2">
-                        <label for="item_requirement_note" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Match Requirement?
-                        </label>
-                        <input type="text" id="item_requirement_note" name="item_requirement_note" value="{{ old('item_requirement_note') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                @else
+                    {{-- KONDISI 2: JIKA INPUT MANUAL (BIASA) --}}
+                    <div class="grid sm:grid-cols-6 gap-5">
+                        <div class="sm:col-span-3">
+                            <label for="item_name" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                Request Purchase Item <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="item_name" name="items[0][item_name]" value="{{ old('item_name') }}" required
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="item_requirement_note" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                Match Requirement?
+                            </label>
+                            <input type="text" id="item_requirement_note" name="items[0][item_requirement_note]" value="{{ old('item_requirement_note') }}"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label for="quantity" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                Qty <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" min="1" id="quantity" name="items[0][quantity]" value="{{ old('quantity', 1) }}" required
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                        </div>
+                        <div class="sm:col-span-1">
+                            <label for="unit" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                Unit
+                            </label>
+                            <input type="text" id="unit" name="items[0][unit]" value="{{ old('unit', 'Pcs') }}"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                        </div>
                     </div>
-                    <div class="sm:col-span-1">
-                        <label for="quantity" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Qty <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" min="1" id="quantity" name="quantity" value="{{ old('quantity', 1) }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
-                    </div>
-                </div>
+                @endif
 
                 <div>
                     <label for="target_purchase" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">

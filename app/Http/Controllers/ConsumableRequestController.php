@@ -334,7 +334,7 @@ class ConsumableRequestController extends Controller
 
         $messages = [
            'approved' => 'Request has been approved.',
-'rejected' => 'Request has been rejected.',
+           'rejected' => 'Request has been rejected.',
             'revision' => 'Request has been returned for revision. Note has been sent to the applicant.',
             'pending'  => 'Request status has been returned to pending.',
         ];
@@ -441,15 +441,12 @@ class ConsumableRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'no'                 => 'required|string|max:100|unique:procurement_requests,no',
+            'no'                 => 'required|string|max:100',
             'background'         => 'nullable|string',
             'purpose'            => 'nullable|string',
             'required_spec'      => 'nullable|string',
             'request_ids'        => 'required|array|min:1',
             'request_ids.*'      => 'exists:consumable_requests,id',
-        ], [
-            'no.required' => 'PR Number is required.',
-            'no.unique'   => 'PR Number is already used. Please enter a different number.',
         ]);
 
         $consumableRequests = ConsumableRequest::with('items', 'user')
@@ -461,80 +458,51 @@ class ConsumableRequestController extends Controller
             return back()->with('error', 'No valid approved requests available for consolidation.');
         }
 
-        DB::beginTransaction();
-        try {
-            $totalQuantity = 0;
-            $itemsPayload  = [];
+        $itemsPayload = [];
+        $totalQuantity = 0;
 
-            foreach ($consumableRequests as $cr) {
-                foreach ($cr->items as $item) {
-                    $totalQuantity += $item->quantity;
+        foreach ($consumableRequests as $cr) {
+            foreach ($cr->items as $item) {
+                $totalQuantity += $item->quantity;
+                
+                $requirement = collect([
+                    $item->purpose_1,
+                    $item->purpose_2,
+                    $item->purpose_3,
+                ])->filter()->implode(' | ');
 
-                    $requirement = collect([
-                        $item->purpose_1,
-                        $item->purpose_2,
-                        $item->purpose_3,
-                    ])->filter()->implode(' | ');
-
-                    $itemsPayload[] = [
-                        'item_name'                  => $item->item_name,
-                        'brand'                      => $item->brand,
-                        'type'                       => $item->type,
-                        'model'                      => $item->model,
-                        'capacity'                   => $item->capacity,
-                        'specs'                      => $item->specs,
-                        'item_requirement_note'      => $requirement,
-                        'quantity'                   => $item->quantity,
-                        'unit'                       => $item->unit,
-                        'picture'                    => $item->picture,
-                        'consumable_request_item_id' => $item->id, 
-                        
-                        // 🌟 PERBAIKAN: Simpan asal departemen dari pembuat request
-                        'department_id'              => $cr->user->department_id, 
-                    ];
-                }
+                $itemsPayload[] = [
+                    'item_name'                  => $item->item_name,
+                    'brand'                      => $item->brand,
+                    'type'                       => $item->type,
+                    'model'                      => $item->model,
+                    'capacity'                   => $item->capacity,
+                    'specs'                      => $item->specs,
+                    'item_requirement_note'      => $requirement,
+                    'quantity'                   => $item->quantity,
+                    'unit'                       => $item->unit,
+                    'picture'                    => $item->picture,
+                    'consumable_request_item_id' => $item->id, 
+                    'department_id'              => $cr->user->department_id, 
+                ];
             }
-
-            $procurementRequest = ProcurementRequest::create([
-                'no'                    => $validated['no'],
-                'source'                => 'consumable',
-                'date'                  => now()->toDateString(),
-                'department_id'         => $user->department_id, // Dept Admin Utama
-                'request_by'            => $user->name,
-                'division'              => $user->department->name ?? '-',
-                'prepared_by'           => $user->name,
-                'description'           => 'Gabungan Consumable Request: ' . $consumableRequests->pluck('subject')->implode(', '),
-                'is_repeat_order'       => true,
-                'is_goods'              => true,
-                'background'            => $validated['background'] ?: 'Consolidation automatically from ' . $consumableRequests->count() . ' Approved Consumable Requests.',
-                'purpose'               => $validated['purpose'] ?: 'Meeting operational consumable needs.',
-                'required_spec'         => null,
-                'item_name'             => '(Multiple Items - View Attachment Details)',
-                'item_requirement_note' => '(Multiple Items - View Attachment Details)',
-                'quantity'              => $totalQuantity,
-                'pic_name'              => $user->name,
-                'status'                => 'pending',
-                'user_id'               => $user->id,
-            ]);
-
-            foreach ($itemsPayload as $payload) {
-                $procurementRequest->items()->create($payload);
-            }
-
-            ConsumableRequest::whereIn('id', $validated['request_ids'])->update([
-                'status'          => 'converted',
-                'pr_generated_at' => now(),
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('procurement.print', $procurementRequest->id)
-                ->with('success', 'Consumable Request successfully consolidated into PR.');
-
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('Merge Consumable to PR Error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to consolidate Consumable Request: ' . $e->getMessage());
         }
+
+        // Siapkan data untuk mengisi form Create PR
+        $prefillData = [
+            'no'            => $validated['no'],
+            'background'    => $validated['background'] ?: 'Consolidation automatically from ' . $consumableRequests->count() . ' Approved Consumable Requests.',
+            'purpose'       => $validated['purpose'] ?: 'Meeting operational consumable needs.',
+            'required_spec' => $validated['required_spec'] ?? null,
+            'items'         => $itemsPayload,
+            'request_ids'   => $validated['request_ids']
+        ];
+
+        // Simpan sementara ke session
+        session()->flash('prefill_pr_data', $prefillData);
+
+        // Arahkan ke halaman Create Procurement Request
+        return redirect()->route('procurement.create')
+            ->with('info', 'Data dari Consumable Request berhasil dimuat. Silakan periksa dan lengkapi form PR di bawah ini sebelum menyimpan.');
     }
 }

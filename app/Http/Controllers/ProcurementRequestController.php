@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\ProcurementRequest;
+use App\Models\ConsumableRequest;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProcurementRequestController extends Controller
 {
@@ -32,14 +35,17 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE
+       CREATE (Menerima data prefill dari Consumable Request)
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
         $suggestedNo = ProcurementRequest::generateNumber();
         $departments = Department::orderBy('name')->get(); 
+        
+        // Ambil data prefill dari Consumable Request (jika ada)
+        $prefill = session('prefill_pr_data');
 
-        return view('procurement.create', compact('suggestedNo', 'departments'));
+        return view('procurement.create', compact('suggestedNo', 'departments', 'prefill'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -59,35 +65,95 @@ class ProcurementRequestController extends Controller
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
             'required_spec'         => 'nullable|string',
-            'item_name'             => 'required|string|max:255',
-            'item_requirement_note' => 'nullable|string',
-            'quantity'              => 'required|numeric|min:0.01',
-            'target_purchase'       => 'nullable|string',
             'pic_name'              => 'nullable|string|max:255',
             'ops_manager_name'      => 'nullable|string|max:255',
             'fem_manager_name'      => 'nullable|string|max:255',
             'coo_name'              => 'nullable|string|max:255',
+
+            // Validasi untuk Items (jika diinput manual)
+            'items'                       => 'nullable|array',
+            'items.*.item_name'           => 'required_with:items|string|max:255',
+            'items.*.item_requirement_note' => 'nullable|string',
+            'items.*.quantity'            => 'required_with:items|numeric|min:0.01',
+            'items.*.unit'                => 'nullable|string|max:50',
+
+            // Validasi ID Consumable Request yang digabungkan
+            'consumable_request_ids'      => 'nullable|array',
+            'consumable_request_ids.*'    => 'exists:consumable_requests,id'
         ]);
 
-        $orderType  = $request->input('order_type');
-        $department = Department::findOrFail($validated['department_id']);
+        DB::beginTransaction();
+        try {
+            $orderType  = $request->input('order_type');
+            $department = Department::findOrFail($validated['department_id']);
 
-        $validated['user_id']         = auth()->id();
-        $validated['division']        = $department->name;
-        $validated['is_new_order']    = ($orderType === 'new_order');
-        $validated['is_repeat_order'] = ($orderType === 'repeat_order');
-        $validated['is_goods']        = ($orderType === 'goods');
-        $validated['is_services']     = ($orderType === 'services');
-        $validated['status']          = 'pending';
-        $validated['source']          = 'manual';
+            $validated['user_id']         = auth()->id();
+            $validated['division']        = $department->name;
+            $validated['is_new_order']    = ($orderType === 'new_order');
+            $validated['is_repeat_order'] = ($orderType === 'repeat_order');
+            $validated['is_goods']        = ($orderType === 'goods');
+            $validated['is_services']     = ($orderType === 'services');
+            $validated['status']          = 'pending';
+            $validated['source']          = $request->has('consumable_request_ids') ? 'consumable' : 'manual';
 
-        unset($validated['order_type']);
+            $itemsData = $validated['items'] ?? [];
+            
+            // Fallback jika item lama masih menggunakan format single input
+            if (empty($itemsData) && $request->filled('item_name')) {
+                $itemsData[] = [
+                    'item_name' => $request->input('item_name'),
+                    'item_requirement_note' => $request->input('item_requirement_note'),
+                    'quantity' => $request->input('quantity', 1),
+                    'unit' => $request->input('unit', 'Pcs'),
+                ];
+            }
 
-        $procurementRequest = ProcurementRequest::create($validated);
+            // Set ringkasan item untuk tabel utama
+            $validated['item_name'] = count($itemsData) > 1 
+                ? '(Multiple Items - View Details)' 
+                : ($itemsData[0]['item_name'] ?? '-');
 
-        return redirect()
-            ->route('procurement.show', $procurementRequest)
-            ->with('success', 'Procurement Request created successfully.');
+            $validated['item_requirement_note'] = count($itemsData) > 1
+                ? '(Multiple Items - View Details)'
+                : ($itemsData[0]['item_requirement_note'] ?? null);
+
+            $validated['quantity'] = collect($itemsData)->sum('quantity');
+
+            unset($validated['order_type'], $validated['items'], $validated['consumable_request_ids']);
+
+            // Simpan PR
+            $procurementRequest = ProcurementRequest::create($validated);
+
+            // Simpan Item PR
+            foreach ($itemsData as $item) {
+                $procurementRequest->items()->create([
+                    'item_name' => $item['item_name'],
+                    'item_requirement_note' => $item['item_requirement_note'] ?? null,
+                    'quantity' => $item['quantity'],
+                    'unit' => $item['unit'] ?? 'Pcs',
+                ]);
+            }
+
+            // Update status Consumable Request jika ini hasil merge
+            if ($request->has('consumable_request_ids')) {
+                ConsumableRequest::whereIn('id', $request->consumable_request_ids)
+                    ->update([
+                        'status' => 'converted',
+                        'pr_generated_at' => now(),
+                    ]);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('procurement.show', $procurementRequest)
+                ->with('success', 'Procurement Request created successfully.');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Store PR Error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Failed to create PR: ' . $e->getMessage());
+        }
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -144,7 +210,6 @@ class ProcurementRequestController extends Controller
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
             'required_spec'         => 'nullable|string',
-            'target_purchase'       => 'nullable|string',
             'pic_name'              => 'nullable|string|max:255',
             'ops_manager_name'      => 'nullable|string|max:255',
             'fem_manager_name'      => 'nullable|string|max:255',
@@ -159,64 +224,72 @@ class ProcurementRequestController extends Controller
             'items.*.existing_picture'    => 'nullable|string',
         ]);
 
-        $orderType = $request->input('order_type');
+        DB::beginTransaction();
+        try {
+            $orderType = $request->input('order_type');
+            $department = Department::findOrFail($validated['department_id']);
+            
+            $validated['division'] = $department->name; 
+            $validated['is_new_order']    = ($orderType === 'new_order');
+            $validated['is_repeat_order'] = ($orderType === 'repeat_order');
+            $validated['is_goods']        = ($orderType === 'goods');
+            $validated['is_services']     = ($orderType === 'services');
 
-        $department = Department::findOrFail($validated['department_id']);
-        $validated['division'] = $department->name; 
+            $items = $validated['items'];
+            unset($validated['order_type'], $validated['items']);
 
-        $validated['is_new_order']    = ($orderType === 'new_order');
-        $validated['is_repeat_order'] = ($orderType === 'repeat_order');
-        $validated['is_goods']        = ($orderType === 'goods');
-        $validated['is_services']     = ($orderType === 'services');
+            $validated['item_name'] = count($items) > 1
+                ? '(Multiple Items - See Attachment Details)'
+                : $items[0]['item_name'];
 
-        $items = $validated['items'];
-        unset($validated['order_type'], $validated['items']);
+            $validated['item_requirement_note'] = count($items) > 1
+                ? '(Multiple Items - See Attachment Details)'
+                : ($items[0]['item_requirement_note'] ?? null);
 
-        $validated['item_name'] = count($items) > 1
-            ? '(Multiple Items - See Attachment Details)'
-            : $items[0]['item_name'];
+            $validated['quantity'] = collect($items)->sum('quantity');
 
-        $validated['item_requirement_note'] = count($items) > 1
-            ? '(Multiple Items - See Attachment Details)'
-            : ($items[0]['item_requirement_note'] ?? null);
+            $procurementRequest->update($validated);
 
-        $validated['quantity'] = collect($items)->sum('quantity');
-
-        $procurementRequest->update($validated);
-
-        foreach ($procurementRequest->items as $oldItem) {
-            if ($oldItem->picture && Storage::disk('supabase-procurement_request')->exists($oldItem->picture)) {
-                Storage::disk('supabase-procurement_request')->delete($oldItem->picture);
+            foreach ($procurementRequest->items as $oldItem) {
+                if ($oldItem->picture && Storage::disk('supabase-procurement_request')->exists($oldItem->picture)) {
+                    Storage::disk('supabase-procurement_request')->delete($oldItem->picture);
+                }
             }
-        }
 
-        $procurementRequest->items()->delete();
+            $procurementRequest->items()->delete();
 
-        foreach ($request->items as $index => $itemData) {
-            $picturePath = $itemData['existing_picture'] ?? null;
+            foreach ($request->items as $index => $itemData) {
+                $picturePath = $itemData['existing_picture'] ?? null;
 
-            if ($request->hasFile("items.{$index}.picture")) {
-                if ($picturePath && Storage::disk('supabase-procurement_request')->exists($picturePath)) {
-                    Storage::disk('supabase-procurement_request')->delete($picturePath);
+                if ($request->hasFile("items.{$index}.picture")) {
+                    if ($picturePath && Storage::disk('supabase-procurement_request')->exists($picturePath)) {
+                        Storage::disk('supabase-procurement_request')->delete($picturePath);
+                    }
+
+                    $pic     = $request->file("items.{$index}.picture");
+                    $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
+                    $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement_request');
                 }
 
-                $pic     = $request->file("items.{$index}.picture");
-                $picName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', $pic->getClientOriginalName());
-                $picturePath = $pic->storeAs('attachments/procurement-items', $picName, 'supabase-procurement_request');
+                $procurementRequest->items()->create([
+                    'item_name'             => $itemData['item_name'],
+                    'item_requirement_note' => $itemData['item_requirement_note'] ?? null,
+                    'quantity'              => $itemData['quantity'],
+                    'unit'                  => $itemData['unit'] ?? null,
+                    'picture'               => $picturePath,
+                ]);
             }
 
-            $procurementRequest->items()->create([
-                'item_name'             => $itemData['item_name'],
-                'item_requirement_note' => $itemData['item_requirement_note'] ?? null,
-                'quantity'              => $itemData['quantity'],
-                'unit'                  => $itemData['unit'] ?? null,
-                'picture'               => $picturePath,
-            ]);
-        }
+            DB::commit();
 
-        return redirect()
-            ->route('procurement.show', $procurementRequest)
-            ->with('success', 'Procurement Request updated successfully.');
+            return redirect()
+                ->route('procurement.show', $procurementRequest)
+                ->with('success', 'Procurement Request updated successfully.');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to update PR: ' . $e->getMessage());
+        }
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -417,7 +490,6 @@ class ProcurementRequestController extends Controller
             'review_notes' => 'PR Final signed by Manager. Final Number: ' . $validated['final_number'],
         ]);
 
-        // ✅ PERBAIKAN: Arahkan langsung ke PDF Final
         return redirect()
             ->route('procurement.pdf.final', $procurementRequest)
             ->with('success', 'PR Final validated with number: ' . $validated['final_number']);
@@ -511,7 +583,6 @@ class ProcurementRequestController extends Controller
             : $autoSpec;
 
         return [
-            // Gunakan final_number jika ada, fallback ke no
             'no'          => ltrim($model->final_number ?? $model->no ?? '', '/'),
             'date'        => optional($model->date)->format('d F Y'),
             'request_by'  => $model->request_by,
