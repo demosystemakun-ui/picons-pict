@@ -24,21 +24,18 @@ class VendorComparisonController extends Controller
     {
         $user = auth()->user();
 
-        // Validasi: Hanya PR approved/processed yang bisa akses comparison
         if (!in_array($procurement->status, ['approved', 'processed', 'final_approved'])) {
             return redirect()
                 ->route('procurement.show', $procurement)
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
         }
 
-        // RBAC: Admin Departemen hanya bisa akses departemennya
         if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
             abort(403, 'You do not have access to vendor comparisons from other departments.');
         }
 
         $procurement->load('vendors.items', 'winnerVendor');
 
-        // ✅ PERBAIKAN: Panggil 'comparison.index' (bukan 'global-index')
         return view('procurement.comparison.index', compact('procurement'));
     }
 
@@ -54,6 +51,68 @@ class VendorComparisonController extends Controller
 
         return view('procurement.comparison.global-index', compact('procurements'));
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       CREATE FINAL PR — Form untuk melengkapi data PR Final
+    ═══════════════════════════════════════════════════════════════ */
+  public function createFinalPr(ProcurementRequest $procurement)
+{
+    // Pastikan sudah ada vendor pemenang
+    if (!$procurement->winnerVendor) {
+        return redirect()
+            ->route('procurement.comparisons.index', $procurement)
+            ->with('error', 'Please select a winning vendor first.');
+    }
+
+    // Idempotent: kalau sudah final, langsung ke PDF
+    if ($procurement->status === 'final_approved' && $procurement->final_number) {
+        return redirect()
+            ->route('procurement.pdf.final', $procurement)
+            ->with('info', 'Final PR already exists. Redirecting to PDF.');
+    }
+
+    $procurement->load('winnerVendor.items', 'department');
+
+    return view('procurement.comparison.create-final-pr', compact('procurement'));
+}
+
+    /* ═══════════════════════════════════════════════════════════════
+       STORE FINAL PR — Simpan data PR Final & redirect ke PDF
+    ═══════════════════════════════════════════════════════════════ */
+   public function storeFinalPr(Request $request, ProcurementRequest $procurement)
+{
+    // Guard: winner harus masih ada
+    if (!$procurement->winnerVendor) {
+        return back()->with('error', 'Winning vendor is missing. Please select winner again.');
+    }
+
+    $validated = $request->validate([
+        'budget_type'          => 'required|in:Budgeted,Non Budgeted',
+        'final_description'    => 'required|string|max:255',
+        'final_number'         => 'required|string|max:100|unique:procurement_requests,final_number,' . $procurement->id,
+        'reason_choose_vendor' => 'required|string|max:2000',
+        'accounting_mgr_name'  => 'nullable|string|max:255',
+        'cfo_name'             => 'nullable|string|max:255',
+        'ceo_name'             => 'nullable|string|max:255',
+    ]);
+
+    $procurement->update([
+        'budget_type'          => $validated['budget_type'],
+        'description'          => $validated['final_description'],
+        'final_number'         => $validated['final_number'],
+        'reason_choose_vendor' => $validated['reason_choose_vendor'],
+        'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
+        'cfo_name'             => $validated['cfo_name'] ?? null,
+        'ceo_name'             => $validated['ceo_name'] ?? null,
+        'final_total_price'    => $procurement->winnerVendor->total_price,
+        'status'               => 'final_approved',
+    ]);
+
+    // Redirect langsung ke PDF Final
+    return redirect()
+        ->route('procurement.pdf.final', $procurement)
+        ->with('success', 'Final PR saved. PDF is ready.');
+}
 
     /* ═══════════════════════════════════════════════════════════════
        SCAN — 3 entry point
@@ -74,7 +133,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       PROCESS SCAN — Shared logic
+       PROCESS SCAN
     ═══════════════════════════════════════════════════════════════ */
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
@@ -321,7 +380,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       DESTROY — Hapus 1 vendor
+       DESTROY
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementVendor $vendor)
     {

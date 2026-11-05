@@ -59,16 +59,22 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
     });
 
-    // ═══ CASH ADVANCE ═══
-Route::resource('cash-advances', CashAdvanceController::class);
-Route::post('cash-advances/{cashAdvance}/approve', [CashAdvanceController::class, 'approve'])->name('cash-advances.approve');
-Route::get('cash-advances/{cashAdvance}/print', [CashAdvanceController::class, 'print'])->name('cash-advances.print');
-Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pdf'])->name('cash-advances.pdf');
+    /* ─────────────────────────────────────────────
+       CASH ADVANCE
+    ───────────────────────────────────────────── */
+    Route::resource('cash-advances', CashAdvanceController::class);
+    Route::post('cash-advances/{cashAdvance}/approve', [CashAdvanceController::class, 'approve'])->name('cash-advances.approve');
+    Route::get('cash-advances/{cashAdvance}/print', [CashAdvanceController::class, 'print'])->name('cash-advances.print');
+    Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pdf'])->name('cash-advances.pdf');
 
-  Route::resource('liquidations', LiquidationController::class);
+    /* ─────────────────────────────────────────────
+       LIQUIDATION
+    ───────────────────────────────────────────── */
+    Route::resource('liquidations', LiquidationController::class);
     Route::post('liquidations/{liquidation}/approve', [LiquidationController::class, 'approve'])->name('liquidations.approve');
     Route::get('liquidations/{liquidation}/print', [LiquidationController::class, 'print'])->name('liquidations.print');
     Route::get('liquidations/{liquidation}/pdf', [LiquidationController::class, 'pdf'])->name('liquidations.pdf');
+
     /* ─────────────────────────────────────────────
        INVENTORY STOCK
     ───────────────────────────────────────────── */
@@ -139,53 +145,76 @@ Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pd
     ───────────────────────────────────────────── */
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
-        // 🌟 PERBAIKAN: Izinkan Super Admin & Admin (termasuk Admin Departemen) untuk akses daftar PR
+        // ═══ LIST & GLOBAL ═══
         Route::middleware('role:Super Admin|Admin')->group(function () {
             Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
             Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
         });
 
+        // ═══ CREATE & STORE PR AWAL ═══
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
 
-        // ═══ COMPARISON ROUTES ═══
-        Route::get('/{procurement}/comparisons', [VendorComparisonController::class, 'index'])->name('comparisons.index');
-        Route::post('/{procurement}/comparisons', [VendorComparisonController::class, 'store'])->name('comparisons.store');
-        Route::post('/{procurement}/comparisons/scan', [VendorComparisonController::class, 'scanImage'])->name('comparisons.scan');
-        Route::post('/{procurement}/comparisons/scan-monotaro', [VendorComparisonController::class, 'scanMonotaro'])->name('comparisons.scan.monotaro');
-        Route::post('/{procurement}/comparisons/scan-others', [VendorComparisonController::class, 'scanOthers'])->name('comparisons.scan.others');
-        Route::patch('/{procurement}/comparisons/{comparison}/select', [VendorComparisonController::class, 'selectVendor'])->name('comparisons.select');
-        Route::delete('/comparisons/{comparison}', [VendorComparisonController::class, 'destroy'])->name('comparisons.destroy');
+        // ═══════════════════════════════════════════════════════════
+        // VENDOR COMPARISON (per PR)
+        // ═══════════════════════════════════════════════════════════
+        Route::prefix('/{procurement}/comparisons')->name('comparisons.')->group(function () {
 
-        // ═══ VALIDASI TTD & UPDATE STATUS (Hanya Super Admin) ═══
+            // Index & store vendor
+            Route::get('/',  [VendorComparisonController::class, 'index'])->name('index');
+            Route::post('/', [VendorComparisonController::class, 'store'])->name('store');
+
+            // AI Scan
+            Route::post('/scan',          [VendorComparisonController::class, 'scanImage'])->name('scan');
+            Route::post('/scan-monotaro', [VendorComparisonController::class, 'scanMonotaro'])->name('scan.monotaro');
+            Route::post('/scan-others',   [VendorComparisonController::class, 'scanOthers'])->name('scan.others');
+
+            // Select winner (manual override)
+            Route::patch('/{vendor}/select', [VendorComparisonController::class, 'selectVendor'])->name('select');
+
+            // Delete vendor
+            Route::delete('/{vendor}', [VendorComparisonController::class, 'destroy'])->name('destroy');
+
+            // ✅ CREATE FINAL PR — form & simpan
+            Route::get('/final-pr/create', [VendorComparisonController::class, 'createFinalPr'])->name('final-pr.create');
+            Route::post('/final-pr/store', [VendorComparisonController::class, 'storeFinalPr'])->name('final-pr.store');
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // PDF, PRINT, VALIDASI
+        // ═══════════════════════════════════════════════════════════
+        Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
+        Route::get('/{procurementRequest}/pdf',       [ProcurementRequestController::class, 'pdf'])->name('pdf');
+        Route::get('/{procurementRequest}/print',     [ProcurementRequestController::class, 'print'])->name('print');
+
         Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
             ->name('validate-signature')
+            ->middleware('role:Super Admin');
+
+        Route::patch('/{procurementRequest}/validate-final-signature', [ProcurementRequestController::class, 'validateFinalSignature'])
+            ->name('validate-final-signature')
             ->middleware('role:Super Admin');
 
         Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
             ->name('status')
             ->middleware('role:Super Admin');
 
-        // ═══ PDF & DETAIL PR ═══
-        Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
-        Route::get('/{procurementRequest}', [ProcurementRequestController::class, 'show'])->name('show');
-        Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');
-        Route::put('/{procurementRequest}', [ProcurementRequestController::class, 'update'])->name('update');
-        Route::delete('/{procurementRequest}', [ProcurementRequestController::class, 'destroy'])->name('destroy');
-        Route::get('/{procurementRequest}/print', [ProcurementRequestController::class, 'print'])->name('print');
-        Route::get('/{procurementRequest}/pdf', [ProcurementRequestController::class, 'pdf'])->name('pdf');
+        // ═══════════════════════════════════════════════════════════
+        // PURCHASE ORDER (PO) & RECEIVING
+        // ═══════════════════════════════════════════════════════════
+        Route::get('/purchases',                       [PurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('/purchases/{purchase}',            [PurchaseController::class, 'show'])->name('purchases.show');
+        Route::post('/purchases/{purchase}/receive',   [PurchaseController::class, 'receive'])->name('purchases.receive');
+        Route::get('/{procurement}/purchases/create',  [PurchaseController::class, 'create'])->name('purchases.create');
+        Route::post('/{procurement}/purchases',        [PurchaseController::class, 'store'])->name('purchases.store');
 
-        Route::patch('/{procurementRequest}/validate-final-signature', [ProcurementRequestController::class, 'validateFinalSignature'])
-    ->name('validate-final-signature')
-    ->middleware('role:Super Admin');
-        /* ─────────────────────────────────────────────
-           PURCHASE ORDER (PO) & RECEIVING
-        ───────────────────────────────────────────── */
-        Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
-        Route::get('/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
-        Route::post('/{procurement}/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
-        Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
-        Route::post('/purchases/{purchase}/receive', [PurchaseController::class, 'receive'])->name('purchases.receive');
+        // ═══════════════════════════════════════════════════════════
+        // CRUD PR — PALING BAWAH agar wildcard tidak menangkap route di atas
+        // ═══════════════════════════════════════════════════════════
+        Route::get('/{procurementRequest}',      [ProcurementRequestController::class, 'show'])->name('show');
+        Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');
+        Route::put('/{procurementRequest}',      [ProcurementRequestController::class, 'update'])->name('update');
+        Route::delete('/{procurementRequest}',   [ProcurementRequestController::class, 'destroy'])->name('destroy');
     });
 
     /* ─────────────────────────────────────────────
@@ -198,29 +227,32 @@ Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pd
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   RUTE SEMENTARA UNTUK DEPLOYMENT / FIX MIGRASI
+   RUTE SEMENTARA — HANYA UNTUK LOCAL / STAGING
 ═══════════════════════════════════════════════════════════════════ */
-Route::get('/jalankan-migrasi-baru', function () {
-    try {
-        \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
-        \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
-        
-        \Illuminate\Support\Facades\DB::table('migrations')
-            ->where('migration', 'like', '%create_purchases%')
-            ->orWhere('migration', 'like', '%fix_purchases%')
-            ->delete();
+if (app()->environment('local', 'staging')) {
 
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        
-        return '<h3>Berhasil!</h3><p>Migrasi baru sudah berjalan.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
-    } catch (\Exception $e) {
-        return '<h3>Error:</h3> ' . $e->getMessage();
-    }
-});
+    Route::get('/jalankan-migrasi-baru', function () {
+        try {
+            \Illuminate\Support\Facades\Schema::dropIfExists('purchase_items');
+            \Illuminate\Support\Facades\Schema::dropIfExists('purchases');
 
-Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
-    return 'Cache (Route, Config, View) berhasil dibersihkan!';
-});
+            \Illuminate\Support\Facades\DB::table('migrations')
+                ->where('migration', 'like', '%create_purchases%')
+                ->orWhere('migration', 'like', '%fix_purchases%')
+                ->delete();
+
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+
+            return '<h3>Berhasil!</h3><p>Migrasi baru sudah berjalan.</p><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+        } catch (\Exception $e) {
+            return '<h3>Error:</h3> ' . $e->getMessage();
+        }
+    });
+
+    Route::get('/clear-cache', function () {
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        return 'Cache (Route, Config, View) berhasil dibersihkan!';
+    });
+}
