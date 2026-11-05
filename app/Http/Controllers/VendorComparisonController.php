@@ -55,64 +55,101 @@ class VendorComparisonController extends Controller
     /* ═══════════════════════════════════════════════════════════════
        CREATE FINAL PR — Form untuk melengkapi data PR Final
     ═══════════════════════════════════════════════════════════════ */
-  public function createFinalPr(ProcurementRequest $procurement)
-{
-    // Pastikan sudah ada vendor pemenang
-    if (!$procurement->winnerVendor) {
-        return redirect()
-            ->route('procurement.comparisons.index', $procurement)
-            ->with('error', 'Please select a winning vendor first.');
+     public function createFinalPr(ProcurementRequest $procurement)
+    {
+        // Pastikan sudah ada vendor pemenang
+        if (!$procurement->winnerVendor) {
+            return redirect()
+                ->route('procurement.comparisons.index', $procurement)
+                ->with('error', 'Please select a winning vendor first.');
+        }
+
+        // Idempotent: kalau sudah final, langsung ke PDF
+        if ($procurement->status === 'final_approved' && $procurement->final_number) {
+            return redirect()
+                ->route('procurement.pdf.final', $procurement)
+                ->with('info', 'Final PR already exists. Redirecting to PDF.');
+        }
+
+        $procurement->load('winnerVendor.items', 'department');
+
+        // ═══ GENERATE FORMAT BELAKANGAN OTOMATIS ═══
+        $bulanRomawi = $this->getRomawi((int) date('n'));
+        $tahun       = date('Y');
+        $deptCode    = strtoupper($procurement->department->code ?? 'OPS');
+        
+        // Ini adalah "template" format belakang yang akan dimunculkan di form
+        $formatBelakang = '/PR/' . $deptCode . '/PICT-' . $bulanRomawi . '-' . $tahun;
+
+        // Jika Admin sudah pernah input (ada error validasi), kita pisahkan nomor urutnya
+        $nomorAwal = '';
+        if (old('final_number')) {
+            $parts = explode('/', old('final_number'));
+            $nomorAwal = $parts[0] ?? '';
+        } elseif ($procurement->final_number) {
+            $parts = explode('/', $procurement->final_number);
+            $nomorAwal = $parts[0] ?? '';
+        }
+
+        return view('procurement.comparison.create-final-pr', compact('procurement', 'formatBelakang', 'nomorAwal'));
     }
-
-    // Idempotent: kalau sudah final, langsung ke PDF
-    if ($procurement->status === 'final_approved' && $procurement->final_number) {
-        return redirect()
-            ->route('procurement.pdf.final', $procurement)
-            ->with('info', 'Final PR already exists. Redirecting to PDF.');
-    }
-
-    $procurement->load('winnerVendor.items', 'department');
-
-    return view('procurement.comparison.create-final-pr', compact('procurement'));
-}
 
     /* ═══════════════════════════════════════════════════════════════
        STORE FINAL PR — Simpan data PR Final & redirect ke PDF
     ═══════════════════════════════════════════════════════════════ */
-   public function storeFinalPr(Request $request, ProcurementRequest $procurement)
-{
-    // Guard: winner harus masih ada
-    if (!$procurement->winnerVendor) {
-        return back()->with('error', 'Winning vendor is missing. Please select winner again.');
+     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
+    {
+        // Guard: winner harus masih ada
+        if (!$procurement->winnerVendor) {
+            return back()->with('error', 'Winning vendor is missing. Please select winner again.');
+        }
+
+        // Validasi HANYA nomor urutnya saja
+        $request->validate([
+            'nomor_urut'           => 'required|numeric|min:1',
+            'budget_type'          => 'required|in:Budgeted,Non Budgeted',
+            'final_description'    => 'required|string|max:255',
+            'reason_choose_vendor' => 'required|string|max:2000',
+            'accounting_mgr_name'  => 'nullable|string|max:255',
+            'cfo_name'             => 'nullable|string|max:255',
+            'ceo_name'             => 'nullable|string|max:255',
+        ]);
+
+        // ═══ GABUNGKAN NOMOR URUT DENGAN FORMAT BELAKANG ═══
+        $bulanRomawi = $this->getRomawi((int) date('n'));
+        $tahun       = date('Y');
+        $deptCode    = strtoupper($procurement->department->code ?? 'OPS');
+        
+        // Format: 001/PR/OPS/PICT-XI-2026
+        $nomorUrutPad = str_pad($request->nomor_urut, 3, '0', STR_PAD_LEFT);
+        $finalNumber  = $nomorUrutPad . '/PR/' . $deptCode . '/PICT-' . $bulanRomawi . '-' . $tahun;
+
+        // Cek apakah nomor ini sudah dipakai oleh PR lain
+        $exists = ProcurementRequest::where('final_number', $finalNumber)
+                    ->where('id', '!=', $procurement->id)
+                    ->exists();
+                    
+        if ($exists) {
+            return back()->withInput()->withErrors(['nomor_urut' => 'This Final PR Number is already used by another request.']);
+        }
+
+        $procurement->update([
+            'budget_type'          => $request->budget_type,
+            'description'          => $request->final_description,
+            'final_number'         => $finalNumber,
+            'reason_choose_vendor' => $request->reason_choose_vendor,
+            'accounting_mgr_name'  => $request->accounting_mgr_name ?? null,
+            'cfo_name'             => $request->cfo_name ?? null,
+            'ceo_name'             => $request->ceo_name ?? null,
+            'final_total_price'    => $procurement->winnerVendor->total_price,
+            'status'               => 'final_approved',
+        ]);
+
+        // Redirect langsung ke PDF Final
+        return redirect()
+            ->route('procurement.pdf.final', $procurement)
+            ->with('success', 'Final PR saved. PDF is ready.');
     }
-
-    $validated = $request->validate([
-        'budget_type'          => 'required|in:Budgeted,Non Budgeted',
-        'final_description'    => 'required|string|max:255',
-        'final_number'         => 'required|string|max:100|unique:procurement_requests,final_number,' . $procurement->id,
-        'reason_choose_vendor' => 'required|string|max:2000',
-        'accounting_mgr_name'  => 'nullable|string|max:255',
-        'cfo_name'             => 'nullable|string|max:255',
-        'ceo_name'             => 'nullable|string|max:255',
-    ]);
-
-    $procurement->update([
-        'budget_type'          => $validated['budget_type'],
-        'description'          => $validated['final_description'],
-        'final_number'         => $validated['final_number'],
-        'reason_choose_vendor' => $validated['reason_choose_vendor'],
-        'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
-        'cfo_name'             => $validated['cfo_name'] ?? null,
-        'ceo_name'             => $validated['ceo_name'] ?? null,
-        'final_total_price'    => $procurement->winnerVendor->total_price,
-        'status'               => 'final_approved',
-    ]);
-
-    // Redirect langsung ke PDF Final
-    return redirect()
-        ->route('procurement.pdf.final', $procurement)
-        ->with('success', 'Final PR saved. PDF is ready.');
-}
 
     /* ═══════════════════════════════════════════════════════════════
        SCAN — 3 entry point
@@ -380,6 +417,34 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
+       SELECT VENDOR — Manual pick winner
+    ═══════════════════════════════════════════════════════════════ */
+    public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
+    {
+        // Pastikan vendor milik procurement ini
+        if ($vendor->procurement_request_id !== $procurement->id) {
+            abort(404);
+        }
+
+        // Hanya boleh ganti winner kalau status masih 'approved'
+        if ($procurement->status !== 'approved') {
+            return back()->with('error', 'Winner can only be changed while status is Approved.');
+        }
+
+        // Reset semua winner
+        $procurement->vendors()->update(['is_winner' => false]);
+
+        // Set yang baru
+        $vendor->update(['is_winner' => true]);
+
+        $procurement->update([
+            'final_total_price' => $vendor->total_price,
+        ]);
+
+        return back()->with('success', 'Winning vendor updated to: ' . $vendor->vendor_name);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
        DESTROY
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementVendor $vendor)
@@ -411,5 +476,16 @@ class VendorComparisonController extends Controller
         $procurement->update([
             'final_total_price' => $winner?->total_price,
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HELPER: Konversi Bulan ke Romawi
+    ═══════════════════════════════════════════════════════════════ */
+private function getRomawi($number) {
+        $map = [
+            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+        ];
+        return $map[$number] ?? '';
     }
 }
