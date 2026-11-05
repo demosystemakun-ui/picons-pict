@@ -33,6 +33,9 @@
         ['label' => 'FEM Manager', 'value' => $procurementRequest->fem_manager_name],
         ['label' => 'COO',         'value' => $procurementRequest->coo_name],
     ];
+
+    // Cek apakah user boleh membuat Cash Advance / Liquidation
+    $canCreateCA = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
 @endphp
 
 @section('content')
@@ -150,6 +153,20 @@
                 <i data-lucide="download" class="w-4 h-4 text-emerald-500"></i>
                 Download PDF
             </a>
+
+            {{-- 🌟 TOMBOL BARU: Create Cash Advance & Liquidation --}}
+            @if($canCreateCA && in_array($currStatus, ['approved', 'processed', 'received']))
+                <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurementRequest->id]) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-purple-300 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition">
+                    <i data-lucide="banknote" class="w-4 h-4"></i>
+                    Create Cash Advance
+                </a>
+                <a href="{{ route('liquidations.create', ['procurement_request_id' => $procurementRequest->id]) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-indigo-300 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
+                    <i data-lucide="file-check-2" class="w-4 h-4"></i>
+                    Create Liquidation
+                </a>
+            @endif
 
             {{-- Hide Edit & Delete if status is approved/processed --}}
             @if(in_array($currStatus, ['pending', 'revision']))
