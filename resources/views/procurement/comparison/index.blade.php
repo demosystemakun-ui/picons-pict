@@ -161,7 +161,8 @@
                             </td>
                             <td class="px-5 py-4 text-right">
                                 @if($procurement->status === 'approved')
-                                    <form action="{{ route('procurement.comparisons.destroy', $vendor) }}" method="POST" onsubmit="return confirm('Delete vendor?')">
+                                    {{-- PERBAIKAN: Tambahkan $procurement ke dalam array --}}
+                                    <form action="{{ route('procurement.comparisons.destroy', [$procurement, $vendor]) }}" method="POST" onsubmit="return confirm('Delete vendor?')">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-rose-600 hover:underline">Delete</button>
                                     </form>
