@@ -139,26 +139,18 @@
                     </div>
                 </div>
 
-                {{-- ═══ FINAL PR NUMBER (MANUAL + AUTO FORMAT) ═══ --}}
+                {{-- ═══ FINAL PR NUMBER (AUTO FORMAT) ═══ --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                         Final PR Number <span class="text-rose-500">*</span>
                     </label>
-                    <div class="flex items-center gap-2 max-w-lg">
-                        {{-- Input Manual Nomor Urut --}}
-                        <input type="text" name="nomor_urut"
-                               value="{{ old('nomor_urut', $nomorAwal) }}"
-                               placeholder="001"
-                               class="w-24 rounded-lg border-gray-300 text-sm px-3 py-2 font-mono focus:border-teal-500 focus:ring-teal-500 text-center @error('nomor_urut') border-rose-400 @enderror"
-                               required>
-                        
-                        {{-- Text Readonly Format Belakang --}}
-                        <span class="flex-1 text-sm font-mono text-gray-600 font-medium bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 select-none">
-                            {{ $formatBelakang }}
-                        </span>
-                    </div>
-                    <p class="mt-1.5 text-xs text-gray-500">Enter the sequence number only (e.g., 001). The month and year format will be added automatically.</p>
-                    @error('nomor_urut')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    <input type="text" name="final_number"
+                           value="{{ old('final_number', $procurement->final_number ?? $suggestedFinalNumber) }}"
+                           placeholder="e.g. 07/PR/OPS-PICT/XI-2026"
+                           class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 font-mono focus:border-teal-500 focus:ring-teal-500 @error('final_number') border-rose-400 @enderror"
+                           required>
+                    <p class="mt-1.5 text-xs text-gray-500">The month and year format are generated automatically. You only need to adjust the sequence number at the front (e.g., 07).</p>
+                    @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
