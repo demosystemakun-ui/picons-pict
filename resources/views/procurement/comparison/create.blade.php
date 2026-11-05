@@ -194,7 +194,7 @@
                         @if($isFinalApproved)
                             You can now proceed to the PO/Cash Advance/Reimbursement process.
                         @elseif($isProcessed)
-                            Print the PR Final, get Manager signature, then input Final PR Number and validate.
+                            Fill in the Final PR form (Budget, Date, Request By, etc.) to generate the PDF.
                         @else
                             Print the PR Awal, get Manager signature, then validate.
                         @endif
@@ -212,20 +212,20 @@
                             <a href="{{ route('reimbursement.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Create Reimbursement</a>
                         @endif
 
-                    @elseif($isProcessed)
-                        {{-- Print Final PR & Input Nomor Final --}}
+                        {{-- Tombol View PDF --}}
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50">
-                            Print Final PR
+                            View Final PR PDF
                         </a>
 
-                        <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST" class="flex items-center gap-2">
-                            @csrf @method('PATCH')
-                            <input type="text" name="final_number" required placeholder="Final PR Number (e.g. 07/OPS-PICT/CAF/IV/2026)" class="rounded-lg border-gray-300 text-sm px-3 py-2 w-64">
-                            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Manager signature confirmed?')">
-                                Validate Final PR
-                            </button>
-                        </form>
-
+                    @elseif($isProcessed)
+                        {{-- ═══ TOMBOL MASUK KE FORM FINAL PR ═══ --}}
+                        <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
+                           class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Create Final PR
+                        </a>
                     @else
                         {{-- Print PR Awal & Tombol Validasi Pertama --}}
                         <a href="{{ route('procurement.pdf', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50">
