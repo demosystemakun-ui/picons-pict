@@ -19,7 +19,7 @@
         {{-- Tombol close — HANYA muncul di mobile --}}
         <button type="button"
                 @click="sidebarOpen = false"
-            class="lg:hidden absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
+                class="lg:hidden absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
                 aria-label="Close sidebar">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -74,16 +74,16 @@
             @include('layouts.partials.sidebar-group', [
                 'label'  => 'Master Data',
                 'icon'   => 'archive',
-               'active' => request()->routeIs(['items.*', 'categories.*', 'units.*', 'vendors.*', 'departments.*', 'signers.*']),
-'links'  => [
-    ['route' => 'items.index',       'label' => 'Items'],
-    ['route' => 'categories.index',  'label' => 'Categories'],
-    ['route' => 'units.index',       'label' => 'Units'],
-    ['route' => 'vendors.index',     'label' => 'Vendors'],
-    ['route' => 'departments.index', 'label' => 'Departments'],
-    ['route' => 'signers.index',     'label' => 'Signers'],
-    ['route' => 'users.index',       'label' => 'Users'],
-],
+                'active' => request()->routeIs(['items.*', 'categories.*', 'units.*', 'vendors.*', 'departments.*', 'signers.*']),
+                'links'  => [
+                    ['route' => 'items.index',       'label' => 'Items'],
+                    ['route' => 'categories.index',  'label' => 'Categories'],
+                    ['route' => 'units.index',       'label' => 'Units'],
+                    ['route' => 'vendors.index',     'label' => 'Vendors'],
+                    ['route' => 'departments.index', 'label' => 'Departments'],
+                    ['route' => 'signers.index',     'label' => 'Signers'],
+                    ['route' => 'users.index',       'label' => 'Users'],
+                ],
             ])
         @endif
 
@@ -120,15 +120,21 @@
         {{-- ─── Procurement ─── --}}
         @php
             $procurementLinks = [];
-            if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
-                // Menu 1: Procurement Request
+            
+            // Menu untuk Admin & Super Admin
+            if (auth()->check() && auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+                // 1. Procurement Request
                 $procurementLinks[] = ['route' => 'procurement.index', 'label' => 'Procurement Request'];
                 
-                // 🌟 Menu 2: Purchase Orders (PO) - BARU
+                // 2. Vendor Comparison (BARU)
+                $procurementLinks[] = ['route' => 'procurement.comparisons.global', 'label' => 'Vendor Comparison'];
+                
+                // 3. Purchase Orders (PO)
                 $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];
             }
 
-                $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
+            // Menu Keuangan (Bisa diakses Admin & Departemen)
+            $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
             $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
             $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
         @endphp
@@ -136,7 +142,7 @@
         @include('layouts.partials.sidebar-group', [
             'label'  => 'Procurement',
             'icon'   => 'envelope',
-            'active' => request()->routeIs(['procurement.*', 'reimbursement.*']),
+            'active' => request()->routeIs(['procurement.*', 'reimbursement.*', 'cash-advances.*', 'liquidations.*']),
             'links'  => $procurementLinks,
         ])
 
