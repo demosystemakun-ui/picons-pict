@@ -56,18 +56,18 @@ class CashAdvanceController extends Controller
             ->with('success', 'Cash Advance form created. Waiting for Admin approval.');
     }
 
+    /**
+     * Display the specified cash advance.
+     */
     public function show(CashAdvance $cashAdvance)
     {
         $cashAdvance->load('items');
         return view('procurement.cash-advance.show', compact('cashAdvance'));
     }
 
-    public function show(CashAdvance $cashAdvance)
-{
-    $cashAdvance->load('items');
-    return view('procurement.cash-advance.show', compact('cashAdvance'));
-}
-
+    /**
+     * Approve the cash advance with official number.
+     */
     public function approve(Request $request, CashAdvance $cashAdvance)
     {
         $request->validate([
@@ -86,6 +86,9 @@ class CashAdvanceController extends Controller
         return back()->with('success', 'Cash Advance approved with number: ' . $request->number);
     }
 
+    /**
+     * Generate PDF for the cash advance.
+     */
     public function pdf(CashAdvance $cashAdvance)
     {
         $cashAdvance->load('items');
