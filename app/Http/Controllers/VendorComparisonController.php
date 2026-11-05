@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ProcurementRequest;
 use App\Models\ProcurementVendor;
+use App\Models\CashAdvance;
 use App\Services\GeminiVisionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class VendorComparisonController extends Controller
@@ -75,17 +77,15 @@ class VendorComparisonController extends Controller
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
         
-        // Mengambil kode PR awal, misal dari "78/PR/OPS/PICT" menjadi "OPS/PICT"
         $prCode = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
         
-        // Format akhir: 08/PR/OPS/PICT-XI-2026
         $suggestedFinalNumber = '08/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE FINAL PR
+       STORE FINAL PR (DENGAN AUTO-GENERATE CASH ADVANCE)
     ═══════════════════════════════════════════════════════════════ */
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
     {
@@ -107,29 +107,72 @@ class VendorComparisonController extends Controller
             'ceo_name'             => 'nullable|string|max:255',
         ]);
 
-        $procurement->update([
-            'budget_type'          => $validated['budget_type'],
-            'description'          => $validated['final_description'],
-            'final_number'         => $validated['final_number'],
-            'reason_choose_vendor' => $validated['reason_choose_vendor'],
-            'request_date'         => $validated['request_date'],   
-            'request_by'           => $validated['request_by'],     
-            'division'             => $validated['division'],       
-            'prepared_by'          => $validated['prepared_by'],    
-            'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
-            'cfo_name'             => $validated['cfo_name'] ?? null,
-            'ceo_name'             => $validated['ceo_name'] ?? null,
-            'final_total_price'    => $procurement->winnerVendor->total_price,
-            'status'               => 'final_approved',
-        ]);
+        DB::beginTransaction();
+        try {
+            // 1. Update PR Final
+            $procurement->update([
+                'budget_type'          => $validated['budget_type'],
+                'description'          => $validated['final_description'],
+                'final_number'         => $validated['final_number'],
+                'reason_choose_vendor' => $validated['reason_choose_vendor'],
+                'request_date'         => $validated['request_date'],   
+                'request_by'           => $validated['request_by'],     
+                'division'             => $validated['division'],       
+                'prepared_by'          => $validated['prepared_by'],    
+                'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
+                'cfo_name'             => $validated['cfo_name'] ?? null,
+                'ceo_name'             => $validated['ceo_name'] ?? null,
+                'final_total_price'    => $procurement->winnerVendor->total_price,
+                'status'               => 'final_approved',
+            ]);
 
-        return redirect()
-            ->route('procurement.pdf.final', $procurement)
-            ->with('success', 'Final PR saved. PDF is ready.');
+            // 2. 🌟 AUTO-GENERATE CASH ADVANCE JIKA METODE CASH ADVANCE
+            if ($procurement->procurement_method === 'cash_advance') {
+                // Cek agar tidak duplikat jika disubmit 2x
+                $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
+                
+                if (!$existingCa) {
+                    $ca = CashAdvance::create([
+                        'procurement_request_id' => $procurement->id,
+                        'number'                 => 'DRAFT-CA-' . date('Ymd') . '-' . $procurement->id,
+                        'request_date'           => now(),
+                        'requested_by'           => $validated['request_by'],
+                        'department'             => $procurement->department->name ?? '-',
+                        'cost_department'        => $procurement->department->name ?? '-',
+                        'status'                 => 'pending',
+                        'notes'                  => 'Otomatis dibuat dari PR: ' . $procurement->final_number,
+                    ]);
+
+                    // Pindahkan item dari vendor winner ke item Cash Advance
+                    if ($procurement->winnerVendor) {
+                        foreach ($procurement->winnerVendor->items as $item) {
+                            $ca->items()->create([
+                                'item_description' => $item->product_name,
+                                'qty'              => $item->quantity,
+                                'unit'             => 'Pcs',
+                                'price'            => $item->unit_price,
+                                'purpose'          => 'Pembelian dari vendor ' . $procurement->winnerVendor->vendor_name,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('procurement.pdf.final', $procurement)
+                ->with('success', 'Final PR saved. Draft Cash Advance (if applicable) has been generated.');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Store Final PR Error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Failed to save Final PR: ' . $e->getMessage());
+        }
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SCAN & PROCESS (TIDAK BERUBAH)
+       SCAN & PROCESS
     ═══════════════════════════════════════════════════════════════ */
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
