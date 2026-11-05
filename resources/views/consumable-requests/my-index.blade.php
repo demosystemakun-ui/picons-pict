@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Riwayat Consumable Request')
-@section('page-title', 'Riwayat Pengajuan Saya')
+@section('title', 'Consumable Request History')
+@section('page-title', 'My Request History')
 
 @section('content')
 <div class="space-y-6 pb-12">
@@ -10,10 +10,10 @@
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                Riwayat Pengajuan
+                Request History
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Pantau status dan riwayat consumable request yang Anda ajukan.
+                Track the status and history of consumable requests you have submitted.
             </p>
         </div>
 
@@ -22,7 +22,7 @@
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Buat Request Baru
+            Create New Request
         </button>
     </div>
 
@@ -49,9 +49,9 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Daftar Pengajuan Saya</h2>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">My Requests</h2>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Total {{ $requests->total() ?? $requests->count() }} pengajuan
+                        Total {{ $requests->total() ?? $requests->count() }} request(s)
                     </p>
                 </div>
             </div>
@@ -61,11 +61,11 @@
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">No. Referensi</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Departemen</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Barang</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Reference No.</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Department</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Item</th>
                         <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Aksi</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
@@ -100,7 +100,7 @@
                                     </span>
                                 </div>
                                 
-                                {{-- TAMBAHAN: TAMPILKAN CATATAN REVISI DI SINI --}}
+                                {{-- ADDITIONAL: SHOW REVISION NOTE --}}
                                 @if($req->status === 'revision' && $req->revision_note)
                                     <div class="mt-2 rounded-md bg-amber-50 dark:bg-amber-900/20 p-2 border border-amber-200 dark:border-amber-800/60 max-w-sm">
                                         <div class="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
@@ -108,7 +108,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                             <div>
-                                                <span class="font-semibold block mb-0.5">Catatan Revisi:</span>
+                                                <span class="font-semibold block mb-0.5">Revision Note:</span>
                                                 <span class="line-clamp-3 whitespace-pre-line">{{ $req->revision_note }}</span>
                                             </div>
                                         </div>
@@ -151,14 +151,14 @@
                                         Detail
                                     </a>
 
-                                    {{-- TAMBAHAN: TOMBOL EDIT/PERBAIKI UNTUK STATUS PENDING & REVISION --}}
+                                    {{-- ADDITIONAL: EDIT/FIX BUTTON FOR PENDING & REVISION --}}
                                     @if(in_array($req->status, ['pending', 'revision']))
                                         <a href="{{ route('consumable-requests.edit', $req->id) }}"
                                            class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
-                                            {{ $req->status === 'revision' ? 'Perbaiki' : 'Edit' }}
+                                            {{ $req->status === 'revision' ? 'Fix' : 'Edit' }}
                                         </a>
                                     @endif
                                 </div>
@@ -173,11 +173,11 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                         </svg>
                                     </div>
-                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada pengajuan</p>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">No requests yet</p>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-                                        Anda belum pernah membuat consumable request. Klik tombol
-                                        <button type="button" onclick="openCreateModal()" class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Buat Request Baru</button>
-                                        untuk mulai mengajukan.
+                                        You haven't created any consumable requests. Click
+                                        <button type="button" onclick="openCreateModal()" class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Create New Request</button>
+                                        to start submitting.
                                     </p>
                                 </div>
                             </td>

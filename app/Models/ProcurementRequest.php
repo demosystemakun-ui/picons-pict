@@ -20,9 +20,9 @@ class ProcurementRequest extends Model
     protected $fillable = [
         'no',
         'date',
-        'department_id', // <-- Ini akan menampung ID dari tabel departments
+        'department_id',
         'request_by',
-        'division',      // <-- Menampung nama departemen (string) untuk cetak PDF
+        'division',
         'prepared_by',
         'description',
         'source',
@@ -51,7 +51,6 @@ class ProcurementRequest extends Model
 
         'budget_type',
         'reason_choose_vendor',
-        'final_vendor_id',
         'final_total_price',
         'accounting_mgr_name',
         'ceo_name',
@@ -72,58 +71,58 @@ class ProcurementRequest extends Model
     /* ═══════════════════════════════════════════════════════════════
        RELATIONS
     ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Item-item detail PR.
+     */
     public function items()
     {
         return $this->hasMany(ProcurementRequestItem::class);
     }
 
+    /**
+     * Semua vendor comparison untuk PR ini (urut dari termurah).
+     * Menggunakan tabel procurement_vendors (sistem baru).
+     */
     public function vendors()
     {
         return $this->hasMany(ProcurementVendor::class)->orderBy('total_price');
     }
 
+    /**
+     * Vendor pemenang (harga terendah / is_winner = true).
+     */
     public function winnerVendor()
     {
         return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
     }
 
-    public function comparisons()
-    {
-        return $this->hasMany(ProcurementComparison::class)->orderBy('sort_order');
-    }
-
-    public function selectedComparison()
-    {
-        return $this->hasOne(ProcurementComparison::class)->where('is_selected', true);
-    }
-
-    public function finalVendor()
-    {
-        return $this->belongsTo(ProcurementComparison::class, 'final_vendor_id');
-    }
-
-    public function vendorComparisons()
-    {
-        return $this->hasMany(VendorComparison::class);
-    }
-
+    /**
+     * User yang membuat PR.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Departemen pemohon.
+     */
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
+    /**
+     * Dokumen arsip (jika ada).
+     */
     public function documents()
     {
         return $this->morphMany(DocumentArchive::class, 'documentable');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       BOOT
+       BOOT — Auto-normalize order type (hanya 1 yang boleh true)
     ═══════════════════════════════════════════════════════════════ */
     protected static function booted()
     {
@@ -149,6 +148,12 @@ class ProcurementRequest extends Model
     /* ═══════════════════════════════════════════════════════════════
        HELPERS
     ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Generate nomor PR otomatis.
+     * Format: /PR/{DIVISION}/{PREFIX}-{ROMAN_MONTH}-{YEAR}
+     * Contoh: /PR/OPS/PICT-IX-2026
+     */
     public static function generateNumber(string $division = 'OPS', string $prefix = 'PICT'): string
     {
         $romans = [
@@ -162,5 +167,33 @@ class ProcurementRequest extends Model
         $year         = now()->format('Y');
 
         return "/PR/{$division}/{$prefix}-{$monthRoman}-{$year}";
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCOPES (Opsional)
+    ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Scope: PR dengan status Pending.
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    /**
+     * Scope: PR yang sudah disetujui dan siap diproses.
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', self::STATUS_APPROVED);
+    }
+
+    /**
+     * Scope: PR milik departemen tertentu.
+     */
+    public function scopeForDepartment($query, $departmentId)
+    {
+        return $query->where('department_id', $departmentId);
     }
 }

@@ -15,7 +15,14 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = ProcurementRequest::latest();
+
+        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya bisa lihat PR departemennya sendiri
+        if ($user->hasRole('Admin Departemen')) {
+            $query->where('department_id', $user->department_id);
+        }
+        // Super Admin & Admin Utama bisa lihat semua
 
         if ($request->filled('source')) {
             $query->where('source', $request->source);
@@ -93,6 +100,13 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya bisa lihat PR departemennya
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses ke PR dari departemen lain.');
+        }
+
         $procurementRequest->load('items', 'vendors', 'winnerVendor');
         return view('procurement.show', compact('procurementRequest'));
     }
@@ -102,6 +116,12 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function edit(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses untuk mengedit PR dari departemen lain.');
+        }
+
         $procurementRequest->load('items');
         $departments = Department::orderBy('name')->get(); 
 
@@ -113,6 +133,12 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function update(Request $request, ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses untuk mengubah PR dari departemen lain.');
+        }
+
         $validated = $request->validate([
             'date'                  => 'required|date',
             'department_id'         => 'required|exists:departments,id',
@@ -140,7 +166,6 @@ class ProcurementRequestController extends Controller
 
         $orderType = $request->input('order_type');
 
-        // ── FIX BUG: Definisikan variabel $department ──
         $department = Department::findOrFail($validated['department_id']);
         $validated['division'] = $department->name; 
 
@@ -204,6 +229,12 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses untuk menghapus PR dari departemen lain.');
+        }
+
         foreach ($procurementRequest->items as $item) {
             if ($item->picture && Storage::disk('supabase-procurement_request')->exists($item->picture)) {
                 Storage::disk('supabase-procurement_request')->delete($item->picture);
@@ -221,12 +252,24 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function print(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $procurement = $this->mapToPrintData($procurementRequest);
         return view('procurement.print', compact('procurement'));
     }
 
     public function pdf(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $procurement = $this->mapToPrintData($procurementRequest);
 
         $pdf = Pdf::loadView('procurement.pdf', compact('procurement'))
@@ -249,6 +292,12 @@ class ProcurementRequestController extends Controller
 
     public function pdfFinal(ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $procurement = $this->mapToPrintData($procurementRequest);
         $procurementRequest->load('vendors.items', 'winnerVendor');
 
@@ -352,6 +401,13 @@ class ProcurementRequestController extends Controller
     ═══════════════════════════════════════════════════════════════ */
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)
     {
+        $user = auth()->user();
+        
+        // Admin Departemen hanya bisa update status PR departemennya
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak dapat memproses PR dari departemen lain.');
+        }
+
         $validated = $request->validate([
             'status'       => 'required|in:approved,rejected,revision,pending,processed,received,completed',
             'review_notes' => 'nullable|string|max:1000',

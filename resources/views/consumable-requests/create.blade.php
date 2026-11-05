@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Consumable Request')
-@section('page-title', 'Consumable Request Baru')
+@section('page-title', 'New Consumable Request')
 
 @section('content')
 <div class="max-w-3xl mx-auto space-y-6 pb-12 pt-6 px-4">
@@ -11,7 +11,7 @@
 
 @push('scripts')
 <script>
-/* Halaman standalone — submit normal (bukan AJAX) */
+/* Standalone page — normal submit (not AJAX) */
 let itemIndex = 0;
 
 const SPEC_LABELS = [
@@ -55,15 +55,15 @@ function addSpecRow(btn, label = '', value = '') {
     row.innerHTML = `
         <select onchange="handleSpecLabelChange(this)"
                 class="shrink-0 w-full sm:w-44 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-2 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
-            <option value="" ${!label ? 'selected' : ''} disabled>-- Pilih Label --</option>
+            <option value="" ${!label ? 'selected' : ''} disabled>-- Select Label --</option>
             ${optionsHtml}
-            <option value="__custom__" ${isCustom ? 'selected' : ''}>+ Lainnya...</option>
+            <option value="__custom__" ${isCustom ? 'selected' : ''}>+ Other...</option>
         </select>
 
         <input type="text"
                name="items[${itemIdx}][spec_labels][]"
                value="${isCustom ? label.replace(/"/g, '&quot;') : ''}"
-               placeholder="Label custom..."
+               placeholder="Custom label..."
                data-role="custom-label"
                class="${isCustom ? '' : 'hidden'} shrink-0 w-full sm:w-44 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
 
@@ -71,7 +71,7 @@ function addSpecRow(btn, label = '', value = '') {
             <input type="text"
                    name="items[${itemIdx}][spec_values][]"
                    value="${value.replace(/"/g, '&quot;')}"
-                   placeholder="Nilai (contoh: 220V)"
+                   placeholder="Value (e.g. 220V)"
                    class="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
 
             <button type="button"
@@ -159,27 +159,27 @@ function addItemRow() {
                     Item Name <span class="text-red-500">*</span>
                 </label>
                 <input type="text" name="items[${itemIndex}][item_name]" required
-                       placeholder="Contoh: Electric Impact Drill"
+                       placeholder="e.g. Electric Impact Drill"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
             </div>
             <div>
                 <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Brand</label>
-                <input type="text" name="items[${itemIndex}][brand]" placeholder="Contoh: Doliz"
+                <input type="text" name="items[${itemIndex}][brand]" placeholder="e.g. Doliz"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
             </div>
             <div>
                 <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Type</label>
-                <input type="text" name="items[${itemIndex}][type]" placeholder="Contoh: BA670"
+                <input type="text" name="items[${itemIndex}][type]" placeholder="e.g. BA670"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
             </div>
             <div>
                 <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Model</label>
-                <input type="text" name="items[${itemIndex}][model]" placeholder="Contoh: 13mm"
+                <input type="text" name="items[${itemIndex}][model]" placeholder="e.g. 13mm"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
             </div>
             <div>
                 <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Capacity</label>
-                <input type="text" name="items[${itemIndex}][capacity]" placeholder="Contoh: 550w"
+                <input type="text" name="items[${itemIndex}][capacity]" placeholder="e.g. 550w"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
             </div>
         </div>
@@ -187,18 +187,18 @@ function addItemRow() {
         <div class="mb-4">
             <div class="specs-header flex items-center justify-between mb-1.5">
                 <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                    Specs / Material Details <span class="text-gray-400 font-normal normal-case">(opsional)</span>
+                    Specs / Material Details <span class="text-gray-400 font-normal normal-case">(optional)</span>
                 </label>
                 <button type="button" onclick="addSpecRow(this)"
                         class="inline-flex items-center gap-1 text-[11px] font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Tambah Baris
+                    Add Row
                 </button>
             </div>
             <div class="specs-container space-y-2" data-item-index="${itemIndex}"></div>
-            <p class="text-[10px] text-gray-400 mt-1.5">Pilih label, lalu tulis nilainya.</p>
+            <p class="text-[10px] text-gray-400 mt-1.5">Select a label, then enter its value.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">

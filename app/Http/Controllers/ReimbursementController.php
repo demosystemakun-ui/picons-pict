@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reimbursement;
-use Barryvdh\DomPDF\Facade\Pdf;          // composer require barryvdh/laravel-dompdf
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Department;
@@ -11,16 +11,60 @@ use App\Models\Signer;
 
 class ReimbursementController extends Controller
 {
+    /**
+     * Helper: Cek apakah user berhak mengakses reimbursement ini
+     */
+    private function authorizeAccess(Reimbursement $reimbursement)
+    {
+        $user = auth()->user();
+
+        // Super Admin & Admin Utama: Bebas akses
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            return true;
+        }
+
+        // Admin Departemen: Hanya bisa akses departemennya sendiri
+        if ($user->hasRole('Admin Departemen')) {
+            if ($reimbursement->department !== $user->department->name) {
+                abort(403, 'Anda tidak memiliki akses ke reimbursement departemen lain.');
+            }
+            return true;
+        }
+
+        // PIC/User: Hanya bisa akses miliknya sendiri
+        if ($reimbursement->requested_by !== $user->name) {
+            abort(403, 'Anda tidak memiliki akses ke reimbursement ini.');
+        }
+
+        return true;
+    }
+
     public function index()
     {
-        $reimbursements = Reimbursement::withCount('items')->latest('request_date')->paginate(15);
+        $user = auth()->user();
+        $query = Reimbursement::withCount('items')->latest('request_date');
+
+        // Filter Berdasarkan Role
+        if ($user->hasRole('Admin Departemen')) {
+            $query->where('department', $user->department->name);
+        } elseif (!$user->hasRole('Super Admin') && !$user->hasRole('Admin Utama')) {
+            $query->where('requested_by', $user->name);
+        }
+
+        $reimbursements = $query->paginate(15);
         return view('procurement.reimbursement.index', compact('reimbursements'));
     }
 
     public function create()
     {
+        $user = auth()->user();
+        
         return view('procurement.reimbursement.create', array_merge(
-            ['number' => Reimbursement::generateNumber()],
+            [
+                'number'        => Reimbursement::generateNumber(),
+                'userDeptName'  => $user->department->name ?? '',
+                'userName'      => $user->name,
+            ],
             $this->formData()
         ));
     }
@@ -49,17 +93,27 @@ class ReimbursementController extends Controller
             return $r;
         });
 
-        return redirect()->route('reimbursement.show', $reimbursement)->with('success', 'Form reimbursement dibuat. Menunggu persetujuan Admin.');
+        return redirect()->route('reimbursement.show', $reimbursement)
+            ->with('success', 'Form reimbursement dibuat. Menunggu validasi Admin & Nomor Surat.');
     }
 
     public function show(Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+        
         $reimbursement->load('items');
         return view('procurement.reimbursement.show', compact('reimbursement'));
     }
 
     public function edit(Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+
+        // Hanya bisa edit jika status masih pending
+        if ($reimbursement->status !== 'pending') {
+            return back()->with('error', 'Form yang sudah di-approve tidak dapat diedit.');
+        }
+
         $reimbursement->load('items');
         return view('procurement.reimbursement.edit', array_merge(
             compact('reimbursement'),
@@ -69,6 +123,12 @@ class ReimbursementController extends Controller
 
     public function update(Request $request, Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+
+        if ($reimbursement->status !== 'pending') {
+            return back()->with('error', 'Form yang sudah di-approve tidak dapat diubah.');
+        }
+
         $data = $this->validated($request, $reimbursement->id);
 
         DB::transaction(function () use ($data, $reimbursement) {
@@ -79,25 +139,49 @@ class ReimbursementController extends Controller
             $reimbursement->items()->createMany(array_values($items));
         });
 
-        return redirect()->route('reimbursement.show', $reimbursement)->with('success', 'Form reimbursement diperbarui.');
+        return redirect()->route('reimbursement.show', $reimbursement)
+            ->with('success', 'Form reimbursement diperbarui.');
     }
 
     public function destroy(Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+
+        if ($reimbursement->status !== 'pending') {
+            return back()->with('error', 'Form yang sudah di-approve tidak dapat dihapus.');
+        }
+
         $reimbursement->delete();
         return redirect()->route('reimbursement.index')->with('success', 'Form reimbursement dihapus.');
     }
 
     /**
-     * FITUR BARU: Approve oleh Admin & Input Nomor Surat
+     * FITUR APPROVE: Admin Input Nomor Surat & Validasi
      */
     public function approve(Request $request, Reimbursement $reimbursement)
     {
+        $user = auth()->user();
+
+        // Hanya Admin Utama, Super Admin, dan Admin Departemen yang boleh approve
+        if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin Utama') && !$user->hasRole('Admin Departemen')) {
+            abort(403, 'Anda tidak memiliki hak untuk menyetujui reimbursement.');
+        }
+
+        // Admin Departemen hanya bisa approve departemennya sendiri
+        if ($user->hasRole('Admin Departemen') && $reimbursement->department !== $user->department->name) {
+            abort(403, 'Anda hanya bisa menyetujui reimbursement departemen Anda sendiri.');
+        }
+
+        // Pastikan status masih pending
+        if ($reimbursement->status !== 'pending') {
+            return back()->with('error', 'Form ini sudah diproses sebelumnya.');
+        }
+
         // Validasi wajib isi nomor surat
         $request->validate([
             'number' => 'required|string|unique:reimbursements,number,' . $reimbursement->id,
         ], [
-            'number.required' => 'Nomor surat wajib diisi sebelum approve.',
+            'number.required' => 'Nomor surat wajib diisi oleh Admin sebelum approve.',
             'number.unique'   => 'Nomor surat ini sudah digunakan.',
         ]);
 
@@ -112,12 +196,16 @@ class ReimbursementController extends Controller
 
     public function print(Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+
         $reimbursement->load('items');
         return view('procurement.reimbursement.print', compact('reimbursement'));
     }
 
     public function pdf(Reimbursement $reimbursement)
     {
+        $this->authorizeAccess($reimbursement);
+
         $reimbursement->load('items');
 
         return Pdf::loadView('procurement.reimbursement.pdf', compact('reimbursement'))

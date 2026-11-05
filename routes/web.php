@@ -127,7 +127,8 @@ Route::middleware(['auth'])->group(function () {
     ───────────────────────────────────────────── */
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
-        Route::middleware('role:Super Admin')->group(function () {
+        // 🌟 PERBAIKAN: Izinkan Super Admin & Admin (termasuk Admin Departemen) untuk akses daftar PR
+        Route::middleware('role:Super Admin|Admin')->group(function () {
             Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
             Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
         });
@@ -144,7 +145,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurement}/comparisons/{comparison}/select', [VendorComparisonController::class, 'selectVendor'])->name('comparisons.select');
         Route::delete('/comparisons/{comparison}', [VendorComparisonController::class, 'destroy'])->name('comparisons.destroy');
 
-        // ═══ VALIDASI TTD (PATCH) — Diletakkan sebelum route dinamis GET/PUT ═══
+        // ═══ VALIDASI TTD & UPDATE STATUS (Hanya Super Admin) ═══
         Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
             ->name('validate-signature')
             ->middleware('role:Super Admin');
@@ -165,10 +166,7 @@ Route::middleware(['auth'])->group(function () {
         /* ─────────────────────────────────────────────
            PURCHASE ORDER (PO) & RECEIVING
         ───────────────────────────────────────────── */
-        
-        // 🌟 ROUTE BARU UNTUK MENU DAFTAR PO DI SIDEBAR 🌟
         Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
-
         Route::get('/{procurement}/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/{procurement}/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
         Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
@@ -210,4 +208,4 @@ Route::get('/clear-cache', function () {
     \Illuminate\Support\Facades\Artisan::call('config:clear');
     \Illuminate\Support\Facades\Artisan::call('view:clear');
     return 'Cache (Route, Config, View) berhasil dibersihkan!';
-}); 
+});

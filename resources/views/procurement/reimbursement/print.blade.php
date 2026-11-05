@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <title>Reimbursement {{ $reimbursement->number }}</title>
@@ -19,9 +19,9 @@
 </head>
 <body>
     <div class="toolbar">
-        <button onclick="window.print()">Cetak</button>
-        <a href="{{ route('reimbursement.pdf', $reimbursement) }}">Unduh PDF</a>
-        <a href="{{ route('reimbursement.show', $reimbursement) }}">Kembali</a>
+        <button onclick="window.print()">Print</button>
+        <a href="{{ route('reimbursement.pdf', $reimbursement) }}">Download PDF</a>
+        <a href="{{ route('reimbursement.show', $reimbursement) }}">Back</a>
     </div>
 
     <div class="sheet">

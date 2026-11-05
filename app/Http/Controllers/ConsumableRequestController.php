@@ -14,11 +14,24 @@ class ConsumableRequestController extends Controller
 {
     public function index()
     {
-        if (!auth()->user()->hasRole('Super Admin')) {
+        $user = auth()->user();
+        
+        // Admin Pusat & Super Admin bisa lihat semua
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            $requests = ConsumableRequest::with(['items'])->latest()->paginate(15);
+        } 
+        // Admin Departemen hanya bisa lihat request dari departemennya sendiri
+        elseif ($user->hasRole('Admin Departemen')) {
+            $requests = ConsumableRequest::with(['items'])
+                ->whereHas('user', function($q) use ($user) {
+                    $q->where('department_id', $user->department_id);
+                })
+                ->latest()->paginate(15);
+        } 
+        else {
             abort(403, 'Unauthorized action.');
         }
 
-        $requests = ConsumableRequest::with(['items'])->latest()->paginate(15);
         return view('consumable-requests.index', compact('requests'));
     }
 
@@ -107,17 +120,32 @@ class ConsumableRequestController extends Controller
 
     public function show(ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin') && $consumableRequest->user_id !== auth()->id()) {
+        $user = auth()->user();
+        
+        // Super Admin / Admin Utama bisa lihat semua
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            // Izinkan
+        } 
+        // Admin Departemen hanya bisa lihat request dari departemennya
+        elseif ($user->hasRole('Admin Departemen')) {
+            if ($consumableRequest->user->department_id !== $user->department_id) {
+                abort(403, 'Unauthorized action.');
+            }
+        } 
+        // PIC/User hanya bisa lihat miliknya sendiri
+        elseif ($consumableRequest->user_id !== auth()->id()) {
             abort(403, 'Unauthorized action.');
         }
+
         $consumableRequest->load(['items']);
         return view('consumable-requests.show', compact('consumableRequest'));
     }
 
     public function edit(ConsumableRequest $consumableRequest)
     {
-        // Jika bukan Super Admin, pastikan dia adalah pemiliknya DAN statusnya HARUS 'revision'
-        if (!auth()->user()->hasRole('Super Admin')) {
+        $user = auth()->user();
+
+        if (!$user->hasRole('Super Admin')) {
             if ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'revision') {
                 abort(403, 'Hanya pengajuan dengan status revisi yang dapat diedit.');
             }
@@ -129,8 +157,9 @@ class ConsumableRequestController extends Controller
 
     public function update(Request $request, ConsumableRequest $consumableRequest)
     {
-        // Validasi akses edit (sama seperti method edit)
-        if (!auth()->user()->hasRole('Super Admin')) {
+        $user = auth()->user();
+
+        if (!$user->hasRole('Super Admin')) {
             if ($consumableRequest->user_id !== auth()->id() || $consumableRequest->status !== 'revision') {
                 abort(403, 'Hanya pengajuan dengan status revisi yang dapat diperbarui.');
             }
@@ -159,8 +188,6 @@ class ConsumableRequestController extends Controller
             'items.*.picture'       => 'nullable|image|max:2048',
         ]);
 
-        // Update data request utama
-        // Status otomatis berubah ke 'pending' dan catatan revisi dibersihkan
         $consumableRequest->update([
             'date'                  => $validated['date'],
             'subject'               => $validated['subject'],
@@ -168,12 +195,11 @@ class ConsumableRequestController extends Controller
             'request_by'            => $validated['request_by'] ?? null,
             'approved_by'           => $validated['approved_by'] ?? null,
             'verified_by'           => $validated['verified_by'] ?? null,
-            'status'                => 'pending', // Kembali ke pending
-            'revision_note'         => null,      // Hapus catatan
-            'revision_requested_at' => null,      // Hapus waktu revisi
+            'status'                => 'pending',
+            'revision_note'         => null,
+            'revision_requested_at' => null,
         ]);
 
-        // Hapus file lama di Supabase Storage jika ada
         foreach ($consumableRequest->items as $oldItem) {
             if ($oldItem->picture && Storage::disk('supabase-consumable_request')->exists($oldItem->picture)) {
                 Storage::disk('supabase-consumable_request')->delete($oldItem->picture);
@@ -230,16 +256,33 @@ class ConsumableRequestController extends Controller
 
     public function print(ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin') && $consumableRequest->user_id !== auth()->id()) {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            // Izinkan
+        } elseif ($user->hasRole('Admin Departemen')) {
+            if ($consumableRequest->user->department_id !== $user->department_id) {
+                abort(403, 'Unauthorized action.');
+            }
+        } elseif ($consumableRequest->user_id !== auth()->id()) {
             abort(403, 'Unauthorized action.');
         }
+
         $consumable = $this->mapToPrintData($consumableRequest);
         return view('consumable-requests.print', compact('consumable'));
     }
 
     public function pdf(ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin') && $consumableRequest->user_id !== auth()->id()) {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            // Izinkan
+        } elseif ($user->hasRole('Admin Departemen')) {
+            if ($consumableRequest->user->department_id !== $user->department_id) {
+                abort(403, 'Unauthorized action.');
+            }
+        } elseif ($consumableRequest->user_id !== auth()->id()) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -258,8 +301,15 @@ class ConsumableRequestController extends Controller
 
     public function updateStatus(Request $request, ConsumableRequest $consumableRequest)
     {
-        if (!auth()->user()->hasRole('Super Admin')) {
+        // Admin Utama & Admin Departemen bisa menyetujui
+        $user = auth()->user();
+        if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin Utama') && !$user->hasRole('Admin Departemen')) {
             abort(403, 'Unauthorized action.');
+        }
+
+        // Admin Departemen hanya bisa update status request dari departemennya
+        if ($user->hasRole('Admin Departemen') && $consumableRequest->user->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak dapat memproses request dari departemen lain.');
         }
 
         $validated = $request->validate([
@@ -340,14 +390,28 @@ class ConsumableRequestController extends Controller
 
     public function consolidationIndex()
     {
-        if (!auth()->user()->hasRole('Super Admin')) {
+        $user = auth()->user();
+        
+        // Super Admin & Admin Utama bisa lihat semua approved requests
+        if ($user->hasRole('Super Admin') || $user->hasRole('Admin Utama')) {
+            $approvedRequests = ConsumableRequest::where('status', 'approved')
+                                    ->whereNull('pr_generated_at')
+                                    ->with('items')
+                                    ->get();
+        } 
+        // Admin Departemen hanya bisa lihat approved requests dari departemennya
+        elseif ($user->hasRole('Admin Departemen')) {
+            $approvedRequests = ConsumableRequest::where('status', 'approved')
+                                    ->whereNull('pr_generated_at')
+                                    ->whereHas('user', function($q) use ($user) {
+                                        $q->where('department_id', $user->department_id);
+                                    })
+                                    ->with('items')
+                                    ->get();
+        } 
+        else {
             abort(403, 'Unauthorized action.');
         }
-
-        $approvedRequests = ConsumableRequest::where('status', 'approved')
-                                ->whereNull('pr_generated_at')
-                                ->with('items')
-                                ->get();
 
         return view('consumable-requests.consolidation', compact('approvedRequests'));
     }
@@ -370,8 +434,10 @@ class ConsumableRequestController extends Controller
 
     public function processConsolidation(Request $request)
     {
-        if (!auth()->user()->hasRole('Super Admin')) {
-            abort(403, 'Unauthorized action.');
+        $user = auth()->user();
+        
+        if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin Utama')) {
+            abort(403, 'Hanya Admin Utama yang dapat melakukan konsolidasi lintas departemen.');
         }
 
         $validated = $request->validate([
@@ -386,7 +452,7 @@ class ConsumableRequestController extends Controller
             'no.unique'   => 'Nomor PR sudah digunakan. Silakan masukkan nomor lain.',
         ]);
 
-        $consumableRequests = ConsumableRequest::with('items')
+        $consumableRequests = ConsumableRequest::with('items', 'user')
             ->whereIn('id', $validated['request_ids'])
             ->where('status', 'approved')
             ->get();
@@ -395,8 +461,6 @@ class ConsumableRequestController extends Controller
             return back()->with('error', 'Tidak ada pengajuan approved yang valid untuk digabungkan.');
         }
 
-        $user = auth()->user();
-        
         DB::beginTransaction();
         try {
             $totalQuantity = 0;
@@ -423,7 +487,10 @@ class ConsumableRequestController extends Controller
                         'quantity'                   => $item->quantity,
                         'unit'                       => $item->unit,
                         'picture'                    => $item->picture,
-                        'consumable_request_item_id' => $item->id, // Traceability
+                        'consumable_request_item_id' => $item->id, 
+                        
+                        // 🌟 PERBAIKAN: Simpan asal departemen dari pembuat request
+                        'department_id'              => $cr->user->department_id, 
                     ];
                 }
             }
@@ -432,7 +499,7 @@ class ConsumableRequestController extends Controller
                 'no'                    => $validated['no'],
                 'source'                => 'consumable',
                 'date'                  => now()->toDateString(),
-                'department_id'         => $user->department_id,
+                'department_id'         => $user->department_id, // Dept Admin Utama
                 'request_by'            => $user->name,
                 'division'              => $user->department->name ?? '-',
                 'prepared_by'           => $user->name,

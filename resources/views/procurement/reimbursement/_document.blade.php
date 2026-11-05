@@ -1,8 +1,8 @@
 {{--
-  Dokumen Claim Reimbursement Form
+  Reimbursement Claim Form Document
 --}}
 @php
-    \Carbon\Carbon::setLocale('id');
+    \Carbon\Carbon::setLocale('en');
     $rp        = fn ($n) => 'Rp' . number_format($n, 0, ',', '.');
     $rpDec     = fn ($n) => 'Rp' . number_format($n, 2, ',', '.');
     $d         = fn ($date) => $date ? $date->translatedFormat('j F Y') : '';
@@ -13,11 +13,11 @@
     $itemCount = $items->count();
     $blank     = max(0, $minRows - $itemCount);
     
-    // Format Period (Header atas) - Menggunakan Until
+    // Period Format (Header) - Using Until
     $period    = ($reimbursement->period_start ? $reimbursement->period_start->format('M j, Y') : '')
                . ($reimbursement->period_end ? ' Until ' . $reimbursement->period_end->format('M j, Y') : '');
 
-    // Format Tanggal di Tabel (Rentang From - To)
+    // Date Format in Table (From - To Range)
     $rowDates = $items->map(function($it) {
         $from = $it->date_from ? date('M j, Y', strtotime($it->date_from)) : '';
         $to   = $it->date_to ? date('M j, Y', strtotime($it->date_to)) : '';
@@ -28,7 +28,7 @@
         return $from ?: $to;
     })->all();
 
-    // Logika penggabungan sel DATE (Rowspan)
+    // DATE cell merge logic (Rowspan)
     $spans = [];
     for ($i = 0, $n = count($rowDates); $i < $n; ) {
         $j = $i;
@@ -50,12 +50,12 @@
     .crf .bd  td, .crf .bd th { border: 1px solid #000; }
     .crf .green { background-color: #92d050 !important; }
     
-    /* Penebalan Teks (Bold) */
+    /* Text Bold */
     .crf .b { font-weight: bold; }
     .crf .c { text-align: center; }
     .crf .r { text-align: right; }
     
-    /* Styling KOP Surat */
+    /* Letterhead Styling */
     .crf .title { font-size: 17px; font-weight: bold; text-align: center; }
     
     .crf .company { 
@@ -76,7 +76,7 @@
         line-height: 1.4; 
     }
     
-    /* Styling Khusus Tabel Item */
+    /* Item Table Styling */
     .crf .items th { font-weight: bold; text-align: center; }
     .crf .items td { height: 18px; font-weight: bold; } 
     
@@ -95,22 +95,20 @@
 
 <div class="crf">
 
-    {{-- KOP SURAT --}}
+    {{-- LETTERHEAD --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
-            {{-- Kolom Logo --}}
+            {{-- Logo Column --}}
             <td style="width: 20%; vertical-align: middle; text-align: left; padding-left: 0;">
                 @if(!empty($logo) && file_exists($logo)) 
-                    {{-- Menggunakan base64 atau path file yang sudah di set dari file pembungkus --}}
                     <img src="{{ $logo }}" style="width: 170px; height: auto;"> 
                 @endif
             </td>
             
-            {{-- Kolom Teks --}}
+            {{-- Text Column --}}
             <td style="width: 80%; vertical-align: middle; text-align: left; padding-left: 10px;">
                 <div class="company">PT PATIMBAN INTERNATIONAL CAR TERMINAL</div>
                 <div class="addr">
-                    {{-- Teks dirapikan agar sesuai dengan gambar Excel --}}
                     Address : Pelabuhan Patimban, Kec. Pusakanagara, Kab. Subang,<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jawa Barat - Indonesia (41255)
                 </div>
@@ -118,7 +116,7 @@
         </tr>
     </table>
 
-    {{-- JUDUL --}}
+    {{-- TITLE --}}
     <table class="bd" style="margin-top:6px;">
         <tr class="green">
             <td class="title" style="border-bottom:none;">CLAIM REIMBURSEMENT FORM</td>
@@ -150,7 +148,7 @@
         </tr>
     </table>
 
-    {{-- TABEL ITEM + TOTAL --}}
+    {{-- ITEM TABLE + TOTAL --}}
     <table class="bd items" style="margin-top:6px;">
         <tr class="green c b">
             <th rowspan="2" style="width:4%;">NO</th>
@@ -167,7 +165,7 @@
             <th style="width:20%;">DETAILS</th>
         </tr>
 
-        {{-- BARIS DATA ASLI --}}
+        {{-- ACTUAL DATA ROWS --}}
         @foreach($items as $i => $item)
             <tr>
                 <td class="c">{{ $i + 1 }}</td>
@@ -186,7 +184,7 @@
             </tr>
         @endforeach
 
-        {{-- BARIS KOSONG --}}
+        {{-- BLANK ROWS --}}
         @for($k = 0; $k < $blank; $k++)
             <tr>
                 <td class="c">{{ $itemCount + $k + 1 }}</td>
@@ -227,7 +225,7 @@
         </tr>
     </table>
 
-    {{-- TANDA TANGAN --}}
+    {{-- SIGNATURES --}}
     <table class="sign" style="margin-top:10px;">
         <tr>
             @foreach(['requested' => 'REQUESTED BY', 'checked' => 'CHECKED', 'acknowledge' => 'ACKNOWLEDGE', 'verified' => 'VERIFIED', 'approved' => 'APPROVED'] as $key => $label)

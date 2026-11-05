@@ -26,10 +26,30 @@ class ConsumableRequestItem extends Model
         'picture',
     ];
 
+    /* ═══════════════════════════════════════════════════════════════
+       RELATIONS
+    ═══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Induk: Consumable Request.
+     */
     public function consumableRequest()
     {
         return $this->belongsTo(ConsumableRequest::class);
     }
+
+    /**
+     * Turunan: Procurement Request Item yang dihasilkan dari konsolidasi.
+     * Satu item Consumable bisa jadi satu item di PR.
+     */
+    public function procurementRequestItem()
+    {
+        return $this->hasOne(ProcurementRequestItem::class, 'consumable_request_item_id');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════════════════════════════ */
 
     /**
      * Helper: gabungkan semua field detail menjadi 1 string

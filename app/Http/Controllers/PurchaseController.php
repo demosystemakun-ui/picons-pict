@@ -5,40 +5,57 @@ namespace App\Http\Controllers;
 use App\Models\ProcurementRequest;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
+use App\Models\InventoryStock; // Pastikan Model ini ada
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
+    /* ═══════════════════════════════════════════════════════════════
+       INDEX — Daftar Purchase Order
+    ═══════════════════════════════════════════════════════════════ */
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $query = Purchase::with(['vendor', 'procurementRequest.department'])->latest();
 
-public function index(Request $request)
-{
-    // Ambil semua PO, urutkan dari yang terbaru
-    $query = Purchase::with(['vendor', 'procurementRequest.department'])->latest();
+        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya lihat PO departemennya
+        if ($user->hasRole('Admin Departemen')) {
+            $query->whereHas('procurementRequest', function($q) use ($user) {
+                $q->where('department_id', $user->department_id);
+            });
+        }
 
-    // Fitur Filter Status
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
+        // Fitur Filter Status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Fitur Pencarian
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('po_number', 'like', "%{$search}%")
+                  ->orWhereHas('vendor', fn($v) => $v->where('vendor_name', 'like', "%{$search}%"));
+            });
+        }
+
+        $purchases = $query->paginate(15)->appends($request->all());
+
+        return view('procurement.purchase.index', compact('purchases'));
     }
 
-    // Fitur Pencarian
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function($q) use ($search) {
-            $q->where('po_number', 'like', "%{$search}%")
-              ->orWhereHas('vendor', fn($v) => $v->where('vendor_name', 'like', "%{$search}%"));
-        });
-    }
-
-    $purchases = $query->paginate(15)->appends($request->all());
-
-    // Pastikan file view ini ada: resources/views/procurement/purchase/index.blade.php
-    return view('procurement.purchase.index', compact('purchases'));
-}
-    // Halaman Form Checkout (Pembuatan PO)
+    /* ═══════════════════════════════════════════════════════════════
+       CREATE — Form Checkout (Pembuatan PO)
+    ═══════════════════════════════════════════════════════════════ */
     public function create(ProcurementRequest $procurement)
     {
-        // Validasi: Pastikan PR sudah siap untuk PO (approved atau processed)
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
+        }
+
         if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
             return redirect()
                 ->route('procurement.show', $procurement)
@@ -49,17 +66,21 @@ public function index(Request $request)
         return view('procurement.purchase.create', compact('procurement'));
     }
 
-    // Proses Simpan PO
+    /* ═══════════════════════════════════════════════════════════════
+       STORE — Proses Simpan PO
+    ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
-        // ═══ 1. VALIDASI STATUS (DILAKUKAN DI AWAL) ═══
-        // Izinkan jika status masih 'approved' (belum divalidasi TTD) 
-        // ATAU 'processed' (sudah divalidasi TTD manual)
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
+            abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
+        }
+
         if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
             return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
         }
 
-        // ═══ 2. VALIDASI INPUT FORM ═══
         $validated = $request->validate([
             'vendor_id'         => 'required|exists:procurement_vendors,id',
             'po_number'         => 'required|string|unique:purchases,po_number',
@@ -72,7 +93,7 @@ public function index(Request $request)
         try {
             $vendor = $procurement->vendors()->findOrFail($validated['vendor_id']);
 
-            // ═══ 3. BUAT PURCHASE RECORD ═══
+            // Buat Purchase Record
             $purchase = Purchase::create([
                 'procurement_request_id' => $procurement->id,
                 'vendor_id'              => $vendor->id,
@@ -83,7 +104,7 @@ public function index(Request $request)
                 'notes'                  => $validated['notes'] ?? null,
             ]);
 
-            // ═══ 4. COPY ITEM DARI VENDOR COMPARISON KE PURCHASE ITEMS ═══
+            // Copy item dari Vendor Comparison ke Purchase Items
             foreach ($vendor->items as $item) {
                 PurchaseItem::create([
                     'purchase_id'  => $purchase->id,
@@ -93,8 +114,7 @@ public function index(Request $request)
                 ]);
             }
 
-            // ═══ 5. UPDATE STATUS PR MENJADI PROCESSED ═══
-            // (Jika sebelumnya masih 'approved', ubah ke 'processed'. Jika sudah 'processed', biarkan)
+            // Update status PR menjadi Processed jika masih Approved
             if ($procurement->status === ProcurementRequest::STATUS_APPROVED) {
                 $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
             }
@@ -111,21 +131,46 @@ public function index(Request $request)
         }
     }
 
-    // Halaman Detail PO & Form Penerimaan Barang
+    /* ═══════════════════════════════════════════════════════════════
+       SHOW — Detail PO & Form Penerimaan Barang
+    ═══════════════════════════════════════════════════════════════ */
     public function show(Purchase $purchase)
     {
-        $purchase->load('items', 'procurementRequest', 'vendor');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen')) {
+            $procurement = $purchase->procurementRequest;
+            if ($procurement->department_id !== $user->department_id) {
+                abort(403, 'Anda tidak memiliki akses ke PO departemen lain.');
+            }
+        }
+
+        $purchase->load('items', 'procurementRequest.items.department', 'vendor');
         return view('procurement.purchase.show', compact('purchase'));
     }
 
-    // Proses Penerimaan Barang
+    /* ═══════════════════════════════════════════════════════════════
+       RECEIVE — Proses Penerimaan Barang & Distribusi Stok
+    ═══════════════════════════════════════════════════════════════ */
     public function receive(Request $request, Purchase $purchase)
     {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen')) {
+            $procurement = $purchase->procurementRequest;
+            if ($procurement->department_id !== $user->department_id) {
+                abort(403, 'Anda tidak memiliki akses ke PO departemen lain.');
+            }
+        }
+
         $validated = $request->validate([
             'items' => 'required|array',
             'items.*.id' => 'required|exists:purchase_items,id',
             'items.*.qty_received' => 'required|integer|min:0',
             'items.*.qty_damaged' => 'required|integer|min:0|lte:items.*.qty_received',
+            'items.*.breakdowns' => 'nullable|array',
+            'items.*.breakdowns.*.department_id' => 'required_with:items.*.breakdowns|exists:departments,id',
+            'items.*.breakdowns.*.qty_received' => 'required_with:items.*.breakdowns|integer|min:0',
         ]);
 
         DB::beginTransaction();
@@ -135,13 +180,38 @@ public function index(Request $request)
             foreach ($validated['items'] as $data) {
                 $item = PurchaseItem::findOrFail($data['id']);
                 
-                // Update qty
-                $item->qty_received += $data['qty_received'];
-                $item->qty_damaged += $data['qty_damaged'];
+                $qtyReceived = (int) $data['qty_received'];
+                $qtyDamaged = (int) $data['qty_damaged'];
+
+                // Update qty penerimaan
+                $item->qty_received += $qtyReceived;
+                $item->qty_damaged += $qtyDamaged;
                 $item->save();
 
                 if ($item->qty_received < $item->qty_ordered) {
                     $allReceived = false;
+                }
+
+                // 🌟 DISTRIBUSI STOK KE DEPARTEMEN
+                if (!empty($data['breakdowns'])) {
+                    $totalAlokasi = collect($data['breakdowns'])->sum('qty_received');
+
+                    if ($totalAlokasi !== $qtyReceived) {
+                        throw new \Exception("Total alokasi departemen ({$totalAlokasi}) tidak sama dengan Qty Datang ({$qtyReceived}) untuk item {$item->product_name}.");
+                    }
+
+                    foreach ($data['breakdowns'] as $bd) {
+                        if ($bd['qty_received'] > 0) {
+                            // Catat ke inventaris departemen
+                            InventoryStock::create([
+                                'department_id' => $bd['department_id'],
+                                'item_name'     => $item->product_name,
+                                'quantity'      => $bd['qty_received'],
+                                'type'          => 'in',
+                                'notes'         => 'Penerimaan PO ' . $purchase->po_number,
+                            ]);
+                        }
+                    }
                 }
             }
 
@@ -150,16 +220,17 @@ public function index(Request $request)
                 'status' => $allReceived ? 'completed' : 'partially_received'
             ]);
 
+            // Update Status PR
             $procurementRequest = $purchase->procurementRequest;
             if ($allReceived && $procurementRequest->status === ProcurementRequest::STATUS_PROCESSED) {
                 $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
             }
 
             DB::commit();
-            return back()->with('success', 'Data penerimaan barang berhasil disimpan.');
+            return back()->with('success', 'Data penerimaan barang berhasil disimpan dan didistribusikan ke departemen.');
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal memproses penerimaan: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memproses penerimaan: ' . $e->getMessage())->withInput();
         }
     }
 }

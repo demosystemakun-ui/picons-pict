@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Consumable Request')
-@section('page-title', 'Detail Consumable Request')
+@section('title', 'Consumable Request Detail')
+@section('page-title', 'Consumable Request Detail')
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6 pb-24" x-data="{ modalOpen: false, modalImg: '' }">
@@ -32,10 +32,10 @@
             </a>
             <a href="{{ route('consumable-requests.pdf', $consumableRequest->id) }}"
                class="px-3.5 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
-                Unduh PDF
+                Download PDF
             </a>
 
-            {{-- Tombol EDIT hanya muncul jika status PENDING --}}
+            {{-- EDIT Button only shown if status is PENDING --}}
             @if(auth()->user()->hasRole('Super Admin') || ($consumableRequest->user_id === auth()->id() && $consumableRequest->status == 'pending'))
                 <a href="{{ route('consumable-requests.edit', $consumableRequest->id) }}"
                    class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium">
@@ -43,7 +43,7 @@
                 </a>
             @endif
 
-            {{-- Tombol APPROVE/REJECT hanya muncul jika status PENDING --}}
+            {{-- APPROVE/REJECT Buttons only shown if status is PENDING --}}
             @if(auth()->user()->hasRole(['Super Admin', 'Manager', 'Approver']) && $consumableRequest->status === 'pending')
                 <form action="{{ route('consumable-requests.update-status', $consumableRequest) }}" method="POST" class="inline">
                     @csrf
@@ -59,7 +59,7 @@
                     @method('PATCH')
                     <input type="hidden" name="status" value="revision">
                     <button type="submit" class="px-3.5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium">
-                        Minta Revisi
+                        Request Revision
                     </button>
                 </form>
 
@@ -75,7 +75,7 @@
 
             <a href="{{ auth()->user()->hasRole('Super Admin') ? route('consumable-requests.index') : route('consumable-requests.my-index') }}"
                class="px-3.5 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
-                Kembali
+                Back
             </a>
         </div>
     </div>
@@ -85,11 +85,11 @@
 
         <div class="grid sm:grid-cols-2 gap-4 pb-6 border-b border-gray-100 dark:border-gray-700">
             <div>
-                <span class="text-xs text-gray-400 block">ID Dokumen</span>
+                <span class="text-xs text-gray-400 block">Document ID</span>
                 <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">#{{ $consumableRequest->id }}</span>
             </div>
             <div>
-                <span class="text-xs text-gray-400 block">Tanggal Pengajuan</span>
+                <span class="text-xs text-gray-400 block">Request Date</span>
                 <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ \Carbon\Carbon::parse($consumableRequest->date)->format('d F Y') }}</span>
             </div>
         </div>
@@ -99,9 +99,9 @@
             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $consumableRequest->subject }}</p>
         </div>
 
-        {{-- Daftar Item Request --}}
+        {{-- Item Request List --}}
         <div class="pb-6 border-b border-gray-100 dark:border-gray-700 space-y-4">
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Daftar Item Request</h3>
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Item Request List</h3>
 
             <div class="space-y-4">
                 @foreach($consumableRequest->items as $index => $item)
@@ -155,7 +155,7 @@
                             </div>
                         </div>
 
-                        {{-- Picture dari Supabase Storage (Menggunakan temporaryUrl agar memiliki signature yang valid) --}}
+                        {{-- Picture from Supabase Storage (using temporaryUrl for valid signature) --}}
                         @if($item->picture)
                             <div>
                                 <span class="text-[11px] font-semibold text-gray-400 uppercase block mb-1">Picture Attachment</span>

@@ -41,13 +41,36 @@ class ProcurementVendor extends Model
         'is_winner'         => 'boolean',
     ];
 
+    /**
+     * Relasi ke Procurement Request (Induk)
+     */
     public function procurementRequest()
     {
         return $this->belongsTo(ProcurementRequest::class);
     }
 
+    /**
+     * Relasi ke Detail Item Vendor (Anak)
+     * ⚠️ Pastikan nama Class ini sesuai dengan nama file model Anda.
+     */
     public function items()
     {
-        return $this->hasMany(ProcurementVendorItem::class)->orderBy('sort_order');
+        return $this->hasMany(ProcurementVendorItem::class, 'procurement_vendor_id')->orderBy('sort_order');
+    }
+
+    /**
+     * Scope: Hanya ambil vendor pemenang (termurah)
+     */
+    public function scopeWinner($query)
+    {
+        return $query->where('is_winner', true);
+    }
+
+    /**
+     * Scope: Urutkan dari harga termurah
+     */
+    public function scopeCheapest($query)
+    {
+        return $query->orderBy('total_price', 'asc');
     }
 }

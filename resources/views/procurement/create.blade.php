@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Buat Procurement Request')
-@section('page-title', 'Procurement Request Baru')
+@section('title', 'Create Procurement Request')
+@section('page-title', 'New Procurement Request')
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6 pb-12">
@@ -13,12 +13,12 @@
                 Procurement Request
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Ajukan permintaan pengadaan barang atau jasa dengan detail lengkap dan terstruktur.
+                Submit a procurement request for goods or services with complete and structured details.
             </p>
         </div>
         <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-primary-50 dark:bg-primary-900/30 px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 ring-1 ring-inset ring-primary-200 dark:ring-primary-800">
             <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span>
-            Draft Baru
+            New Draft
         </span>
     </div>
 
@@ -31,7 +31,7 @@
                 </svg>
                 <div>
                     <h3 class="text-sm font-semibold text-red-800 dark:text-red-300">
-                        Terdapat {{ $errors->count() }} kesalahan pada form
+                        There are {{ $errors->count() }} errors in the form
                     </h3>
                     <ul class="mt-2 list-disc list-inside space-y-0.5 text-sm text-red-700 dark:text-red-300/90">
                         @foreach ($errors->all() as $error)
@@ -46,7 +46,7 @@
     <form method="POST" action="{{ route('procurement.store') }}" class="space-y-6">
         @csrf
 
-        {{-- SECTION 1: Informasi Umum --}}
+        {{-- SECTION 1: General Information --}}
         <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                 <div class="flex items-center gap-3">
@@ -56,8 +56,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Informasi Umum</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Detail dasar permintaan pengadaan</p>
+                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">General Information</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Basic details of the procurement request</p>
                     </div>
                 </div>
             </header>
@@ -66,14 +66,14 @@
                 <div class="grid sm:grid-cols-2 gap-5">
                     <div>
                         <label for="no" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            No. Referensi <span class="text-red-500">*</span>
+                            Reference No. <span class="text-red-500">*</span>
                         </label>
                         <input type="text" id="no" name="no" value="{{ old('no', $suggestedNo) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                     <div>
                         <label for="date" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Tanggal <span class="text-red-500">*</span>
+                            Date <span class="text-red-500">*</span>
                         </label>
                         <input type="date" id="date" name="date" value="{{ old('date', date('Y-m-d')) }}" required
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
@@ -89,14 +89,14 @@
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                     </div>
                     
-                    {{-- DROPDOWN DEPARTEMEN --}}
+                    {{-- DEPARTMENT DROPDOWN --}}
                     <div>
                         <label for="department_id" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                            Divisi / Departemen <span class="text-red-500">*</span>
+                            Division / Department <span class="text-red-500">*</span>
                         </label>
                         <select name="department_id" id="department_id" required
                                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition @error('department_id') border-red-500 @enderror">
-                            <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>— Pilih Departemen —</option>
+                            <option value="" disabled {{ old('department_id') ? '' : 'selected' }}>— Select Department —</option>
                             
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}" {{ old('department_id') == $dept->id ? 'selected' : '' }}>
@@ -124,7 +124,7 @@
                         Description <span class="text-red-500">*</span>
                     </label>
                     <input type="text" id="description" name="description" value="{{ old('description') }}" required
-                           placeholder="Ringkasan singkat mengenai permintaan pengadaan ini"
+                           placeholder="A short summary of this procurement request"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
                 </div>
 
@@ -161,8 +161,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Justifikasi</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Alasan dan tujuan pengadaan</p>
+                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Justification</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Reason and purpose of the procurement</p>
                     </div>
                 </div>
             </header>
@@ -173,7 +173,7 @@
                         Background
                     </label>
                     <textarea id="background" name="background" rows="3"
-                              placeholder="Why you would like to purchase?"
+                              placeholder="Why would you like to purchase?"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('background') }}</textarea>
                 </div>
 
@@ -182,7 +182,7 @@
                         Purpose
                     </label>
                     <textarea id="purpose" name="purpose" rows="3"
-                              placeholder="What the effect to purchase it? What if not purchase it?"
+                              placeholder="What is the effect of purchasing it? What if it is not purchased?"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('purpose') }}</textarea>
                 </div>
 
@@ -191,7 +191,7 @@
                         Required Spec
                     </label>
                     <textarea id="required_spec" name="required_spec" rows="4"
-                              placeholder="Detail and reason of it"
+                              placeholder="Details and reason of it"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('required_spec') }}</textarea>
                 </div>
             </div>
@@ -208,7 +208,7 @@
                     </div>
                     <div>
                         <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Item Request</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Detail barang atau jasa yang diminta</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Details of goods or services requested</p>
                     </div>
                 </div>
             </header>
@@ -260,7 +260,7 @@
                     </div>
                     <div>
                         <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Approval Chain</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Rantai persetujuan dokumen</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Document approval chain</p>
                     </div>
                 </div>
             </header>
@@ -289,19 +289,19 @@
         <div class="sticky bottom-4 z-10">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-5 py-3.5 shadow-lg">
                 <p class="text-xs text-gray-500 dark:text-gray-400 order-2 sm:order-1">
-                    Pastikan seluruh data sudah benar sebelum menyimpan.
+                    Make sure all data is correct before saving.
                 </p>
                 <div class="flex items-center gap-3 order-1 sm:order-2 w-full sm:w-auto">
                     <a href="{{ url()->previous() }}"
                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        Batal
+                        Cancel
                     </a>
                     <button type="submit"
                             class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        Simpan Request
+                        Save Request
                     </button>
                 </div>
             </div>

@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('title', 'Vendor Comparison')
-@section('page-title', 'Perbandingan Harga Vendor')
+@section('page-title', 'Vendor Price Comparison')
 
 @php
     $hasVendors = $procurement->vendors->count() > 0;
-    $isProcessed = $procurement->status === 'processed'; // Cek status validasi
+    $isProcessed = $procurement->status === 'processed'; // Check validation status
 @endphp
 
 @section('content')
@@ -25,7 +25,7 @@
             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Kembali ke Detail
+            Back to Detail
         </a>
     </div>
 
@@ -81,7 +81,7 @@
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         AI SCAN SECTION — Hanya muncul jika status masih approved
+         AI SCAN SECTION — Only shows if status is still 'approved'
     ═══════════════════════════════════════════════════════════════ --}}
     @if($procurement->status === 'approved')
     <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -93,8 +93,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Scan Screenshot Vendor dengan AI</h2>
-                    <p class="text-xs text-gray-500">Pilih jenis vendor, lalu upload screenshot-nya</p>
+                    <h2 class="text-sm font-semibold text-gray-900">Scan Vendor Screenshots with AI</h2>
+                    <p class="text-xs text-gray-500">Select the vendor type, then upload the screenshot</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-teal-200 px-3 py-1 text-xs font-semibold text-teal-700">
@@ -116,18 +116,18 @@
                 </div>
                 <div>
                     <p id="fileCountInfo" class="text-sm font-semibold text-gray-900">
-                        Klik untuk memilih screenshot
+                        Click to select screenshots
                     </p>
                     <p class="mt-1 text-xs text-gray-500">
-                        Pilih file dulu, lalu klik tombol scan sesuai sumbernya
+                        Select files first, then click the scan button according to the source
                     </p>
                 </div>
                 <input type="file" id="multiScreenshotInput" accept="image/*" multiple class="sr-only">
             </label>
 
-            {{-- ═══ 2 TOMBOL SCAN ═══ --}}
+            {{-- ═══ 2 SCAN BUTTONS ═══ --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {{-- Tombol 1: Scan Monotaro --}}
+                {{-- Button 1: Scan Monotaro --}}
                 <form action="{{ route('procurement.comparisons.scan.monotaro', $procurement) }}"
                       method="POST" enctype="multipart/form-data"
                       onsubmit="return transferFiles(this, 'scanMonotaroBtn')">
@@ -142,7 +142,7 @@
                     </button>
                 </form>
 
-                {{-- Tombol 2: Scan Marketplace Lain --}}
+                {{-- Button 2: Scan Other Marketplaces --}}
                 <form action="{{ route('procurement.comparisons.scan.others', $procurement) }}"
                       method="POST" enctype="multipart/form-data"
                       onsubmit="return transferFiles(this, 'scanOthersBtn')">
@@ -153,32 +153,32 @@
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                         </svg>
-                        Scan Marketplace Lain
+                        Scan Other Marketplaces
                     </button>
                 </form>
             </div>
 
             <p class="text-xs text-gray-400 text-center">
-                <strong class="text-blue-600">Monotaro</strong>: khusus screenshot monotaro.id &nbsp;·&nbsp;
-                <strong class="text-orange-600">Lain</strong>: Shopee, Tokopedia, Lazada, Bukalapak, Blibli
+                <strong class="text-blue-600">Monotaro</strong>: specifically for monotaro.id screenshots &nbsp;·&nbsp;
+                <strong class="text-orange-600">Other</strong>: Shopee, Tokopedia, Lazada, Bukalapak, Blibli
             </p>
         </div>
     </section>
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         LIST VENDOR + FORM INPUT MANUAL
+         VENDOR LIST + MANUAL INPUT FORM
     ═══════════════════════════════════════════════════════════════ --}}
     <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST"
-          x-data="vendorForm()" id="mainVendorForm"> {{-- TAMBAHKAN ID --}}
+          x-data="vendorForm()" id="mainVendorForm"> {{-- ADD ID --}}
         @csrf
 
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Data Vendor</h2>
+                    <h2 class="text-sm font-semibold text-gray-900">Vendor Data</h2>
                     <p class="text-xs text-gray-500 mt-0.5">
-                        Bisa edit / tambah manual. Sistem otomatis pilih vendor termurah.
+                        You can edit / add manually. The system automatically selects the cheapest vendor.
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -196,18 +196,18 @@
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Tambah Vendor
+                        Add Vendor
                     </button>
                     @endif
                 </div>
             </header>
 
             <div class="p-6 space-y-4">
-                {{-- TIPE BUDGET --}}
+                {{-- BUDGET TYPE --}}
                 <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-800">Tipe Budget Pengadaan</label>
-                        <p class="text-xs text-gray-500">Pilih apakah pengadaan ini masuk dalam anggaran (Budgeted) atau di luar anggaran (Non Budgeted).</p>
+                        <label class="block text-sm font-semibold text-gray-800">Procurement Budget Type</label>
+                        <p class="text-xs text-gray-500">Select whether this procurement is within the budget (Budgeted) or outside the budget (Non Budgeted).</p>
                     </div>
                     <div class="flex gap-6">
                         <label class="inline-flex items-center cursor-pointer">
@@ -227,8 +227,8 @@
                         <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <p class="text-sm font-medium text-gray-700">Belum ada vendor</p>
-                        <p class="mt-1 text-xs text-gray-500">Scan screenshot di atas, atau klik "Tambah Vendor" untuk input manual.</p>
+                        <p class="text-sm font-medium text-gray-700">No vendors yet</p>
+                        <p class="mt-1 text-xs text-gray-500">Scan the screenshots above, or click "Add Vendor" to input manually.</p>
                     </div>
                 </template>
 
@@ -239,7 +239,7 @@
                              ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
                              : 'border-gray-200 bg-gray-50/50'">
 
-                        {{-- Header card --}}
+                        {{-- Card Header --}}
                         <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-xs font-bold uppercase tracking-wider text-gray-500"
@@ -250,14 +250,14 @@
                                 </template>
                                 <template x-if="isWinner(idx)">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                        ✓ Termurah
+                                        ✓ Cheapest
                                     </span>
                                 </template>
                             </div>
                             @if($procurement->status === 'approved')
                             <button type="button" @click="removeVendor(idx)"
                                     class="text-xs text-rose-600 hover:underline">
-                                Hapus
+                                Remove
                             </button>
                             @endif
                         </div>
@@ -265,9 +265,9 @@
                         {{-- Form fields --}}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Nama Vendor *</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Vendor Name *</label>
                                 <input type="text" :name="`vendors[${idx}][vendor_name]`" x-model="v.vendor_name"
-                                       required placeholder="Monotaro / Shopee / dll" :readonly="$procurement->status !== 'approved'"
+                                       required placeholder="Monotaro / Shopee / etc." :readonly="$procurement->status !== 'approved'"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div>
@@ -277,13 +277,13 @@
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Total Harga (Rp) *</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Total Price (Rp) *</label>
                                 <input type="number" :name="`vendors[${idx}][total_price]`" x-model.number="v.total_price"
                                        required min="0" step="100" placeholder="1000000" :readonly="$procurement->status !== 'approved'"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Keterangan Pajak</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tax Note</label>
                                 <select :name="`vendors[${idx}][tax_note]`" x-model="v.tax_note" :disabled="$procurement->status !== 'approved'"
                                         class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                     <option value="Include Tax">Include Tax</option>
@@ -291,12 +291,12 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Company Name (opsional)</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Company Name (optional)</label>
                                 <input type="text" :name="`vendors[${idx}][company_name]`" x-model="v.company_name" :readonly="$procurement->status !== 'approved'"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Metode Pembayaran</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
                                 <input type="text" :name="`vendors[${idx}][payment_method]`" x-model="v.payment_method" :readonly="$procurement->status !== 'approved'"
                                        placeholder="Transfer / COD / Virtual Account"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
@@ -308,22 +308,22 @@
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Estimasi Pengiriman</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Estimated Delivery</label>
                                 <input type="text" :name="`vendors[${idx}][estimated_delivery]`" x-model="v.estimated_delivery" :readonly="$procurement->status !== 'approved'"
-                                       placeholder="3-5 hari"
+                                       placeholder="3-5 days"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">URL Produk (opsional)</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Product URL (optional)</label>
                                 <input type="url" :name="`vendors[${idx}][product_url]`" x-model="v.product_url" :readonly="$procurement->status !== 'approved'"
                                        placeholder="https://shopee.co.id/..."
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                             </div>
                         </div>
 
-                        {{-- Rincian biaya --}}
+                        {{-- Cost Breakdown --}}
                         <div class="mt-4 rounded-lg bg-white border border-gray-200 p-3">
-                            <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Rincian Biaya</div>
+                            <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Cost Breakdown</div>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                                 <div>
                                     <span class="block text-gray-500 mb-0.5">Subtotal</span>
@@ -331,39 +331,39 @@
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Ongkir</span>
+                                    <span class="block text-gray-500 mb-0.5">Shipping Cost</span>
                                     <input type="number" :name="`vendors[${idx}][shipping_cost]`" x-model.number="v.shipping_cost" :readonly="$procurement->status !== 'approved'"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Diskon</span>
+                                    <span class="block text-gray-500 mb-0.5">Discount</span>
                                     <input type="number" :name="`vendors[${idx}][discount_voucher]`" x-model.number="v.discount_voucher" :readonly="$procurement->status !== 'approved'"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">PPN</span>
+                                    <span class="block text-gray-500 mb-0.5">VAT</span>
                                     <input type="number" :name="`vendors[${idx}][tax_ppn]`" x-model.number="v.tax_ppn" :readonly="$procurement->status !== 'approved'"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Total Sebelum Pajak</span>
+                                    <span class="block text-gray-500 mb-0.5">Total Before Tax</span>
                                     <input type="number" :name="`vendors[${idx}][total_before_tax]`" x-model.number="v.total_before_tax" :readonly="$procurement->status !== 'approved'"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Detail Produk --}}
+                        {{-- Product Details --}}
                         <template x-if="v.items && v.items.length > 0">
                             <div class="mt-4 rounded-lg bg-white border border-gray-200 overflow-hidden">
                                 <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                                     <span class="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                                        Detail Produk (<span x-text="v.items.length"></span>)
+                                        Product Details (<span x-text="v.items.length"></span>)
                                     </span>
                                     @if($procurement->status === 'approved')
                                     <button type="button" @click="addItem(idx)"
                                             class="text-[10px] font-semibold text-teal-600 hover:underline">
-                                        + Tambah
+                                        + Add
                                     </button>
                                     @endif
                                 </div>
@@ -372,10 +372,10 @@
                                         <div class="p-3 grid grid-cols-12 gap-2 items-center text-xs">
                                             <div class="col-span-5">
                                                 <input type="text" :name="`vendors[${idx}][items][${itemIdx}][product_name]`"
-                                                       x-model="item.product_name" placeholder="Nama produk" :readonly="$procurement->status !== 'approved'"
+                                                       x-model="item.product_name" placeholder="Product name" :readonly="$procurement->status !== 'approved'"
                                                        class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                                 <input type="text" :name="`vendors[${idx}][items][${itemIdx}][variant]`"
-                                                       x-model="item.variant" placeholder="Varian (opsional)" :readonly="$procurement->status !== 'approved'"
+                                                       x-model="item.variant" placeholder="Variant (optional)" :readonly="$procurement->status !== 'approved'"
                                                        class="w-full mt-1 rounded-md border-gray-200 text-[10px] focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                             </div>
                                             <div class="col-span-2">
@@ -385,7 +385,7 @@
                                             </div>
                                             <div class="col-span-3">
                                                 <input type="number" :name="`vendors[${idx}][items][${itemIdx}][unit_price]`"
-                                                       x-model.number="item.unit_price" placeholder="Harga satuan" :readonly="$procurement->status !== 'approved'"
+                                                       x-model.number="item.unit_price" placeholder="Unit price" :readonly="$procurement->status !== 'approved'"
                                                        class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
                                             </div>
                                             <div class="col-span-2 text-right font-semibold text-gray-700"
@@ -393,7 +393,7 @@
                                             @if($procurement->status === 'approved')
                                             <div class="col-span-12 text-right -mt-2">
                                                 <button type="button" @click="removeItem(idx, itemIdx)"
-                                                        class="text-[10px] text-rose-500 hover:underline">Hapus item</button>
+                                                        class="text-[10px] text-rose-500 hover:underline">Remove item</button>
                                             </div>
                                             @endif
                                         </div>
@@ -406,7 +406,7 @@
                         <template x-if="!v.items || v.items.length === 0">
                             <button type="button" @click="addItem(idx)"
                                     class="mt-4 w-full text-xs text-gray-500 border border-dashed border-gray-300 rounded-lg py-2 hover:border-teal-400 hover:text-teal-600 transition">
-                                + Tambah Detail Produk
+                                + Add Product Detail
                             </button>
                         </template>
                         @endif
@@ -414,27 +414,27 @@
                 </template>
             </div>
 
-            {{-- ═══ FOOTER: AKSI BERDASARKAN STATUS ═══ --}}
+            {{-- ═══ FOOTER: ACTION BASED ON STATUS ═══ --}}
             <footer class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 
                 <p class="text-xs text-gray-500 order-2 sm:order-1">
                     @if($procurement->status === 'approved')
-                        Sistem otomatis set vendor dengan total harga <strong>terkecil</strong> sebagai pemenang.
+                        The system automatically sets the vendor with the <strong>lowest</strong> total price as the winner.
                     @else
-                        Data vendor telah dikunci karena PR Final telah divalidasi.
+                        Vendor data is locked because the Final PR has been validated.
                     @endif
                 </p>
 
                 <div class="flex flex-wrap items-center gap-2 order-1 sm:order-2">
                     
-                    {{-- TAMPILAN JIKA BELUM DIVALIDASI (Status = approved) --}}
+                    {{-- DISPLAY IF NOT YET VALIDATED (Status = approved) --}}
                     @if($procurement->status === 'approved')
-                        {{-- TOMBOL SIMPAN (type submit untuk form utama) --}}
+                        {{-- SAVE BUTTON (type submit for main form) --}}
                         <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Simpan Data Vendor
+                            Save Vendor Data
                         </button>
 
                         @if($hasVendors && $procurement->winnerVendor)
@@ -444,26 +444,26 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z"/>
                                 </svg>
-                                Cetak PR Final
+                                Print Final PR
                             </a>
 
-                            {{-- TOMBOL VALIDASI (Menggunakan JavaScript untuk submit form terpisah) --}}
+                            {{-- VALIDATE BUTTON (Using JavaScript to submit separate form) --}}
                             <button type="button" onclick="validateSignature()" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
-                                Validasi TTD
+                                Validate Signature
                             </button>
                         @endif
 
-                    {{-- TAMPILAN JIKA SUDAH DIVALIDASI (Status = processed) --}}
+                    {{-- DISPLAY IF ALREADY VALIDATED (Status = processed) --}}
                     @elseif($procurement->status === 'processed')
                         <a href="{{ route('procurement.purchases.create', $procurement->id) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                             </svg>
-                            Lanjut Checkout (PO)
+                            Proceed to Checkout (PO)
                         </a>
                     @endif
                 </div>
@@ -471,7 +471,7 @@
         </section>
     </form>
 
-    {{-- ═══ FORM VALIDASI TTD TERPISAH (DILUAR FORM UTAMA) ═══ --}}
+    {{-- ═══ SEPARATE SIGNATURE VALIDATION FORM (OUTSIDE MAIN FORM) ═══ --}}
     <form id="validateSignatureForm" action="{{ route('procurement.validate-signature', $procurement) }}" method="POST" class="hidden">
         @csrf
         @method('PATCH')
@@ -482,9 +482,9 @@
 
 @push('scripts')
 <script>
-    // Fungsi untuk memunculkan konfirmasi dan submit form validasi
+    // Function to show confirmation and submit validation form
     function validateSignature() {
-        if (confirm('Pastikan PR Final sudah ditandatangani oleh Manajer. Lanjutkan validasi?')) {
+        if (confirm('Make sure the Final PR has been signed by the Manager. Continue validation?')) {
             document.getElementById('validateSignatureForm').submit();
         }
     }
@@ -594,7 +594,7 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SHARED FILE BUFFER — 1 input, bisa dipakai 2 tombol scan
+       SHARED FILE BUFFER — 1 input, usable by 2 scan buttons
     ═══════════════════════════════════════════════════════════════ */
     let sharedFileBuffer = new DataTransfer();
 
@@ -612,22 +612,22 @@
             const label = document.getElementById('fileCountInfo');
             if (label) {
                 if (count > 0) {
-                    label.innerText = `${count} file terkumpul (siap diproses)`;
+                    label.innerText = `${count} file(s) collected (ready to process)`;
                     label.classList.remove('text-gray-900');
                     label.classList.add('text-teal-600');
                 } else {
-                    label.innerText = 'Klik untuk memilih screenshot';
+                    label.innerText = 'Click to select screenshots';
                 }
             }
         });
     });
 
     /* ═══════════════════════════════════════════════════════════════
-       TRANSFER FILE KE FORM YANG DI-SUBMIT
+       TRANSFER FILES TO THE SUBMITTED FORM
     ═══════════════════════════════════════════════════════════════ */
     function transferFiles(form, buttonId) {
         if (sharedFileBuffer.files.length === 0) {
-            alert('Silakan pilih screenshot dulu sebelum scan.');
+            alert('Please select screenshots first before scanning.');
             return false;
         }
 
@@ -644,7 +644,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
-                AI sedang memproses...
+                AI is processing...
             `;
         }
 

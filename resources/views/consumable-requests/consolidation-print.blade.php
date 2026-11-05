@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Rekap Konsolidasi Consumable Request ke PR</title>
+    <title>Consolidation Recap: Consumable Request to PR</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 11px; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; border: 1px solid #000; padding: 0; background: #fff; }
@@ -24,7 +24,7 @@
 <body onload="window.print()">
 
 <div class="no-print">
-    <button onclick="window.print()">Cetak Rekap PR</button>
+    <button onclick="window.print()">Print PR Recap</button>
 </div>
 
 <div class="container">
@@ -33,13 +33,13 @@
             <img src="{{ asset('logo/pict.png') }}" alt="Logo" style="max-height: 40px;">
         </div>
         <div class="title">
-            <h2>REKAP KONSOLIDASI PURCHASE REQUISITION (CONSUMABLE)</h2>
+            <h2>CONSOLIDATION RECAP OF PURCHASE REQUISITION (CONSUMABLE)</h2>
         </div>
     </div>
 
     <div class="info">
-        <strong>Tanggal Rekap:</strong> {{ date('d/m/Y') }}<br>
-        <strong>Gabungan Request ID:</strong> 
+        <strong>Recap Date:</strong> {{ date('d/m/Y') }}<br>
+        <strong>Consolidated Request IDs:</strong> 
         @foreach($selectedRequests as $req)
             #{{ $req->id }}{{ !$loop->last ? ', ' : '' }}
         @endforeach

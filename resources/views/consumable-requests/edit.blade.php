@@ -6,8 +6,8 @@
             <table class="w-full text-left text-sm" id="itemsTable">
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="py-2 pr-2 text-xs font-medium text-gray-500 w-1/3">Nama Barang</th>
-                        <th class="py-2 px-2 text-xs font-medium text-gray-500 w-1/3">Catatan Kebutuhan</th>
+                        <th class="py-2 pr-2 text-xs font-medium text-gray-500 w-1/3">Item Name</th>
+                        <th class="py-2 px-2 text-xs font-medium text-gray-500 w-1/3">Requirement Note</th>
                         <th class="py-2 px-2 text-xs font-medium text-gray-500 w-24">Qty</th>
                         <th class="py-2 pl-2 w-10"></th>
                     </tr>
@@ -45,7 +45,7 @@
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Tambah Item
+            Add Item
         </button>
 
         <div>

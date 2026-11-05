@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Procurement Request')
-@section('page-title', 'Detail Procurement Request')
+@section('title', 'Procurement Request Detail')
+@section('page-title', 'Procurement Request Detail')
 
 @php
     /* ═══ STATUS CONFIG ═══ */
     $statusMeta = [
         'pending'  => ['label' => 'Pending',       'bg' => 'bg-amber-50 dark:bg-amber-900/30',   'text' => 'text-amber-700 dark:text-amber-300',   'ring' => 'ring-amber-200 dark:ring-amber-800/60',   'dot' => 'bg-amber-500'],
-        'approved' => ['label' => 'Disetujui',      'bg' => 'bg-emerald-50 dark:bg-emerald-900/30','text' => 'text-emerald-700 dark:text-emerald-300','ring' => 'ring-emerald-200 dark:ring-emerald-800/60','dot' => 'bg-emerald-500'],
-        'rejected' => ['label' => 'Ditolak',        'bg' => 'bg-red-50 dark:bg-red-900/30',        'text' => 'text-red-700 dark:text-red-300',        'ring' => 'ring-red-200 dark:ring-red-800/60',        'dot' => 'bg-red-500'],
-        'revision' => ['label' => 'Perlu Revisi',   'bg' => 'bg-orange-50 dark:bg-orange-900/30',  'text' => 'text-orange-700 dark:text-orange-300',  'ring' => 'ring-orange-200 dark:ring-orange-800/60',  'dot' => 'bg-orange-500'],
-        'processed' => ['label' => 'Diproses (Dibeli)', 'bg' => 'bg-blue-50 dark:bg-blue-900/30', 'text' => 'text-blue-700 dark:text-blue-300', 'ring' => 'ring-blue-200 dark:ring-blue-800/60', 'dot' => 'bg-blue-500'],
-        'received' => ['label' => 'Diterima', 'bg' => 'bg-indigo-50 dark:bg-indigo-900/30', 'text' => 'text-indigo-700 dark:text-indigo-300', 'ring' => 'ring-indigo-200 dark:ring-indigo-800/60', 'dot' => 'bg-indigo-500'],
-        'completed' => ['label' => 'Selesai', 'bg' => 'bg-slate-50 dark:bg-slate-800', 'text' => 'text-slate-700 dark:text-slate-300', 'ring' => 'ring-slate-200 dark:ring-slate-700', 'dot' => 'bg-slate-500'],
+        'approved' => ['label' => 'Approved',      'bg' => 'bg-emerald-50 dark:bg-emerald-900/30','text' => 'text-emerald-700 dark:text-emerald-300','ring' => 'ring-emerald-200 dark:ring-emerald-800/60','dot' => 'bg-emerald-500'],
+        'rejected' => ['label' => 'Rejected',        'bg' => 'bg-red-50 dark:bg-red-900/30',        'text' => 'text-red-700 dark:text-red-300',        'ring' => 'ring-red-200 dark:ring-red-800/60',        'dot' => 'bg-red-500'],
+        'revision' => ['label' => 'Needs Revision',   'bg' => 'bg-orange-50 dark:bg-orange-900/30',  'text' => 'text-orange-700 dark:text-orange-300',  'ring' => 'ring-orange-200 dark:ring-orange-800/60',  'dot' => 'bg-orange-500'],
+        'processed' => ['label' => 'Processed (Purchased)', 'bg' => 'bg-blue-50 dark:bg-blue-900/30', 'text' => 'text-blue-700 dark:text-blue-300', 'ring' => 'ring-blue-200 dark:ring-blue-800/60', 'dot' => 'bg-blue-500'],
+        'received' => ['label' => 'Received', 'bg' => 'bg-indigo-50 dark:bg-indigo-900/30', 'text' => 'text-indigo-700 dark:text-indigo-300', 'ring' => 'ring-indigo-200 dark:ring-indigo-800/60', 'dot' => 'bg-indigo-500'],
+        'completed' => ['label' => 'Completed', 'bg' => 'bg-slate-50 dark:bg-slate-800', 'text' => 'text-slate-700 dark:text-slate-300', 'ring' => 'ring-slate-200 dark:ring-slate-700', 'dot' => 'bg-slate-500'],
     ];
 
     $currStatus = $procurementRequest->status ?? 'pending';
@@ -43,7 +43,7 @@
         <div class="flex items-start gap-3">
             <a href="{{ route('procurement.index') }}"
                class="mt-0.5 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shrink-0"
-               aria-label="Kembali ke daftar procurement">
+               aria-label="Back to procurement list">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
             </a>
             <div class="min-w-0">
@@ -57,7 +57,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Dibuat pada {{ $procurementRequest->created_at->format('d M Y, H:i') }} WIB
+                    Created on {{ $procurementRequest->created_at->format('d M Y, H:i') }} WIB
                 </p>
             </div>
         </div>
@@ -66,7 +66,7 @@
         <div class="flex flex-wrap items-center gap-2">
             @if($currStatus === 'pending')
             <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST"
-                  onsubmit="return confirm('Apakah Anda yakin ingin menyetujui pengajuan ini?')"
+                  onsubmit="return confirm('Are you sure you want to approve this request?')"
                   class="inline">
                 @csrf
                 @method('PATCH')
@@ -74,7 +74,7 @@
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
                     <i data-lucide="check-circle" class="w-4 h-4"></i>
-                    Setujui
+                    Approve
                 </button>
             </form>
 
@@ -82,14 +82,14 @@
                     onclick="openActionModal('revision')"
                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                Minta Revisi
+                Request Revision
             </button>
 
             <button type="button"
                     onclick="openActionModal('rejected')"
                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition">
                 <i data-lucide="x-circle" class="w-4 h-4"></i>
-                Tolak
+                Reject
             </button>
             @elseif($currStatus === 'revision')
             <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
@@ -98,34 +98,32 @@
                 <input type="hidden" name="status" value="pending">
                 <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
                     <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-                    Ajukan Kembali
+                    Resubmit
                 </button>
             </form>
             @elseif($currStatus === 'approved')
             
-                {{-- ═══ LOGIKA BARU: CEK COMPARISON & VENDOR PEMENANG ═══ --}}
+                {{-- ═══ NEW LOGIC: CHECK COMPARISON & WINNER VENDOR ═══ --}}
                 @if($procurementRequest->vendors->isEmpty())
-                    {{-- Ganti route menjadi procurement.comparisons.index --}}
                     <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
                         <i data-lucide="scale" class="w-4 h-4"></i>
-                        Buat Perbandingan Harga
+                        Create Price Comparison
                     </a>
                 @elseif(!$procurementRequest->winnerVendor)
-                    {{-- Ganti route menjadi procurement.comparisons.index --}}
                     <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
                         <i data-lucide="check-square" class="w-4 h-4"></i>
-                        Pilih Vendor Pemenang
+                        Select Winning Vendor
                     </a>
                 @else
                     <a href="{{ route('procurement.purchases.create', $procurementRequest) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
                         <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                        Buat PO / Proses Pembelian
+                        Create PO / Purchase Process
                     </a>
                 @endif
-                {{-- ═══ END LOGIKA BARU ═══ --}}
+                {{-- ═══ END NEW LOGIC ═══ --}}
 
             @elseif($currStatus === 'received')
             <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
@@ -134,7 +132,7 @@
                 <input type="hidden" name="status" value="completed">
                 <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-slate-700 hover:bg-slate-800 text-white">
                     <i data-lucide="badge-check" class="w-4 h-4"></i>
-                    Selesaikan Pengajuan
+                    Complete Request
                 </button>
             </form>
             @endif
@@ -150,10 +148,10 @@
             <a href="{{ route('procurement.pdf', $procurementRequest) }}"
                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <i data-lucide="download" class="w-4 h-4 text-emerald-500"></i>
-                Unduh PDF
+                Download PDF
             </a>
 
-            {{-- Sembunyikan tombol Edit & Hapus jika status sudah disetujui/diproses --}}
+            {{-- Hide Edit & Delete if status is approved/processed --}}
             @if(in_array($currStatus, ['pending', 'revision']))
                 <a href="{{ route('procurement.edit', $procurementRequest) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
@@ -162,14 +160,14 @@
                 </a>
 
                 <form action="{{ route('procurement.destroy', $procurementRequest) }}" method="POST"
-                      onsubmit="return confirm('Yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.')"
+                      onsubmit="return confirm('Are you sure you want to delete this data? This action cannot be undone.')"
                       class="inline">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
                             class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        Hapus
+                        Delete
                     </button>
                 </form>
             @endif
@@ -197,7 +195,7 @@
                 </svg>
                 <div class="flex-1">
                     <h3 class="text-sm font-semibold {{ $alertText }}">
-                        Catatan {{ $isRevision ? 'Revisi' : 'Penolakan' }}
+                        {{ $isRevision ? 'Revision' : 'Rejection' }} Note
                     </h3>
                     <p class="mt-1 text-sm {{ $alertText }} opacity-90 whitespace-pre-line leading-relaxed">
                         {{ $procurementRequest->review_notes }}
@@ -210,7 +208,7 @@
     {{-- MAIN CARD --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden">
 
-        {{-- SECTION 1: Informasi Umum --}}
+        {{-- SECTION 1: General Information --}}
         <section class="p-6">
             <header class="flex items-center gap-3 mb-5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
@@ -219,50 +217,50 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Informasi Umum</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Detail dasar pengajuan procurement</p>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">General Information</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Basic details of the procurement request</p>
                 </div>
             </header>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-sm">
                 <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Tanggal Permohonan</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Request Date</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->date->format('d F Y') }}</span>
                 </div>
                 <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Divisi</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Division</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->division }}</span>
                 </div>
                 <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Diajukan Oleh</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Requested By</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->request_by }}</span>
                 </div>
                 <div>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Disiapkan Oleh</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Prepared By</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->prepared_by }}</span>
                 </div>
 
                 <div class="md:col-span-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Deskripsi Pengadaan</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Procurement Description</span>
                     <p class="font-medium text-gray-900 dark:text-white leading-relaxed">{{ $procurementRequest->description }}</p>
                 </div>
 
                 <div class="md:col-span-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-2">Tipe Pesanan</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-2">Order Type</span>
                     <div class="flex flex-wrap gap-2">
                         @forelse($orderTypes as $type)
                             <span class="inline-flex items-center rounded-md {{ $type['class'] }} ring-1 ring-inset px-2.5 py-1 text-xs font-semibold">
                                 {{ $type['label'] }}
                             </span>
                         @empty
-                            <span class="text-xs text-gray-400 dark:text-gray-500 italic">— Tidak ada tipe pesanan —</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500 italic">— No order type —</span>
                         @endforelse
                     </div>
                 </div>
             </div>
         </section>
 
-        {{-- SECTION 2: Detail Kebutuhan & Justifikasi --}}
+        {{-- SECTION 2: Requirement Details & Justification --}}
         <section class="p-6">
             <header class="flex items-center gap-3 mb-5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
@@ -271,8 +269,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Detail Kebutuhan &amp; Justifikasi</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Alasan dan spesifikasi yang diminta</p>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Requirement Details &amp; Justification</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Reason and specifications requested</p>
                 </div>
             </header>
 
@@ -298,7 +296,7 @@
             </div>
         </section>
 
-        {{-- SECTION 3: Item Permintaan --}}
+        {{-- SECTION 3: Requested Items --}}
         <section class="p-6">
             <header class="flex items-center gap-3 mb-5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
@@ -307,9 +305,9 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Item Permintaan</h2>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Requested Items</h2>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ $procurementRequest->items->isNotEmpty() ? 'Hasil gabungan ' . $procurementRequest->items->count() . ' item dari Consumable Request' : 'Detail barang atau jasa yang diajukan' }}
+                        {{ $procurementRequest->items->isNotEmpty() ? 'Combined result of ' . $procurementRequest->items->count() . ' items from Consumable Request' : 'Details of goods or services requested' }}
                     </p>
                 </div>
             </header>
@@ -322,10 +320,10 @@
                             <tr class="border-b border-gray-200 dark:border-gray-700">
                                 <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-12">No.</th>
                                 <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Item</th>
-                                <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-2/5">Catatan Kesesuaian</th>
+                                <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-2/5">Requirement Note</th>
                                 <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-20 text-center">Qty</th>
                                 <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-20 text-center">Unit</th>
-                                <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-28">Gambar</th>
+                                <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide w-28">Picture</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -333,7 +331,7 @@
                                 <tr class="align-top hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
                                     <td class="py-3 px-4 text-gray-500 dark:text-gray-400">{{ $loop->iteration }}</td>
 
-                                    {{-- Kolom Item: format multiline --}}
+                                    {{-- Item column: multiline format --}}
                                     <td class="py-3 px-4">
                                         @php
                                             $lines = [];
@@ -363,7 +361,7 @@
                                         </div>
                                     </td>
 
-                                    {{-- Catatan Kesesuaian --}}
+                                    {{-- Requirement Note --}}
                                     <td class="py-3 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ $item->item_requirement_note ?: '—' }}</td>
 
                                     {{-- Qty --}}
@@ -372,11 +370,11 @@
                                     {{-- Unit --}}
                                     <td class="py-3 px-4 text-center text-gray-600 dark:text-gray-300">{{ $item->unit ?: '—' }}</td>
 
-                                    {{-- Gambar --}}
+                                    {{-- Picture --}}
                                     <td class="py-3 px-4">
                                         @if($item->picture)
                                             <a href="{{ Storage::url($item->picture) }}" target="_blank" rel="noopener">
-                                                <img src="{{ Storage::url($item->picture) }}" alt="Gambar item" class="h-12 w-12 object-cover rounded-md border border-gray-200 dark:border-gray-700">
+                                                <img src="{{ Storage::url($item->picture) }}" alt="Item picture" class="h-12 w-12 object-cover rounded-md border border-gray-200 dark:border-gray-700">
                                             </a>
                                         @else
                                             <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>
@@ -397,7 +395,7 @@
 
                 @if($procurementRequest->target_purchase)
                     <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Target Pembelian</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Target Purchase</span>
                         <span class="text-gray-800 dark:text-gray-200">{{ $procurementRequest->target_purchase }}</span>
                     </div>
                 @endif
@@ -405,7 +403,7 @@
                 {{-- SINGLE ITEM --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700 p-5 text-sm">
                     <div class="md:col-span-3">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Nama Item</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Item Name</span>
                         <div class="font-semibold text-gray-900 dark:text-white leading-relaxed space-y-0.5">
                             @php
                                 $lines = [];
@@ -419,17 +417,17 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Catatan Kesesuaian</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Requirement Note</span>
                         <span class="text-gray-800 dark:text-gray-200 whitespace-pre-line">{{ $procurementRequest->item_requirement_note ?: '—' }}</span>
                     </div>
                     <div>
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Jumlah</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Quantity</span>
                         <span class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-1 font-semibold text-gray-900 dark:text-white">
                             {{ $procurementRequest->quantity }}
                         </span>
                     </div>
                     <div class="md:col-span-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Target Pembelian</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1.5">Target Purchase</span>
                         <span class="text-gray-800 dark:text-gray-200">{{ $procurementRequest->target_purchase ?: '—' }}</span>
                     </div>
                 </div>
@@ -445,8 +443,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Persetujuan &amp; Tanda Tangan</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Rantai persetujuan dokumen</p>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Approval &amp; Signatures</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Document approval chain</p>
                 </div>
             </header>
 
@@ -468,7 +466,7 @@
     </div>
 </div>
 
-{{-- ACTION MODAL (Revisi / Tolak) --}}
+{{-- ACTION MODAL (Revision / Reject) --}}
 <div id="actionModal"
      class="fixed inset-0 z-50 hidden"
      role="dialog"
@@ -487,10 +485,10 @@
                 </div>
                 <div class="min-w-0">
                     <h3 id="modalTitle" class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
-                        Konfirmasi Aksi
+                        Confirm Action
                     </h3>
                     <p id="modalSubtitle" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Silakan masukkan alasan atau catatan terkait keputusan ini.
+                        Please enter the reason or note for this decision.
                     </p>
                 </div>
             </div>
@@ -502,21 +500,21 @@
 
                 <div class="mb-5">
                     <label for="review_notes" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                        Catatan / Alasan <span class="text-red-500">*</span>
+                        Note / Reason <span class="text-red-500">*</span>
                     </label>
                     <textarea name="review_notes" id="review_notes" rows="4" required
-                              placeholder="Tuliskan catatan detail..."
+                              placeholder="Write a detailed note..."
                               class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition resize-none"></textarea>
                 </div>
 
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="closeActionModal()"
                             class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        Batal
+                        Cancel
                     </button>
                     <button type="submit" id="modalSubmitBtn"
                             class="px-4 py-2 text-sm font-semibold rounded-lg text-white shadow-sm transition">
-                        Kirim
+                        Submit
                     </button>
                 </div>
             </form>
@@ -531,18 +529,18 @@
 
     const MODAL_CONFIG = {
         revision: {
-            title:      'Permintaan Revisi Pengadaan',
-            subtitle:   'Berikan catatan agar pemohon dapat melakukan perbaikan.',
-            btnText:    'Kirim Revisi',
+            title:      'Procurement Revision Request',
+            subtitle:   'Provide notes so the requester can make corrections.',
+            btnText:    'Send Revision',
             btnClass:   'px-4 py-2 text-sm font-semibold rounded-lg text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition',
             iconBg:     'bg-amber-100 dark:bg-amber-900/40',
             iconColor:  'text-amber-600 dark:text-amber-400',
             iconPath:   'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
         },
         rejected: {
-            title:      'Tolak Pengajuan Pengadaan',
-            subtitle:   'Jelaskan alasan penolakan agar pemohon mendapat kejelasan.',
-            btnText:    'Tolak Pengajuan',
+            title:      'Reject Procurement Request',
+            subtitle:   'Explain the reason for rejection so the requester has clarity.',
+            btnText:    'Reject Request',
             btnClass:   'px-4 py-2 text-sm font-semibold rounded-lg text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition',
             iconBg:     'bg-red-100 dark:bg-red-900/40',
             iconColor:  'text-red-600 dark:text-red-400',

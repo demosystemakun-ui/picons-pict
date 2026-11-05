@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
 @section('title', 'Vendor Comparison')
-@section('page-title', 'Perbandingan Harga Vendor (E-Commerce)')
+@section('page-title', 'Vendor Price Comparison (E-Commerce)')
 
 @php
-    // Cek apakah sudah ada vendor terpilih
+    // Check if a vendor has already been selected
     $hasSelectedVendor = isset($procurement) && $comparisons->where('is_selected', true)->count() > 0;
     
-    // Cek status PR untuk validasi manual
+    // Check PR status for manual validation
     $isProcessed = isset($procurement) && $procurement->status === 'processed';
 @endphp
 
@@ -23,24 +23,24 @@
                 Vendor Comparison
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Bandingkan harga dan spesifikasi dari beberapa vendor e-commerce dalam satu tampilan.
+                Compare prices and specifications from multiple e-commerce vendors in a single view.
             </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 self-start">
-            {{-- Tombol Kembali --}}
+            {{-- Back Button --}}
             <a href="{{ route('procurement.show', $procurement) }}"
                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Kembali ke Detail PR
+                Back to PR Detail
             </a>
         </div>
     </div>
 
     {{-- ============================================================
-         INFO DOKUMEN PROCUREMENT
+         PROCUREMENT DOCUMENT INFO
     ============================================================ --}}
     @isset($procurement)
         <div class="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-800 p-6 shadow-sm">
@@ -55,7 +55,7 @@
                     </div>
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                            No. Dokumen
+                            Document No.
                         </div>
                         <div class="mt-0.5 font-mono text-sm font-bold text-gray-900 dark:text-white">
                             {{ $procurement->no }}
@@ -74,12 +74,12 @@
                     @if($hasSelectedVendor)
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-800">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                            Vendor Terpilih
+                            Vendor Selected
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-200 dark:ring-amber-800">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                            Belum Dipilih
+                            Not Selected
                         </span>
                     @endif
                 </div>
@@ -88,7 +88,7 @@
     @endisset
 
     {{-- ============================================================
-         SUCCESS & ERROR ALERT
+         SUCCESS & ERROR ALERTS
     ============================================================ --}}
     @if(session('success'))
         <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 px-5 py-4">
@@ -109,7 +109,7 @@
                 </svg>
                 <div>
                     <h3 class="text-sm font-semibold text-rose-800 dark:text-rose-300">
-                        Terjadi kesalahan saat memproses permintaan
+                        An error occurred while processing your request
                     </h3>
                     <ul class="mt-2 list-disc list-inside space-y-0.5 text-sm text-rose-700 dark:text-rose-300/90">
                         @foreach ($errors->all() as $error)
@@ -122,7 +122,7 @@
     @endif
 
     {{-- ============================================================
-         UPLOAD & SCAN AI (Hanya tampil jika belum diproses)
+         UPLOAD & AI SCAN (Only shown if not yet processed)
     ============================================================ --}}
     @isset($procurement)
         @if($procurement->status === 'approved')
@@ -135,8 +135,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Upload & Scan Screenshot Vendor</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Unggah beberapa screenshot sekaligus — AI akan mengekstrak data otomatis</p>
+                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Upload & Scan Vendor Screenshot</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Upload multiple screenshots at once — AI will extract data automatically</p>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/30 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-200 dark:ring-teal-800">
@@ -162,10 +162,10 @@
                         </div>
                         <div>
                             <p id="fileCountInfo" class="text-sm font-semibold text-gray-900 dark:text-white">
-                                Klik untuk memilih screenshot
+                                Click to select screenshots
                             </p>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Shopee, Tokopedia, Bukalapak, Lazada — bisa pilih beberapa sekaligus
+                                Shopee, Tokopedia, Bukalapak, Lazada — you can select multiple files at once
                             </p>
                         </div>
                         <input type="file" name="screenshots[]" id="multiScreenshotInput"
@@ -175,14 +175,14 @@
 
                     <div class="flex items-center justify-between gap-3 flex-wrap">
                         <p class="text-xs text-gray-400 dark:text-gray-500">
-                            Mendukung JPG, PNG, dan format gambar lainnya.
+                            Supports JPG, PNG, and other image formats.
                         </p>
                         <button type="submit" id="submitBtn"
                                 class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition disabled:opacity-70 disabled:cursor-not-allowed">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            Proses & Scan dengan AI
+                            Process & Scan with AI
                         </button>
                     </div>
                 </form>
@@ -192,7 +192,7 @@
     @endisset
 
     {{-- ============================================================
-         TABEL PERBANDINGAN VENDOR
+         VENDOR COMPARISON TABLE
     ============================================================ --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between flex-wrap gap-3">
@@ -203,9 +203,9 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Rekapitulasi Perbandingan</h2>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Comparison Recap</h2>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ $comparisons->count() }} vendor terdaftar
+                        {{ $comparisons->count() }} vendors registered
                     </p>
                 </div>
             </div>
@@ -215,7 +215,7 @@
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Vendor sudah dipilih
+                    Vendor selected
                 </span>
             @endif
         </header>
@@ -225,19 +225,19 @@
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
                         @empty($procurement)
-                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">No. Dokumen</th>
+                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Document No.</th>
                         @endempty
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Vendor / Toko</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nama Produk</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Harga Satuan</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Vendor / Store</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Product Name</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Unit Price</th>
                         <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Qty</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Rincian Biaya</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Total Akhir</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Metode</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Estimasi</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Cost Breakdown</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Final Total</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Method</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Estimation</th>
                         <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Status</th>
                         @isset($procurement)
-                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Aksi</th>
+                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Actions</th>
                         @endisset
                     </tr>
                 </thead>
@@ -267,7 +267,7 @@
                                         </div>
                                         @if($isSelected)
                                             <div class="text-xs font-medium text-teal-600 dark:text-teal-400 mt-0.5">
-                                                ★ Terpilih
+                                                ★ Selected
                                             </div>
                                         @endif
                                     </div>
@@ -301,26 +301,26 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <span class="text-gray-400 dark:text-gray-500">Ongkir</span>
+                                        <span class="text-gray-400 dark:text-gray-500">Shipping</span>
                                         <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
                                             Rp {{ number_format($comp->shipping_cost, 0, ',', '.') }}
                                         </span>
                                     </div>
                                     <div>
-                                        <span class="text-gray-400 dark:text-gray-500">Layanan</span>
+                                        <span class="text-gray-400 dark:text-gray-500">Service Fee</span>
                                         <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
                                             Rp {{ number_format($comp->service_fee, 0, ',', '.') }}
                                         </span>
                                     </div>
                                     <div>
-                                        <span class="text-gray-400 dark:text-gray-500">PPN</span>
+                                        <span class="text-gray-400 dark:text-gray-500">VAT</span>
                                         <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
                                             Rp {{ number_format($comp->tax, 0, ',', '.') }}
                                         </span>
                                     </div>
                                     @if($comp->discount_voucher > 0)
                                         <div>
-                                            <span class="text-rose-500 dark:text-rose-400">Diskon</span>
+                                            <span class="text-rose-500 dark:text-rose-400">Discount</span>
                                             <span class="ml-2 font-medium text-rose-600 dark:text-rose-400">
                                                 -Rp {{ number_format($comp->discount_voucher, 0, ',', '.') }}
                                             </span>
@@ -351,7 +351,7 @@
                                 @if($isSelected)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                        Dipilih
+                                        Selected
                                     </span>
                                 @elseif(isset($procurement) && $procurement->status === 'approved')
                                     <form action="{{ route('procurement.comparisons.select', [$procurement, $comp]) }}" method="POST">
@@ -362,7 +362,7 @@
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
-                                            Pilih
+                                            Select
                                         </button>
                                     </form>
                                 @else
@@ -375,12 +375,12 @@
                                     @if($procurement->status === 'approved')
                                         <form action="{{ route('procurement.comparisons.destroy', $comp) }}" method="POST"
                                               class="inline-block"
-                                              onsubmit="return confirm('Hapus data vendor {{ $comp->vendor_name }}?')">
+                                              onsubmit="return confirm('Delete vendor data {{ $comp->vendor_name }}?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
                                                     class="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
-                                                    title="Hapus">
+                                                    title="Delete">
                                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -401,12 +401,12 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </div>
-                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Belum ada data perbandingan</p>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">No comparison data yet</p>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm">
                                         @isset($procurement)
-                                            Unggah screenshot vendor di atas untuk mulai membandingkan harga.
+                                            Upload vendor screenshots above to start comparing prices.
                                         @else
-                                            Belum ada perbandingan vendor yang tercatat dalam sistem.
+                                            No vendor comparisons are recorded in the system yet.
                                         @endisset
                                     </p>
                                 </div>
@@ -418,7 +418,7 @@
         </div>
 
         {{-- ============================================================
-             FOOTER: Aksi Lanjutan (Validasi & Checkout)
+             FOOTER: Further Actions (Validation & Checkout)
         ============================================================ --}}
         @if($hasSelectedVendor)
             <footer class="px-6 py-5 border-t border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -436,20 +436,20 @@
                     </div>
                     <div>
                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                            {{ $isProcessed ? 'PR Final Telah Divalidasi' : 'Vendor sudah dipilih' }}
+                            {{ $isProcessed ? 'Final PR Has Been Validated' : 'Vendor has been selected' }}
                         </div>
                         <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                             @if($isProcessed)
-                                Tanda tangan manajer telah dikonfirmasi. Anda sekarang dapat melanjutkan ke proses PO.
+                                The manager's signature has been confirmed. You can now proceed to the PO process.
                             @else
-                                Cetak PR Final, minta tanda tangan manajer, lalu validasi di sini untuk membuka proses PO.
+                                Print the Final PR, ask for the manager's signature, then validate it here to unlock the PO process.
                             @endif
                         </div>
                     </div>
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
-                    {{-- Tombol Cetak PR Final (Hanya jika belum divalidasi) --}}
+                    {{-- Print Final PR Button (Only if not validated) --}}
                     @if(!$isProcessed)
                         <a href="{{ route('procurement.pdf.final', $procurement) }}"
                            target="_blank"
@@ -457,29 +457,29 @@
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                             </svg>
-                            Cetak PR Final
+                            Print Final PR
                         </a>
 
-                        {{-- Tombol Validasi TTD --}}
+                        {{-- Validate Signature Button --}}
                         <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST"
-                              onsubmit="return confirm('Pastikan PR Final sudah ditandatangani oleh Manajer. Lanjutkan validasi?')">
+                              onsubmit="return confirm('Make sure the Final PR has been signed by the Manager. Continue validation?')">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
-                                Validasi TTD Manajer
+                                Validate Manager Signature
                             </button>
                         </form>
                     @else
-                        {{-- Tombol Checkout PO (Aktif jika sudah divalidasi) --}}
+                        {{-- Checkout PO Button (Enabled if validated) --}}
                         <a href="{{ route('procurement.purchases.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
-                            Lanjut Checkout (PO)
+                            Proceed to Checkout (PO)
                         </a>
                     @endif
                 </div>
@@ -505,11 +505,11 @@
         const labelInfo = document.getElementById('fileCountInfo');
         if (labelInfo) {
             if (count > 0) {
-                labelInfo.innerText = `${count} file screenshot terkumpul (siap diproses)`;
+                labelInfo.innerText = `${count} screenshot file(s) collected (ready to process)`;
                 labelInfo.classList.remove('text-gray-900', 'dark:text-white');
                 labelInfo.classList.add('text-teal-600', 'dark:text-teal-400');
             } else {
-                labelInfo.innerText = 'Klik untuk memilih screenshot';
+                labelInfo.innerText = 'Click to select screenshots';
             }
         }
     });
@@ -523,7 +523,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
-                AI sedang memproses...
+                AI is processing...
             `;
         }
     }

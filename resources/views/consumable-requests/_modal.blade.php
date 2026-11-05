@@ -22,10 +22,10 @@
                     </div>
                     <div class="min-w-0">
                         <h2 class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
-                            Consumable Request Baru
+                            New Consumable Request
                         </h2>
                         <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                            Lengkapi detail permintaan pengadaan
+                            Complete the details of your procurement request
                         </p>
                     </div>
                 </div>
@@ -53,19 +53,19 @@
                         px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
 
                 <p class="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
-                    Pastikan seluruh data sudah benar sebelum menyimpan.
+                    Make sure all data is correct before saving.
                 </p>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <button type="button" onclick="closeCreateModal()"
                             class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        Batal
+                        Cancel
                     </button>
 
-                    {{-- Submit button di luar form → pakai form="consumableForm" --}}
+                    {{-- Submit button outside form → using form="consumableForm" --}}
                     <button type="submit" form="consumableForm"
                             class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition">
-                        Simpan Request
+                        Save Request
                     </button>
                 </div>
             </div>

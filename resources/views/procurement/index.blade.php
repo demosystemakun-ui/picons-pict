@@ -19,30 +19,30 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Procurement Request</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Kelola persetujuan dan pantau status dokumen pengadaan barang & jasa.</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage approvals and track the status of goods & services procurement documents.</p>
         </div>
         <a href="{{ route('procurement.create') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100 rounded-md shadow-sm transition-all">
-            <i data-lucide="plus" class="w-4 h-4"></i> Buat PR Baru
+            <i data-lucide="plus" class="w-4 h-4"></i> Create New PR
         </a>
     </div>
 
-    {{-- TAB FILTER SUMBER PR --}}
+    {{-- TAB FILTER BY PR SOURCE --}}
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
             <a href="{{ route('procurement.index') }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
                       {{ !request('source') ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
-                Semua PR
+                All PRs
             </a>
             <a href="{{ route('procurement.index', ['source' => 'manual']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
                       {{ request('source') == 'manual' ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
-                PR Langsung (Manual)
+                Direct PR (Manual)
             </a>
             <a href="{{ route('procurement.index', ['source' => 'consumable']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
                       {{ request('source') == 'consumable' ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
-                PR dari Consumable
+                PR from Consumable
             </a>
         </nav>
     </div>
@@ -53,14 +53,14 @@
             <table class="w-full text-left text-sm whitespace-nowrap">
                 <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                     <tr>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">No. Dokumen</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Document No.</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Request By</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Divisi</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deskripsi</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Division</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Qty</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Status</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Aksi</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -77,17 +77,17 @@
                             ];
                             $statusLabels = [
                                 'pending'  => 'Pending',
-                                'approved' => 'Disetujui',
-                                'rejected' => 'Ditolak',
-                                'revision' => 'Perlu Revisi',
-                                'processed' => 'Diproses (Dibeli)',
-                                'received' => 'Diterima',
-                                'completed' => 'Selesai',
+                                'approved' => 'Approved',
+                                'rejected' => 'Rejected',
+                                'revision' => 'Needs Revision',
+                                'processed' => 'Processed (Purchased)',
+                                'received' => 'Received',
+                                'completed' => 'Completed',
                             ];
                             $currStatus = $r->status ?? 'pending';
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            {{-- KOLOM NOMOR PR & BADGE SUMBER --}}
+                            {{-- COLUMN: PR NO & SOURCE BADGE --}}
                             <td class="px-4 py-3">
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $r->no }}</div>
                                 <div class="mt-1">
@@ -121,36 +121,36 @@
 
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    {{-- Aksi Approval (Membuka Modal Modern) --}}
+                                    {{-- Approval Actions (opens modern modal) --}}
                                     <button type="button" 
                                             onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" 
                                             class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" 
-                                            title="Setujui Pengajuan">
+                                            title="Approve Request">
                                         <i data-lucide="check-circle" class="w-4 h-4"></i>
                                     </button>
 
                                     <button type="button" 
                                             onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" 
                                             class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" 
-                                            title="Minta Revisi">
+                                            title="Request Revision">
                                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                     </button>
 
                                     <button type="button" 
                                             onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" 
                                             class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" 
-                                            title="Tolak Pengajuan">
+                                            title="Reject Request">
                                         <i data-lucide="x-circle" class="w-4 h-4"></i>
                                     </button>
 
                                     <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-                                    {{-- Tombol Aksi Lainnya --}}
+                                    {{-- Other Action Buttons --}}
                                     <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
                                         <i data-lucide="git-compare" class="w-4 h-4"></i>
                                     </a>
 
-                                    <a href="{{ route('procurement.show', $r) }}" class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition" title="Lihat Detail">
+                                    <a href="{{ route('procurement.show', $r) }}" class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition" title="View Details">
                                         <i data-lucide="eye" class="w-4 h-4"></i>
                                     </a>
 
@@ -161,7 +161,7 @@
                                         <i data-lucide="printer" class="w-4 h-4"></i>
                                     </button>
 
-                                    <a href="{{ route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Simpan PDF">
+                                    <a href="{{ route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Save as PDF">
                                         <i data-lucide="file-down" class="w-4 h-4"></i>
                                     </a>
 
@@ -175,7 +175,7 @@
                         <tr>
                             <td colspan="8" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                 <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600"></i>
-                                <p class="text-sm">Belum ada data Procurement Request.</p>
+                                <p class="text-sm">No Procurement Request data yet.</p>
                             </td>
                         </tr>
                     @endforelse
@@ -191,7 +191,7 @@
     </div>
 </div>
 
-{{-- Modal Approval & Review --}}
+{{-- Approval & Review Modal --}}
 <div id="actionModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
         {{-- Backdrop --}}
@@ -216,23 +216,23 @@
                     </div>
                 </div>
 
-                {{-- Catatan / Review Notes Area --}}
+                {{-- Review Notes Area --}}
                 <div id="notesContainer" class="mt-5 space-y-1.5">
                     <label for="review_notes" id="notesLabel" class="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                        Catatan & Alasan <span class="text-rose-500">*</span>
+                        Notes & Reason <span class="text-rose-500">*</span>
                     </label>
                     <textarea name="review_notes" id="review_notes" rows="3" 
                         class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 focus:outline-none transition" 
-                        placeholder="Berikan alasan atau instruksi yang jelas..."></textarea>
+                        placeholder="Provide a clear reason or instruction..."></textarea>
                 </div>
 
                 {{-- Modal Action Buttons --}}
                 <div class="mt-6 flex items-center justify-end gap-3">
                     <button type="button" onclick="closeActionModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        Batal
+                        Cancel
                     </button>
                     <button type="submit" id="modalSubmitBtn" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white shadow-sm transition">
-                        Konfirmasi
+                        Confirm
                     </button>
                 </div>
             </form>
@@ -280,41 +280,41 @@ function openActionModal(actionUrl, actionType, docNo) {
 
     form.action = actionUrl;
     input.value = actionType;
-    docText.innerText = 'Dokumen: ' + docNo;
+    docText.innerText = 'Document: ' + docNo;
     modal.classList.remove('hidden');
 
     if (actionType === 'approved') {
-        title.innerText = 'Setujui Pengajuan';
+        title.innerText = 'Approve Request';
         iconCont.className = 'flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400';
         icon.setAttribute('data-lucide', 'check');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition';
-        btn.innerText = 'Setujui';
+        btn.innerText = 'Approve';
         
-        notesLabel.innerHTML = 'Catatan Tambahan <span class="text-xs text-gray-400 font-normal">(Opsional)</span>';
+        notesLabel.innerHTML = 'Additional Notes <span class="text-xs text-gray-400 font-normal">(Optional)</span>';
         notesInput.required = false;
-        notesInput.placeholder = 'Tambahkan catatan jika diperlukan...';
+        notesInput.placeholder = 'Add a note if necessary...';
     } 
     else if (actionType === 'revision') {
-        title.innerText = 'Minta Revisi';
+        title.innerText = 'Request Revision';
         iconCont.className = 'flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
         icon.setAttribute('data-lucide', 'rotate-ccw');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition';
-        btn.innerText = 'Kirim Revisi';
+        btn.innerText = 'Send Revision';
         
-        notesLabel.innerHTML = 'Instruksi Revisi <span class="text-rose-500">*</span>';
+        notesLabel.innerHTML = 'Revision Instructions <span class="text-rose-500">*</span>';
         notesInput.required = true;
-        notesInput.placeholder = 'Jelaskan bagian mana yang perlu diperbaiki...';
+        notesInput.placeholder = 'Explain which parts need to be fixed...';
     } 
     else if (actionType === 'rejected') {
-        title.innerText = 'Tolak Pengajuan';
+        title.innerText = 'Reject Request';
         iconCont.className = 'flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400';
         icon.setAttribute('data-lucide', 'x');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition';
-        btn.innerText = 'Tolak';
+        btn.innerText = 'Reject';
         
-        notesLabel.innerHTML = 'Alasan Penolakan <span class="text-rose-500">*</span>';
+        notesLabel.innerHTML = 'Rejection Reason <span class="text-rose-500">*</span>';
         notesInput.required = true;
-        notesInput.placeholder = 'Jelaskan alasan pengajuan ini ditolak...';
+        notesInput.placeholder = 'Explain why this request is rejected...';
     }
 
     if (window.lucide) {

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Consumable Request')
+@section('title', 'Consumable Request List')
 @section('page-title', 'Consumable Request')
 
 @section('content')
@@ -13,7 +13,7 @@
                 Consumable Requests
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Kelola, tinjau, dan konsolidasikan pengajuan barang consumable ke dalam PR.
+                Manage, review, and consolidate consumable item requests into a PR.
             </p>
         </div>
 
@@ -24,7 +24,7 @@
                     <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                     </svg>
-                    Gabungkan ke PR
+                    Merge into PR
                 </button>
             @endif
 
@@ -33,12 +33,12 @@
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                Buat Request
+                Create Request
             </button>
         </div>
     </div>
 
-    {{-- FORM KONSOLIDASI (HIDDEN) --}}
+    {{-- CONSOLIDATION FORM (HIDDEN) --}}
     <form id="consolidationForm" action="{{ route('consumable-requests.consolidation.process') }}" method="POST" class="hidden">
         @csrf
         <input type="hidden" name="no" id="consolidationNo">
@@ -57,10 +57,10 @@
                             <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-slate-600 focus:ring-slate-500 dark:bg-gray-700 dark:border-gray-600">
                         </th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pemohon</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Requester</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Aksi</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -73,7 +73,7 @@
                                 @else
                                     <input type="checkbox" disabled
                                            class="rounded border-gray-200 bg-gray-100 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed opacity-50"
-                                           title="Hanya status Approved yang dapat digabungkan">
+                                           title="Only Approved requests can be consolidated">
                                 @endif
                             </td>
 
@@ -111,7 +111,7 @@
                                 <div class="flex items-center justify-end gap-1">
                                     {{-- Detail --}}
                                     <a href="{{ route('consumable-requests.show', $req->id) }}"
-                                       title="Lihat Detail"
+                                       title="View Detail"
                                        class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -119,7 +119,7 @@
                                         </svg>
                                     </a>
 
-                                   {{-- Aksi Cepat Super Admin (Hanya Pending) --}}
+                                   {{-- Quick Action for Super Admin (Pending Only) --}}
 @if(auth()->user()->hasRole('Super Admin') && $req->status == 'pending')
     <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
@@ -128,7 +128,7 @@
         @csrf
         @method('PATCH')
         <input type="hidden" name="status" value="approved">
-        <button type="submit" title="Setujui"
+        <button type="submit" title="Approve"
                 class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -136,9 +136,9 @@
         </button>
     </form>
 
-    {{-- Revisi --}}
+    {{-- Revision --}}
     <button type="button"
-            title="Revisi"
+            title="Revision"
             onclick="openRevisionModal('{{ route('consumable-requests.update-status', $req->id) }}')"
             class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -151,7 +151,7 @@
         @csrf
         @method('PATCH')
         <input type="hidden" name="status" value="rejected">
-        <button type="submit" title="Tolak"
+        <button type="submit" title="Reject"
                 class="p-1.5 text-gray-400 hover:text-red-600 rounded transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -165,7 +165,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-4 py-12 text-center text-gray-500 text-sm">
-                                Belum ada data consumable request.
+                                No consumable request data yet.
                             </td>
                         </tr>
                     @endforelse
@@ -193,18 +193,18 @@
         document.querySelectorAll('.request-checkbox:not(:disabled)').forEach(cb => cb.checked = this.checked);
     });
 
-    // Submit Konsolidasi
+    // Submit Consolidation
     function submitConsolidation() {
         const checked = document.querySelectorAll('.request-checkbox:checked');
         if (checked.length === 0) {
-            alert('Pilih minimal 1 request dengan status Approved terlebih dahulu.');
+            alert('Please select at least 1 request with Approved status first.');
             return;
         }
         window.__selectedRequestIds = Array.from(checked).map(cb => cb.value);
         window.dispatchEvent(new CustomEvent('pr-open'));
     }
 
-    // Event listener form konsolidasi
+    // Consolidation form event listener
     window.addEventListener('pr-confirm', function (e) {
         const form = document.getElementById('consolidationForm');
         const inputsContainer = document.getElementById('consolidationInputs');

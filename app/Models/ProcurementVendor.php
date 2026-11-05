@@ -4,59 +4,34 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ProcurementVendor extends Model
+class ProcurementVendorItem extends Model
 {
     protected $fillable = [
-        'procurement_request_id',
-        'vendor_name',
-        'marketplace',
-        'company_name',
-        'payment_method',
-        'payment_bank',
-        'estimated_delivery',
-        'product_url',
-        'notes',
-
-        // Rincian biaya
+        'procurement_vendor_id',
+        'product_name',
+        'variant',
+        'sku',
+        'quantity',
+        'unit_price',
         'subtotal',
-        'shipping_cost',
-        'discount_voucher',
-        'tax_ppn',
-        'total_before_tax',
-        'total_price',
-        'tax_note',
-
-        // Meta
+        'stock_status',
+        'weight',
         'sort_order',
-        'is_winner',
+        'picture', // jika ada
     ];
 
     protected $casts = [
-        'subtotal'          => 'decimal:2',
-        'shipping_cost'     => 'decimal:2',
-        'discount_voucher'  => 'decimal:2',
-        'tax_ppn'           => 'decimal:2',
-        'total_before_tax'  => 'decimal:2',
-        'total_price'       => 'decimal:2',
-        'is_winner'         => 'boolean',
+        'quantity'   => 'integer',
+        'unit_price' => 'decimal:2',
+        'subtotal'   => 'decimal:2',
+        'weight'     => 'decimal:2',
     ];
 
-    /* ═══════════════════════════════════════════════════════════════
-       RELATIONS
-    ═══════════════════════════════════════════════════════════════ */
-
-    public function procurementRequest()
-    {
-        return $this->belongsTo(ProcurementRequest::class);
-    }
-
     /**
-     * Detail produk dalam vendor ini.
-     * ← INI YANG BELUM ADA, penyebab error "undefined relationship [items]"
+     * Relasi balik ke ProcurementVendor.
      */
-    public function items()
+    public function procurementVendor()
     {
-        return $this->hasMany(ProcurementVendorItem::class, 'procurement_vendor_id')
-            ->orderBy('sort_order');
+        return $this->belongsTo(ProcurementVendor::class);
     }
 }

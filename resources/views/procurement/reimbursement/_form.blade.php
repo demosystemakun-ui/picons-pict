@@ -38,7 +38,7 @@
         $deptList = $deptList->prepend($deptCurrent);
     }
 
-    // CEK ROLE (Menggunakan Spatie Permission)
+    // ROLE CHECK (Using Spatie Permission)
     $isAdmin = auth()->check() && auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 
     $in   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200';
@@ -68,10 +68,10 @@
                    value="{{ $val('number', $number ?? '') }}" 
                    {{ !$isAdmin ? 'readonly' : '' }} 
                    required 
-                   title="{{ !$isAdmin ? 'Nomor form akan diisi oleh Admin saat disetujui' : '' }}">
+                   title="{{ !$isAdmin ? 'Form number will be filled by Admin upon approval' : '' }}">
             
             @if(!$isAdmin)
-                <p class="mt-1 text-xs text-gray-500">Nomor form akan di-generate otomatis dan diisi oleh Admin saat disetujui.</p>
+                <p class="mt-1 text-xs text-gray-500">Form number will be auto-generated and filled by Admin upon approval.</p>
             @endif
         </div>
         <div>
