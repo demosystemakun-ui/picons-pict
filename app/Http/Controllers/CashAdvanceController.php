@@ -56,18 +56,12 @@ class CashAdvanceController extends Controller
             ->with('success', 'Cash Advance form created. Waiting for Admin approval.');
     }
 
-    /**
-     * Display the specified cash advance.
-     */
     public function show(CashAdvance $cashAdvance)
     {
         $cashAdvance->load('items');
         return view('procurement.cash-advance.show', compact('cashAdvance'));
     }
 
-    /**
-     * Approve the cash advance with official number.
-     */
     public function approve(Request $request, CashAdvance $cashAdvance)
     {
         $request->validate([
@@ -86,9 +80,6 @@ class CashAdvanceController extends Controller
         return back()->with('success', 'Cash Advance approved with number: ' . $request->number);
     }
 
-    /**
-     * Generate PDF for the cash advance.
-     */
     public function pdf(CashAdvance $cashAdvance)
     {
         $cashAdvance->load('items');
@@ -100,27 +91,27 @@ class CashAdvanceController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'number'                 => 'nullable|string',
-            'procurement_request_id' => 'nullable|exists:procurement_requests,id',
-            'request_date'           => 'required|date',
-            'requested_by'           => 'required|string|max:150',
-            'nik'                    => 'nullable|string|max:50',
-            'position'               => 'nullable|string|max:100',
-            'department'             => 'nullable|string|max:100',
-            'cost_department'        => 'nullable|string|max:100',
-            'delivery_address'       => 'nullable|string',
-            'attachment'             => 'nullable|string',
-            'notes'                  => 'nullable|string',
-            'bank_name'              => 'nullable|string|max:100',
-            'account_name'           => 'nullable|string|max:150',
-            'account_number'         => 'nullable|string|max:50',
-            'signers'                => 'nullable|array',
-            'items'                  => 'required|array|min:1',
+            'number'                   => 'nullable|string',
+            'procurement_request_id'   => 'nullable|exists:procurement_requests,id',
+            'request_date'             => 'required|date',
+            'requested_by'             => 'required|string|max:150',
+            'nik'                      => 'nullable|string|max:50',
+            'position'                 => 'nullable|string|max:100',
+            'department'               => 'nullable|string|max:100',
+            'cost_department'          => 'nullable|string|max:100',
+            'delivery_address'         => 'nullable|string',
+            'attachment'               => 'nullable|string',
+            'notes'                    => 'nullable|string',
+            'bank_name'                => 'nullable|string|max:100',
+            'account_name'             => 'nullable|string|max:150',
+            'account_number'           => 'nullable|string|max:50',
+            'signers'                  => 'nullable|array',
+            'items'                    => 'required|array|min:1',
             'items.*.item_description' => 'required|string|max:255',
-            'items.*.purpose'        => 'nullable|string|max:255',
-            'items.*.qty'            => 'required|integer|min:1',
-            'items.*.unit'           => 'required|string|max:30',
-            'items.*.price'          => 'required|numeric|min:0',
+            'items.*.purpose'          => 'nullable|string|max:255',
+            'items.*.qty'              => 'required|integer|min:1',
+            'items.*.unit'             => 'required|string|max:30',
+            'items.*.price'            => 'required|numeric|min:0',
         ]);
     }
 }

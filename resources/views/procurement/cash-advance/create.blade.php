@@ -27,7 +27,7 @@
             </div>
         @endif
 
-        {{-- APPLICANT DATA (Sesuai Template Excel) --}}
+        {{-- APPLICANT DATA --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 p-6 shadow-sm">
             <h2 class="text-sm font-semibold text-gray-800 mb-4 pb-2 border-b">Applicant Data</h2>
             
@@ -38,7 +38,7 @@
                         <label class="text-xs font-bold text-gray-600 uppercase col-span-1">Date</label>
                         <div class="col-span-2 flex items-center gap-2">
                             <span>:</span>
-                            <input type="date" name="request_date" value="{{ date('Y-m-d') }}" required class="w-full rounded-md border-gray-300 text-sm">
+                            <input type="date" name="created_date" value="{{ date('Y-m-d') }}" readonly class="w-full rounded-md border-gray-200 bg-gray-50 text-sm text-gray-600 cursor-not-allowed">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 items-center">
@@ -77,7 +77,11 @@
                         <label class="text-xs font-bold text-gray-600 uppercase col-span-1">Request Date</label>
                         <div class="col-span-2 flex items-center gap-2">
                             <span>:</span>
-                            <input type="date" name="request_date_ref" value="{{ date('Y-m-d') }}" class="w-full rounded-md border-gray-300 text-sm">
+                            {{-- Diambil otomatis dari PR Final --}}
+                            <input type="date" name="request_date" 
+                                   value="{{ $procurement ? $procurement->date->format('Y-m-d') : date('Y-m-d') }}" 
+                                   readonly
+                                   class="w-full rounded-md border-gray-200 bg-gray-50 text-sm text-gray-600 cursor-not-allowed">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 items-center">
@@ -105,7 +109,7 @@
             </div>
         </div>
 
-        {{-- ITEMS TABLE (Sesuai Template Excel) --}}
+        {{-- ITEMS TABLE --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div class="bg-purple-800 text-white p-3 flex items-center justify-between">
                 <h2 class="text-sm font-bold uppercase tracking-wider">Claim Details</h2>
@@ -126,7 +130,6 @@
                         </tr>
                     </thead>
                     <tbody id="itemsBody" class="divide-y divide-gray-200">
-                        {{-- Baris 1 (Default) --}}
                         <tr>
                             <td class="px-3 py-2 text-center font-bold row-num">1</td>
                             <td class="px-3 py-2 border-r"><input type="text" name="items[0][item_description]" required class="w-full border-0 focus:ring-0 p-0 text-sm"></td>

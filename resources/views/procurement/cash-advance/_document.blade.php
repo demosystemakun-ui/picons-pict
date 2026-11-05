@@ -1,7 +1,7 @@
 @php
     \Carbon\Carbon::setLocale('en');
     $rp    = fn ($n) => 'Rp ' . number_format($n, 0, ',', '.');
-    // Format tanggal: Monday, 13 April 2026
+    // Format: Monday, 13 April 2026
     $d     = fn ($date) => $date ? $date->translatedFormat('l, j F Y') : '';
     $sg    = fn ($key, $field) => data_get($cashAdvance->signers ?? [], "$key.$field") ?? '';
 
@@ -60,9 +60,9 @@
         <tr class="purple">
             <td class="c b" style="border-top:none;">
                 @if($cashAdvance->status === 'approved' && !str_starts_with($cashAdvance->number, 'DRAFT'))
-                    {{ $cashAdvance->number }}
+                    No: {{ $cashAdvance->number }}
                 @else
-                    <span class="italic opacity-80">Waiting for Admin Approval</span>
+                    No: <span class="italic opacity-80">Waiting for Admin Approval</span>
                 @endif
             </td>
         </tr>
@@ -72,8 +72,11 @@
     <table class="bd">
         <tr>
             <td class="b" style="width:14%;">DATE</td><td class="b" style="width:2%;">:</td>
-            <td class="b" style="width:34%;">{{ $d($cashAdvance->request_date) }}</td>
+            {{-- DATE: Tanggal form dibuat --}}
+            <td class="b" style="width:34%;">{{ $d($cashAdvance->created_at) }}</td>
+            
             <td class="b" style="width:14%;">REQUEST DATE</td><td class="b" style="width:2%;">:</td>
+            {{-- REQUEST DATE: Tanggal PR Final --}}
             <td class="b">{{ $d($cashAdvance->request_date) }}</td>
         </tr>
         <tr>
