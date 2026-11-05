@@ -148,6 +148,27 @@
                         @endforeach
                     </div>
                 </div>
+
+                {{-- 🌟 NEW: PROCUREMENT METHOD --}}
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                        Procurement Method <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach ([
+                            'po'             => 'Purchase Order (PO)',
+                            'cash_advance'   => 'Cash Advance',
+                            'reimbursement'  => 'Reimbursement',
+                        ] as $value => $text)
+                            <label class="relative flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300 has-[:checked]:ring-2 has-[:checked]:ring-primary-500/20">
+                                <input type="radio" name="procurement_method" value="{{ $value }}"
+                                       {{ old('procurement_method', $procurementRequest->procurement_method ?? 'po') === $value ? 'checked' : '' }}
+                                       class="sr-only">
+                                {{ $text }}
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
             </div>
         </section>
 

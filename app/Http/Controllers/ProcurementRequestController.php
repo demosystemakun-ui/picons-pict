@@ -11,18 +11,18 @@ use Illuminate\Support\Facades\Storage;
 class ProcurementRequestController extends Controller
 {
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Daftar semua PR & Filter Tab
+       INDEX — List of all PRs & Filter Tabs
     ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $user  = auth()->user();
         $query = ProcurementRequest::latest();
 
-        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya bisa lihat PR departemennya sendiri
+        // RBAC: Admin Departemen only sees their own department's PRs
         if ($user->hasRole('Admin Departemen')) {
             $query->where('department_id', $user->department_id);
         }
-        // Super Admin & Admin Utama bisa lihat semua
+        // Super Admin & Admin can see all
 
         if ($request->filled('source')) {
             $query->where('source', $request->source);
@@ -34,20 +34,18 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE — Form buat PR baru
+       CREATE — Form for new PR
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
         $suggestedNo = ProcurementRequest::generateNumber();
-        
-        // Ambil semua departemen dari master data
         $departments = Department::orderBy('name')->get(); 
 
         return view('procurement.create', compact('suggestedNo', 'departments'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE — Simpan PR baru
+       STORE — Save new PR
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request)
     {
@@ -58,6 +56,7 @@ class ProcurementRequestController extends Controller
             'request_by'            => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
+            'procurement_method'    => 'required|in:po,cash_advance,reimbursement', // NEW
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
@@ -73,12 +72,10 @@ class ProcurementRequestController extends Controller
         ]);
 
         $orderType = $request->input('order_type');
-
-        // Ambil data departemen untuk disimpan di kolom 'division'
         $department = Department::findOrFail($validated['department_id']);
 
         $validated['user_id']         = auth()->id();
-        $validated['division']        = $department->name; // Generate dari department_id
+        $validated['division']        = $department->name;
         $validated['is_new_order']    = ($orderType === 'new_order');
         $validated['is_repeat_order'] = ($orderType === 'repeat_order');
         $validated['is_goods']        = ($orderType === 'goods');
@@ -92,19 +89,18 @@ class ProcurementRequestController extends Controller
 
         return redirect()
             ->route('procurement.show', $procurementRequest)
-            ->with('success', 'Procurement Request berhasil dibuat.');
+            ->with('success', 'Procurement Request created successfully.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SHOW — Detail PR
+       SHOW — PR Detail
     ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
         
-        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya bisa lihat PR departemennya
         if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak memiliki akses ke PR dari departemen lain.');
+            abort(403, 'You do not have access to PRs from other departments.');
         }
 
         $procurementRequest->load('items', 'vendors', 'winnerVendor');
@@ -112,14 +108,14 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       EDIT — Form edit PR
+       EDIT — PR Edit Form
     ═══════════════════════════════════════════════════════════════ */
     public function edit(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
         
         if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak memiliki akses untuk mengedit PR dari departemen lain.');
+            abort(403, 'You do not have access to edit PRs from other departments.');
         }
 
         $procurementRequest->load('items');
@@ -129,14 +125,14 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       UPDATE — Simpan perubahan PR
+       UPDATE — Save PR Changes
     ═══════════════════════════════════════════════════════════════ */
     public function update(Request $request, ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
         
         if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak memiliki akses untuk mengubah PR dari departemen lain.');
+            abort(403, 'You do not have access to update PRs from other departments.');
         }
 
         $validated = $request->validate([
@@ -145,6 +141,7 @@ class ProcurementRequestController extends Controller
             'request_by'            => 'required|string|max:255',
             'prepared_by'           => 'required|string|max:255',
             'description'           => 'required|string|max:255',
+            'procurement_method'    => 'required|in:po,cash_advance,reimbursement', // NEW
             'order_type'            => 'nullable|string|in:new_order,repeat_order,goods,services',
             'background'            => 'nullable|string',
             'purpose'               => 'nullable|string',
@@ -178,11 +175,11 @@ class ProcurementRequestController extends Controller
         unset($validated['order_type'], $validated['items']);
 
         $validated['item_name'] = count($items) > 1
-            ? '(Multiple Items - Lihat Detail Lampiran)'
+            ? '(Multiple Items - See Attachment Details)'
             : $items[0]['item_name'];
 
         $validated['item_requirement_note'] = count($items) > 1
-            ? '(Multiple Items - Lihat Detail Lampiran)'
+            ? '(Multiple Items - See Attachment Details)'
             : ($items[0]['item_requirement_note'] ?? null);
 
         $validated['quantity'] = collect($items)->sum('quantity');
@@ -221,18 +218,18 @@ class ProcurementRequestController extends Controller
 
         return redirect()
             ->route('procurement.show', $procurementRequest)
-            ->with('success', 'Procurement Request berhasil diperbarui.');
+            ->with('success', 'Procurement Request updated successfully.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       DESTROY — Hapus PR
+       DESTROY — Delete PR
     ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
         
         if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak memiliki akses untuk menghapus PR dari departemen lain.');
+            abort(403, 'You do not have access to delete PRs from other departments.');
         }
 
         foreach ($procurementRequest->items as $item) {
@@ -244,7 +241,7 @@ class ProcurementRequestController extends Controller
         $procurementRequest->items()->delete();
         $procurementRequest->delete();
 
-        return redirect()->route('procurement.index')->with('success', 'Data dihapus.');
+        return redirect()->route('procurement.index')->with('success', 'Data deleted successfully.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -374,26 +371,26 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       VALIDASI TANDA TANGAN MANUAL
+       MANUAL SIGNATURE VALIDATION
     ═══════════════════════════════════════════════════════════════ */
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
     {
         if (!$procurementRequest->winnerVendor) {
-            return back()->with('error', 'Tidak ada vendor pemenang. Silakan pilih vendor terlebih dahulu.');
+            return back()->with('error', 'No winning vendor. Please select a vendor first.');
         }
 
         if ($procurementRequest->status !== 'approved') {
-            return back()->with('error', 'Status PR tidak valid untuk divalidasi. Status saat ini: ' . $procurementRequest->status);
+            return back()->with('error', 'Invalid PR status for validation. Current status: ' . $procurementRequest->status);
         }
 
         $procurementRequest->update([
             'status'       => 'processed',
-            'review_notes' => 'PR Final telah ditandatangani manual oleh Manajer. Divalidasi oleh Admin: ' . auth()->user()->name,
+            'review_notes' => 'Final PR has been manually signed by Manager. Validated by Admin: ' . auth()->user()->name,
         ]);
 
         return redirect()
             ->route('procurement.comparisons.index', $procurementRequest)
-            ->with('success', 'Validasi tanda tangan berhasil. Anda sekarang dapat melanjutkan ke proses PO.');
+            ->with('success', 'Signature validation successful. You can now proceed to PO process.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -403,9 +400,8 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        // Admin Departemen hanya bisa update status PR departemennya
         if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak dapat memproses PR dari departemen lain.');
+            abort(403, 'You cannot process PRs from other departments.');
         }
 
         $validated = $request->validate([
@@ -423,7 +419,7 @@ class ProcurementRequestController extends Controller
         $targetStatus = $validated['status'];
 
         if (!in_array($targetStatus, $allowedTransitions[$procurementRequest->status] ?? [], true)) {
-            return back()->with('error', "Status tidak dapat diubah dari {$procurementRequest->status} menjadi {$targetStatus}.");
+            return back()->with('error', "Status cannot be changed from {$procurementRequest->status} to {$targetStatus}.");
         }
 
         $procurementRequest->update([
@@ -432,16 +428,16 @@ class ProcurementRequestController extends Controller
         ]);
 
         $messages = [
-            'approved' => 'Pengajuan berhasil disetujui.',
-            'rejected' => 'Pengajuan telah ditolak.',
-            'revision' => 'Pengajuan berhasil dikembalikan untuk revisi.',
-            'pending'  => 'Status pengajuan dikembalikan ke pending.',
-            'processed' => 'Pengajuan diproses dan pembelian telah dilakukan.',
-            'received' => 'Barang atau jasa berhasil diterima.',
-            'completed' => 'Pengajuan pengadaan telah selesai.',
+            'approved'  => 'Request has been approved.',
+            'rejected'  => 'Request has been rejected.',
+            'revision'  => 'Request has been returned for revision.',
+            'pending'   => 'Request status has been reset to pending.',
+            'processed' => 'Request has been processed and purchased.',
+            'received'  => 'Goods or services have been received.',
+            'completed' => 'Procurement request has been completed.',
         ];
 
-        return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
+        return back()->with('success', $messages[$validated['status']] ?? 'Status updated successfully.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
