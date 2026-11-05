@@ -54,6 +54,7 @@
                 <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                     <tr>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Document No.</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Method</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Request By</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Division</th>
@@ -85,6 +86,19 @@
                                 'completed' => 'Completed',
                             ];
                             $currStatus = $r->status ?? 'pending';
+
+                            // Method Badge Config
+                            $methodColors = [
+                                'po'             => 'bg-blue-50 text-blue-700 border-blue-200',
+                                'cash_advance'   => 'bg-purple-50 text-purple-700 border-purple-200',
+                                'reimbursement'  => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                            ];
+                            $methodLabels = [
+                                'po'             => 'PO',
+                                'cash_advance'   => 'Cash Advance',
+                                'reimbursement'  => 'Reimbursement',
+                            ];
+                            $currMethod = $r->procurement_method ?? 'po';
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             {{-- COLUMN: PR NO & SOURCE BADGE --}}
@@ -101,6 +115,13 @@
                                         </span>
                                     @endif
                                 </div>
+                            </td>
+
+                            {{-- COLUMN: PROCUREMENT METHOD --}}
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium {{ $methodColors[$currMethod] ?? $methodColors['po'] }}">
+                                    {{ $methodLabels[$currMethod] ?? 'PO' }}
+                                </span>
                             </td>
                             
                             <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ $r->date->format('d/m/Y') }}</td>
@@ -121,29 +142,31 @@
 
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    {{-- Approval Actions (opens modern modal) --}}
-                                    <button type="button" 
-                                            onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" 
-                                            class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" 
-                                            title="Approve Request">
-                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                                    </button>
+                                    {{-- Approval Actions (Hanya Muncul Jika Pending) --}}
+                                    @if($currStatus === 'pending')
+                                        <button type="button" 
+                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" 
+                                                class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" 
+                                                title="Approve Request">
+                                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                        </button>
 
-                                    <button type="button" 
-                                            onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" 
-                                            class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" 
-                                            title="Request Revision">
-                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                                    </button>
+                                        <button type="button" 
+                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" 
+                                                class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" 
+                                                title="Request Revision">
+                                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                        </button>
 
-                                    <button type="button" 
-                                            onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" 
-                                            class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" 
-                                            title="Reject Request">
-                                        <i data-lucide="x-circle" class="w-4 h-4"></i>
-                                    </button>
+                                        <button type="button" 
+                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" 
+                                                class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" 
+                                                title="Reject Request">
+                                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                                        </button>
 
-                                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                                        <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                                    @endif
 
                                     {{-- Other Action Buttons --}}
                                     <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
@@ -165,15 +188,17 @@
                                         <i data-lucide="file-down" class="w-4 h-4"></i>
                                     </a>
 
-                                    <a href="{{ route('procurement.edit', $r) }}" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Edit Data">
-                                        <i data-lucide="pencil" class="w-4 h-4"></i>
-                                    </a>
+                                    @if(in_array($currStatus, ['pending', 'revision']))
+                                        <a href="{{ route('procurement.edit', $r) }}" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Edit Data">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </a>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="9" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                 <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600"></i>
                                 <p class="text-sm">No Procurement Request data yet.</p>
                             </td>
