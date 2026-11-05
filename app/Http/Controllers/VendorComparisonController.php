@@ -40,12 +40,12 @@ class VendorComparisonController extends Controller
         $vendors = $procurement->vendors()->get();
 
         // PERBAIKAN: Gunakan view 'comparison.index' (bukan 'create')
-        return view('procurement.comparison.index', compact('procurement', 'vendors'));
+        return view('procurement.comparison.global-index', compact('procurement', 'vendors'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
        SCAN — 3 entry point
-    ═══════════════════════════════════════════════════════════════ */
+    ══════════════════════════════════════════════════════════════════ */
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');
