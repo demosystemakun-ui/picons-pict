@@ -4,11 +4,11 @@
 @section('page-title', 'Vendor Price Comparison (E-Commerce)')
 
 @php
-    // Check if a vendor has already been selected
-    $hasSelectedVendor = isset($procurement) && $comparisons->where('is_selected', true)->count() > 0;
+    // Cek apakah sudah ada vendor terpilih (is_winner = true)
+    $hasSelectedVendor = isset($procurement) && $procurement->vendors->where('is_winner', true)->count() > 0;
     
-    // Check PR status for manual validation
-    $isProcessed = isset($procurement) && $procurement->status === 'processed';
+    // Cek status PR untuk validasi manual
+    $isProcessed = isset($procurement) && in_array($procurement->status, ['processed', 'final_approved']);
 @endphp
 
 @section('content')
@@ -40,7 +40,7 @@
     </div>
 
     {{-- ============================================================
-         PROCUREMENT DOCUMENT INFO
+         PROCUREMENT DOCUMENT INFO (PR Awal & Final)
     ============================================================ --}}
     @isset($procurement)
         <div class="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-teal-50 to-white dark:from-teal-950/30 dark:to-gray-800 p-6 shadow-sm">
@@ -55,11 +55,22 @@
                     </div>
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                            Document No.
+                            PR Awal (Internal)
                         </div>
                         <div class="mt-0.5 font-mono text-sm font-bold text-gray-900 dark:text-white">
                             {{ $procurement->no }}
                         </div>
+
+                        {{-- Tampilkan PR Final jika sudah ada --}}
+                        @if($procurement->final_number)
+                            <div class="mt-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                PR Final (Vendor)
+                            </div>
+                            <div class="font-mono text-sm font-bold text-indigo-700 dark:text-indigo-300">
+                                {{ $procurement->final_number }}
+                            </div>
+                        @endif
+
                         <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                             <span class="text-gray-500 dark:text-gray-400">Item:</span>
                             <span class="font-semibold text-gray-900 dark:text-white">{{ $procurement->item_name }}</span>
@@ -122,7 +133,7 @@
     @endif
 
     {{-- ============================================================
-         UPLOAD & AI SCAN (Only shown if not yet processed)
+         UPLOAD & AI SCAN (Only shown if PR is approved)
     ============================================================ --}}
     @isset($procurement)
         @if($procurement->status === 'approved')
@@ -140,9 +151,6 @@
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-800/30 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-200 dark:ring-teal-800">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
                     AI Gemini Vision
                 </span>
             </header>
@@ -178,10 +186,7 @@
                             Supports JPG, PNG, and other image formats.
                         </p>
                         <button type="submit" id="submitBtn"
-                                class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition disabled:opacity-70 disabled:cursor-not-allowed">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
+                                class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition disabled:opacity-70 disabled:cursor-not-allowed">
                             Process & Scan with AI
                         </button>
                     </div>
@@ -205,55 +210,30 @@
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Comparison Recap</h2>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ $comparisons->count() }} vendors registered
+                        {{ $procurement->vendors->count() }} vendors registered
                     </p>
                 </div>
             </div>
-
-            @if($hasSelectedVendor)
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-800">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Vendor selected
-                </span>
-            @endif
         </header>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
-                        @empty($procurement)
-                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Document No.</th>
-                        @endempty
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Vendor / Store</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Product Name</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Unit Price</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Qty</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Cost Breakdown</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Final Total</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Method</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Estimation</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">Status</th>
-                        @isset($procurement)
-                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">Actions</th>
-                        @endisset
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Vendor / Store</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Subtotal</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Shipping</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Discount</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Tax</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Total</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">Status</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
-                    @forelse($comparisons as $comp)
-                        @php $isSelected = (bool) $comp->is_selected; @endphp
+                    @forelse($procurement->vendors as $vendor)
+                        @php $isSelected = (bool) $vendor->is_winner; @endphp
                         <tr class="group transition-colors {{ $isSelected ? 'bg-teal-50/50 dark:bg-teal-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30' }}">
-
-                            @empty($procurement)
-                                <td class="px-5 py-4">
-                                    <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700/60 px-2 py-1 text-xs font-mono font-semibold text-gray-700 dark:text-gray-300">
-                                        {{ $comp->procurementRequest->no ?? '-' }}
-                                    </span>
-                                </td>
-                            @endempty
-
                             <td class="px-5 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="flex h-9 w-9 items-center justify-center rounded-lg {{ $isSelected ? 'bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400' : 'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300' }} shrink-0">
@@ -263,105 +243,35 @@
                                     </div>
                                     <div class="min-w-0">
                                         <div class="font-semibold text-gray-900 dark:text-white truncate">
-                                            {{ $comp->vendor_name }}
+                                            {{ $vendor->vendor_name }}
                                         </div>
+                                        <div class="text-xs text-gray-500">{{ $vendor->marketplace }}</div>
                                         @if($isSelected)
                                             <div class="text-xs font-medium text-teal-600 dark:text-teal-400 mt-0.5">
-                                                ★ Selected
+                                                ★ Selected (Cheapest)
                                             </div>
                                         @endif
                                     </div>
                                 </div>
                             </td>
-
-                            <td class="px-5 py-4">
-                                <span class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 max-w-xs">
-                                    {{ $comp->item_name }}
-                                </span>
-                            </td>
-
-                            <td class="px-5 py-4 text-right">
-                                <span class="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                                    Rp {{ number_format($comp->price, 0, ',', '.') }}
-                                </span>
-                            </td>
-
-                            <td class="px-5 py-4 text-center">
-                                <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700/60 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                    {{ $comp->quantity }}
-                                </span>
-                            </td>
-
-                            <td class="px-5 py-4 text-right">
-                                <div class="space-y-0.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                    <div>
-                                        <span class="text-gray-400 dark:text-gray-500">Subtotal</span>
-                                        <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
-                                            Rp {{ number_format($comp->price * $comp->quantity, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-400 dark:text-gray-500">Shipping</span>
-                                        <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
-                                            Rp {{ number_format($comp->shipping_cost, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-400 dark:text-gray-500">Service Fee</span>
-                                        <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
-                                            Rp {{ number_format($comp->service_fee, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-400 dark:text-gray-500">VAT</span>
-                                        <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">
-                                            Rp {{ number_format($comp->tax, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                    @if($comp->discount_voucher > 0)
-                                        <div>
-                                            <span class="text-rose-500 dark:text-rose-400">Discount</span>
-                                            <span class="ml-2 font-medium text-rose-600 dark:text-rose-400">
-                                                -Rp {{ number_format($comp->discount_voucher, 0, ',', '.') }}
-                                            </span>
-                                        </div>
-                                    @endif
-                                </div>
-                            </td>
-
-                            <td class="px-5 py-4 text-right">
-                                <div class="text-base font-bold text-teal-600 dark:text-teal-400 whitespace-nowrap">
-                                    Rp {{ number_format($comp->total_price, 0, ',', '.') }}
-                                </div>
-                            </td>
-
-                            <td class="px-5 py-4">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">
-                                    {{ $comp->payment_method ?? '-' }}
-                                </span>
-                            </td>
-
-                            <td class="px-5 py-4">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">
-                                    {{ $comp->estimated_delivery ?? '-' }}
-                                </span>
-                            </td>
+                            <td class="px-5 py-4 text-right font-medium">Rp {{ number_format($vendor->subtotal, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right font-medium">Rp {{ number_format($vendor->shipping_cost, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right font-medium text-rose-600">- Rp {{ number_format($vendor->discount_voucher, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right font-medium">Rp {{ number_format($vendor->tax_ppn, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right font-bold text-teal-600">Rp {{ number_format($vendor->total_price, 0, ',', '.') }}</td>
 
                             <td class="px-5 py-4 text-center">
                                 @if($isSelected)
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-900/60">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200">
                                         <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                         Selected
                                     </span>
-                                @elseif(isset($procurement) && $procurement->status === 'approved')
-                                    <form action="{{ route('procurement.comparisons.select', [$procurement, $comp]) }}" method="POST">
+                                @elseif($procurement->status === 'approved')
+                                    <form action="{{ route('procurement.comparisons.select', [$procurement, $vendor]) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit"
                                                 class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition">
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
                                             Select
                                         </button>
                                     </form>
@@ -370,45 +280,32 @@
                                 @endif
                             </td>
 
-                            @isset($procurement)
-                                <td class="px-5 py-4 text-right whitespace-nowrap">
-                                    @if($procurement->status === 'approved')
-                                        <form action="{{ route('procurement.comparisons.destroy', $comp) }}" method="POST"
-                                              class="inline-block"
-                                              onsubmit="return confirm('Delete vendor data {{ $comp->vendor_name }}?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
-                                                    title="Delete">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="text-xs text-gray-400 dark:text-gray-500 italic">Locked</span>
-                                    @endif
-                                </td>
-                            @endisset
+                            <td class="px-5 py-4 text-right whitespace-nowrap">
+                                @if($procurement->status === 'approved')
+                                    <form action="{{ route('procurement.comparisons.destroy', $vendor) }}" method="POST"
+                                          class="inline-block"
+                                          onsubmit="return confirm('Delete vendor data {{ $vendor->vendor_name }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center justify-center rounded-md p-1.5 text-rose-600 hover:bg-rose-50 transition"
+                                                title="Delete">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 italic">Locked</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ isset($procurement) ? 11 : 10 }}" class="px-6 py-16">
-                                <div class="flex flex-col items-center justify-center text-center">
-                                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 mb-4">
-                                        <svg class="h-7 w-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                    </div>
+                            <td colspan="8" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center justify-center">
                                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">No comparison data yet</p>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-                                        @isset($procurement)
-                                            Upload vendor screenshots above to start comparing prices.
-                                        @else
-                                            No vendor comparisons are recorded in the system yet.
-                                        @endisset
-                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Upload vendor screenshots above to start comparing prices.</p>
                                 </div>
                             </td>
                         </tr>
@@ -418,12 +315,12 @@
         </div>
 
         {{-- ============================================================
-             FOOTER: Further Actions (Validation & Checkout)
+             FOOTER: Validasi PR Final (Input Nomor Manual)
         ============================================================ --}}
         @if($hasSelectedVendor)
             <footer class="px-6 py-5 border-t border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg {{ $isProcessed ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' }} shrink-0">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg {{ $isProcessed ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600' }} shrink-0">
                         @if($isProcessed)
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -449,10 +346,9 @@
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
-                    {{-- Print Final PR Button (Only if not validated) --}}
                     @if(!$isProcessed)
-                        <a href="{{ route('procurement.pdf.final', $procurement) }}"
-                           target="_blank"
+                        {{-- Tombol Print PR Final --}}
+                        <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank"
                            class="inline-flex items-center gap-2 rounded-lg border border-teal-600 text-teal-700 bg-teal-50 px-4 py-2 text-sm font-semibold hover:bg-teal-100 transition">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -460,22 +356,24 @@
                             Print Final PR
                         </a>
 
-                        {{-- Validate Signature Button --}}
-                        <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST"
-                              onsubmit="return confirm('Make sure the Final PR has been signed by the Manager. Continue validation?')">
+                        {{-- Input Nomor Final + Tombol Validasi --}}
+                        <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST" class="flex items-center gap-2">
                             @csrf
                             @method('PATCH')
-                            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
+                            <input type="text" name="final_number" required placeholder="Final PR Number (e.g. 07/OPS-PICT/CAF/IV/2026)"
+                                   class="rounded-lg border-gray-300 text-sm px-3 py-2 w-64">
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+                                    onclick="return confirm('Make sure the Final PR has been signed by the Manager. Continue validation?')">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
-                                Validate Manager Signature
+                                Validate Final Signature
                             </button>
                         </form>
                     @else
-                        {{-- Checkout PO Button (Enabled if validated) --}}
+                        {{-- Tombol Checkout PO (Aktif jika sudah divalidasi) --}}
                         <a href="{{ route('procurement.purchases.create', $procurement) }}"
-                           class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
+                           class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>

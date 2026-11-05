@@ -5,7 +5,8 @@
 
 @php
     $hasVendors = $procurement->vendors->count() > 0;
-    $isProcessed = $procurement->status === 'processed'; // Check validation status
+    $isFinalApproved = in_array($procurement->status, ['final_approved', 'received', 'completed']);
+    $isProcessed = $procurement->status === 'processed'; // PR Awal sudah divalidasi
 @endphp
 
 @section('content')
@@ -16,7 +17,10 @@
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Vendor Comparison</h1>
             <p class="mt-1 text-sm text-gray-500">
-                PR No. <span class="font-mono font-medium text-gray-700">{{ $procurement->no }}</span>
+                PR Awal: <span class="font-mono font-medium text-gray-700">{{ $procurement->no }}</span>
+                @if($procurement->final_number)
+                    | PR Final: <span class="font-mono font-medium text-indigo-600">{{ $procurement->final_number }}</span>
+                @endif
                 — {{ $procurement->description }}
             </p>
         </div>
@@ -29,59 +33,29 @@
         </a>
     </div>
 
-    {{-- ═══ SUCCESS ALERT ═══ --}}
+    {{-- ═══ SUCCESS / ERROR ALERTS ═══ --}}
     @if(session('success'))
         <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4">
-            <div class="flex gap-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
-                </svg>
-                <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
-            </div>
+            <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
         </div>
     @endif
-
-    {{-- ═══ WARNING ALERT ═══ --}}
-    @if(session('warning'))
-        <div class="rounded-xl bg-amber-50 border border-amber-200 px-5 py-4">
-            <div class="flex gap-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p class="text-sm font-medium text-amber-800">{{ session('warning') }}</p>
-            </div>
-        </div>
-    @endif
-
-    {{-- ═══ ERROR ALERT ═══ --}}
     @if(session('error'))
         <div class="rounded-xl bg-rose-50 border border-rose-200 px-5 py-4">
-            <div class="flex gap-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="text-sm font-medium text-rose-800">{{ session('error') }}</p>
-            </div>
+            <p class="text-sm font-medium text-rose-800">{{ session('error') }}</p>
         </div>
     @endif
-
     @if($errors->any())
         <div class="rounded-xl bg-rose-50 border border-rose-200 px-5 py-4">
-            <div class="flex gap-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-rose-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-                </svg>
-                <ul class="text-sm text-rose-700 space-y-0.5">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
+            <ul class="text-sm text-rose-700 space-y-0.5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         AI SCAN SECTION — Only shows if status is still 'approved'
+         AI SCAN SECTION (Hanya jika status approved)
     ═══════════════════════════════════════════════════════════════ --}}
     @if($procurement->status === 'approved')
     <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -94,19 +68,15 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900">Scan Vendor Screenshots with AI</h2>
-                    <p class="text-xs text-gray-500">Select the vendor type, then upload the screenshot</p>
+                    <p class="text-xs text-gray-500">Select files, then click the scan button</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-teal-200 px-3 py-1 text-xs font-semibold text-teal-700">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
                 AI Gemini Vision
             </span>
         </header>
 
         <div class="p-6 space-y-5">
-            {{-- ═══ DROPZONE — shared file input ═══ --}}
             <label for="multiScreenshotInput"
                    class="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-teal-300 bg-teal-50/30 px-6 py-8 text-center transition cursor-pointer hover:border-teal-400 hover:bg-teal-50/60">
                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100 text-teal-600 group-hover:scale-105 transition-transform">
@@ -115,487 +85,169 @@
                     </svg>
                 </div>
                 <div>
-                    <p id="fileCountInfo" class="text-sm font-semibold text-gray-900">
-                        Click to select screenshots
-                    </p>
-                    <p class="mt-1 text-xs text-gray-500">
-                        Select files first, then click the scan button according to the source
-                    </p>
+                    <p id="fileCountInfo" class="text-sm font-semibold text-gray-900">Click to select screenshots</p>
+                    <p class="mt-1 text-xs text-gray-500">Shopee, Tokopedia, Bukalapak, Lazada — multiple files allowed</p>
                 </div>
                 <input type="file" id="multiScreenshotInput" accept="image/*" multiple class="sr-only">
             </label>
 
-            {{-- ═══ 2 SCAN BUTTONS ═══ --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {{-- Button 1: Scan Monotaro --}}
-                <form action="{{ route('procurement.comparisons.scan.monotaro', $procurement) }}"
-                      method="POST" enctype="multipart/form-data"
-                      onsubmit="return transferFiles(this, 'scanMonotaroBtn')">
+                <form action="{{ route('procurement.comparisons.scan.monotaro', $procurement) }}" method="POST" enctype="multipart/form-data" onsubmit="return transferFiles(this, 'scanMonotaroBtn')">
                     @csrf
                     <input type="file" name="screenshots[]" multiple class="hidden-file-input" data-target="monotaro">
-                    <button type="submit" id="scanMonotaroBtn"
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-70 disabled:cursor-not-allowed">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
+                    <button type="submit" id="scanMonotaroBtn" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 transition">
                         Scan Monotaro
                     </button>
                 </form>
 
-                {{-- Button 2: Scan Other Marketplaces --}}
-                <form action="{{ route('procurement.comparisons.scan.others', $procurement) }}"
-                      method="POST" enctype="multipart/form-data"
-                      onsubmit="return transferFiles(this, 'scanOthersBtn')">
+                <form action="{{ route('procurement.comparisons.scan.others', $procurement) }}" method="POST" enctype="multipart/form-data" onsubmit="return transferFiles(this, 'scanOthersBtn')">
                     @csrf
                     <input type="file" name="screenshots[]" multiple class="hidden-file-input" data-target="others">
-                    <button type="submit" id="scanOthersBtn"
-                            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-rose-600 transition disabled:opacity-70 disabled:cursor-not-allowed">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                        </svg>
+                    <button type="submit" id="scanOthersBtn" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-rose-600 transition">
                         Scan Other Marketplaces
                     </button>
                 </form>
             </div>
-
-            <p class="text-xs text-gray-400 text-center">
-                <strong class="text-blue-600">Monotaro</strong>: specifically for monotaro.id screenshots &nbsp;·&nbsp;
-                <strong class="text-orange-600">Other</strong>: Shopee, Tokopedia, Lazada, Bukalapak, Blibli
-            </p>
         </div>
     </section>
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         VENDOR LIST + MANUAL INPUT FORM
+         VENDOR COMPARISON TABLE
     ═══════════════════════════════════════════════════════════════ --}}
-    <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST"
-          x-data="vendorForm()" id="mainVendorForm"> {{-- ADD ID --}}
-        @csrf
-
-        <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Vendor Data</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                        You can edit / add manually. The system automatically selects the cheapest vendor.
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    @if($procurement->winnerVendor)
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Winner: {{ $procurement->winnerVendor->vendor_name }}
-                        </span>
-                    @endif
-                    @if($procurement->status === 'approved')
-                    <button type="button" @click="addVendor()"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Add Vendor
-                    </button>
-                    @endif
-                </div>
-            </header>
-
-            <div class="p-6 space-y-4">
-                {{-- BUDGET TYPE --}}
-                <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-800">Procurement Budget Type</label>
-                        <p class="text-xs text-gray-500">Select whether this procurement is within the budget (Budgeted) or outside the budget (Non Budgeted).</p>
-                    </div>
-                    <div class="flex gap-6">
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="budget_type" value="Budgeted" x-model="budgetType" :disabled="$procurement->status !== 'approved'" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4 disabled:opacity-50">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Budgeted</span>
-                        </label>
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="radio" name="budget_type" value="Non Budgeted" x-model="budgetType" :disabled="$procurement->status !== 'approved'" class="form-radio text-teal-600 focus:ring-teal-500 h-4 w-4 disabled:opacity-50">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Non Budgeted</span>
-                        </label>
-                    </div>
-                </div>
-
-                {{-- Empty state --}}
-                <template x-if="vendors.length === 0">
-                    <div class="text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
-                        <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <p class="text-sm font-medium text-gray-700">No vendors yet</p>
-                        <p class="mt-1 text-xs text-gray-500">Scan the screenshots above, or click "Add Vendor" to input manually.</p>
-                    </div>
-                </template>
-
-                {{-- Vendor cards --}}
-                <template x-for="(v, idx) in vendors" :key="v.uid">
-                    <div class="rounded-xl border-2 p-4 transition"
-                         :class="isWinner(idx)
-                             ? 'border-emerald-500 bg-emerald-50/40 shadow-sm'
-                             : 'border-gray-200 bg-gray-50/50'">
-
-                        {{-- Card Header --}}
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-xs font-bold uppercase tracking-wider text-gray-500"
-                                      x-text="'Vendor #' + (idx + 1)"></span>
-                                <template x-if="v.marketplace">
-                                    <span class="inline-flex items-center rounded-md bg-orange-100 text-orange-700 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                                          x-text="v.marketplace"></span>
-                                </template>
-                                <template x-if="isWinner(idx)">
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                                        ✓ Cheapest
-                                    </span>
-                                </template>
-                            </div>
-                            @if($procurement->status === 'approved')
-                            <button type="button" @click="removeVendor(idx)"
-                                    class="text-xs text-rose-600 hover:underline">
-                                Remove
-                            </button>
-                            @endif
-                        </div>
-
-                        {{-- Form fields --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Vendor Name *</label>
-                                <input type="text" :name="`vendors[${idx}][vendor_name]`" x-model="v.vendor_name"
-                                       required placeholder="Monotaro / Shopee / etc." :readonly="$procurement->status !== 'approved'"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Marketplace</label>
-                                <input type="text" :name="`vendors[${idx}][marketplace]`" x-model="v.marketplace"
-                                       placeholder="Shopee / Tokopedia / Monotaro" :readonly="$procurement->status !== 'approved'"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Total Price (Rp) *</label>
-                                <input type="number" :name="`vendors[${idx}][total_price]`" x-model.number="v.total_price"
-                                       required min="0" step="100" placeholder="1000000" :readonly="$procurement->status !== 'approved'"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Tax Note</label>
-                                <select :name="`vendors[${idx}][tax_note]`" x-model="v.tax_note" :disabled="$procurement->status !== 'approved'"
-                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                    <option value="Include Tax">Include Tax</option>
-                                    <option value="Exclude Tax">Exclude Tax</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Company Name (optional)</label>
-                                <input type="text" :name="`vendors[${idx}][company_name]`" x-model="v.company_name" :readonly="$procurement->status !== 'approved'"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
-                                <input type="text" :name="`vendors[${idx}][payment_method]`" x-model="v.payment_method" :readonly="$procurement->status !== 'approved'"
-                                       placeholder="Transfer / COD / Virtual Account"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Bank / Channel</label>
-                                <input type="text" :name="`vendors[${idx}][payment_bank]`" x-model="v.payment_bank" :readonly="$procurement->status !== 'approved'"
-                                       placeholder="BCA Virtual Account"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Estimated Delivery</label>
-                                <input type="text" :name="`vendors[${idx}][estimated_delivery]`" x-model="v.estimated_delivery" :readonly="$procurement->status !== 'approved'"
-                                       placeholder="3-5 days"
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Product URL (optional)</label>
-                                <input type="url" :name="`vendors[${idx}][product_url]`" x-model="v.product_url" :readonly="$procurement->status !== 'approved'"
-                                       placeholder="https://shopee.co.id/..."
-                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                            </div>
-                        </div>
-
-                        {{-- Cost Breakdown --}}
-                        <div class="mt-4 rounded-lg bg-white border border-gray-200 p-3">
-                            <div class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Cost Breakdown</div>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                                <div>
-                                    <span class="block text-gray-500 mb-0.5">Subtotal</span>
-                                    <input type="number" :name="`vendors[${idx}][subtotal]`" x-model.number="v.subtotal" :readonly="$procurement->status !== 'approved'"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                </div>
-                                <div>
-                                    <span class="block text-gray-500 mb-0.5">Shipping Cost</span>
-                                    <input type="number" :name="`vendors[${idx}][shipping_cost]`" x-model.number="v.shipping_cost" :readonly="$procurement->status !== 'approved'"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                </div>
-                                <div>
-                                    <span class="block text-gray-500 mb-0.5">Discount</span>
-                                    <input type="number" :name="`vendors[${idx}][discount_voucher]`" x-model.number="v.discount_voucher" :readonly="$procurement->status !== 'approved'"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                </div>
-                                <div>
-                                    <span class="block text-gray-500 mb-0.5">VAT</span>
-                                    <input type="number" :name="`vendors[${idx}][tax_ppn]`" x-model.number="v.tax_ppn" :readonly="$procurement->status !== 'approved'"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                </div>
-                                <div>
-                                    <span class="block text-gray-500 mb-0.5">Total Before Tax</span>
-                                    <input type="number" :name="`vendors[${idx}][total_before_tax]`" x-model.number="v.total_before_tax" :readonly="$procurement->status !== 'approved'"
-                                           class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Product Details --}}
-                        <template x-if="v.items && v.items.length > 0">
-                            <div class="mt-4 rounded-lg bg-white border border-gray-200 overflow-hidden">
-                                <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-600">
-                                        Product Details (<span x-text="v.items.length"></span>)
-                                    </span>
-                                    @if($procurement->status === 'approved')
-                                    <button type="button" @click="addItem(idx)"
-                                            class="text-[10px] font-semibold text-teal-600 hover:underline">
-                                        + Add
-                                    </button>
-                                    @endif
-                                </div>
-                                <div class="divide-y divide-gray-100">
-                                    <template x-for="(item, itemIdx) in v.items" :key="itemIdx">
-                                        <div class="p-3 grid grid-cols-12 gap-2 items-center text-xs">
-                                            <div class="col-span-5">
-                                                <input type="text" :name="`vendors[${idx}][items][${itemIdx}][product_name]`"
-                                                       x-model="item.product_name" placeholder="Product name" :readonly="$procurement->status !== 'approved'"
-                                                       class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                                <input type="text" :name="`vendors[${idx}][items][${itemIdx}][variant]`"
-                                                       x-model="item.variant" placeholder="Variant (optional)" :readonly="$procurement->status !== 'approved'"
-                                                       class="w-full mt-1 rounded-md border-gray-200 text-[10px] focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                            </div>
-                                            <div class="col-span-2">
-                                                <input type="number" :name="`vendors[${idx}][items][${itemIdx}][quantity]`"
-                                                       x-model.number="item.quantity" placeholder="Qty" :readonly="$procurement->status !== 'approved'"
-                                                       class="w-full rounded-md border-gray-300 text-xs text-center focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                            </div>
-                                            <div class="col-span-3">
-                                                <input type="number" :name="`vendors[${idx}][items][${itemIdx}][unit_price]`"
-                                                       x-model.number="item.unit_price" placeholder="Unit price" :readonly="$procurement->status !== 'approved'"
-                                                       class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100">
-                                            </div>
-                                            <div class="col-span-2 text-right font-semibold text-gray-700"
-                                                 x-text="'Rp ' + ((item.quantity || 0) * (item.unit_price || 0)).toLocaleString('id-ID')"></div>
-                                            @if($procurement->status === 'approved')
-                                            <div class="col-span-12 text-right -mt-2">
-                                                <button type="button" @click="removeItem(idx, itemIdx)"
-                                                        class="text-[10px] text-rose-500 hover:underline">Remove item</button>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
-
-                        @if($procurement->status === 'approved')
-                        <template x-if="!v.items || v.items.length === 0">
-                            <button type="button" @click="addItem(idx)"
-                                    class="mt-4 w-full text-xs text-gray-500 border border-dashed border-gray-300 rounded-lg py-2 hover:border-teal-400 hover:text-teal-600 transition">
-                                + Add Product Detail
-                            </button>
-                        </template>
-                        @endif
-                    </div>
-                </template>
+    <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Comparison Recap</h2>
+                <p class="text-xs text-gray-500">{{ $procurement->vendors->count() }} vendors registered</p>
             </div>
+        </header>
 
-            {{-- ═══ FOOTER: ACTION BASED ON STATUS ═══ --}}
-            <footer class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 bg-gray-50/80">
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500">Vendor / Store</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Subtotal</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Shipping</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Discount</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Tax</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Total</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-center">Status</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($procurement->vendors as $vendor)
+                        @php $isSelected = (bool) $vendor->is_winner; @endphp
+                        <tr class="{{ $isSelected ? 'bg-teal-50/50' : 'hover:bg-gray-50' }}">
+                            <td class="px-5 py-4 font-semibold">{{ $vendor->vendor_name }}</td>
+                            <td class="px-5 py-4 text-right">Rp {{ number_format($vendor->subtotal, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right">Rp {{ number_format($vendor->shipping_cost, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right text-rose-600">- Rp {{ number_format($vendor->discount_voucher, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right">Rp {{ number_format($vendor->tax_ppn, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-right font-bold text-teal-600">Rp {{ number_format($vendor->total_price, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-center">
+                                @if($isSelected)
+                                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Selected</span>
+                                @elseif($procurement->status === 'approved')
+                                    <form action="{{ route('procurement.comparisons.select', [$procurement, $vendor]) }}" method="POST">
+                                        @csrf @method('PATCH')
+                                        <button type="submit" class="rounded-md px-2.5 py-1 text-xs font-semibold text-teal-600 hover:bg-teal-50">Select</button>
+                                    </form>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-5 py-4 text-right">
+                                @if($procurement->status === 'approved')
+                                    <form action="{{ route('procurement.comparisons.destroy', $vendor) }}" method="POST" onsubmit="return confirm('Delete vendor?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-rose-600 hover:underline">Delete</button>
+                                    </form>
+                                @else
+                                    <span class="text-xs text-gray-400">Locked</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="8" class="px-6 py-16 text-center text-gray-500">No comparison data yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- ═══ FOOTER: Aksi Berdasarkan Status ═══ --}}
+        @if($hasVendors && $procurement->winnerVendor)
+            <footer class="px-6 py-5 border-t border-gray-100 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <div class="text-sm font-semibold text-gray-900">
+                        @if($isFinalApproved)
+                            Final PR Validated
+                        @elseif($isProcessed)
+                            PR Awal Validated — Ready for Final PR
+                        @else
+                            Vendor Selected — Waiting for PR Awal Validation
+                        @endif
+                    </div>
+                    <div class="text-xs text-gray-600">
+                        @if($isFinalApproved)
+                            You can now proceed to the PO/Cash Advance/Reimbursement process.
+                        @elseif($isProcessed)
+                            Print the PR Final, get Manager signature, then input Final PR Number and validate.
+                        @else
+                            Print the PR Awal, get Manager signature, then validate.
+                        @endif
+                    </div>
+                </div>
                 
-                <p class="text-xs text-gray-500 order-2 sm:order-1">
-                    @if($procurement->status === 'approved')
-                        The system automatically sets the vendor with the <strong>lowest</strong> total price as the winner.
-                    @else
-                        Vendor data is locked because the Final PR has been validated.
-                    @endif
-                </p>
-
-                <div class="flex flex-wrap items-center gap-2 order-1 sm:order-2">
-                    
-                    {{-- DISPLAY IF NOT YET VALIDATED (Status = approved) --}}
-                    @if($procurement->status === 'approved')
-                        {{-- SAVE BUTTON (type submit for main form) --}}
-                        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            Save Vendor Data
-                        </button>
-
-                        @if($hasVendors && $procurement->winnerVendor)
-                            <a href="{{ route('procurement.pdf.final', $procurement) }}"
-                               target="_blank"
-                               class="inline-flex items-center gap-2 rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z"/>
-                                </svg>
-                                Print Final PR
-                            </a>
-
-                            {{-- VALIDATE BUTTON (Using JavaScript to submit separate form) --}}
-                            <button type="button" onclick="validateSignature()" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                                Validate Signature
-                            </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    @if($isFinalApproved)
+                        {{-- Tombol Lanjutan berdasarkan procurement_method --}}
+                        @if($procurement->procurement_method === 'po')
+                            <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Create PO</a>
+                        @elseif($procurement->procurement_method === 'cash_advance')
+                            <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">Create Cash Advance</a>
+                        @elseif($procurement->procurement_method === 'reimbursement')
+                            <a href="{{ route('reimbursement.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Create Reimbursement</a>
                         @endif
 
-                    {{-- DISPLAY IF ALREADY VALIDATED (Status = processed) --}}
-                    @elseif($procurement->status === 'processed')
-                        <a href="{{ route('procurement.purchases.create', $procurement->id) }}"
-                           class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
-                            Proceed to Checkout (PO)
+                    @elseif($isProcessed)
+                        {{-- Print Final PR & Input Nomor Final --}}
+                        <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50">
+                            Print Final PR
                         </a>
+
+                        <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST" class="flex items-center gap-2">
+                            @csrf @method('PATCH')
+                            <input type="text" name="final_number" required placeholder="Final PR Number (e.g. 07/OPS-PICT/CAF/IV/2026)" class="rounded-lg border-gray-300 text-sm px-3 py-2 w-64">
+                            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Manager signature confirmed?')">
+                                Validate Final PR
+                            </button>
+                        </form>
+
+                    @else
+                        {{-- Print PR Awal & Tombol Validasi Pertama --}}
+                        <a href="{{ route('procurement.pdf', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50">
+                            Print PR Awal
+                        </a>
+
+                        <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Manager signature confirmed for PR Awal?')">
+                                Validate PR Awal
+                            </button>
+                        </form>
                     @endif
                 </div>
             </footer>
-        </section>
-    </form>
-
-    {{-- ═══ SEPARATE SIGNATURE VALIDATION FORM (OUTSIDE MAIN FORM) ═══ --}}
-    <form id="validateSignatureForm" action="{{ route('procurement.validate-signature', $procurement) }}" method="POST" class="hidden">
-        @csrf
-        @method('PATCH')
-    </form>
-
+        @endif
+    </section>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    // Function to show confirmation and submit validation form
-    function validateSignature() {
-        if (confirm('Make sure the Final PR has been signed by the Manager. Continue validation?')) {
-            document.getElementById('validateSignatureForm').submit();
-        }
-    }
-
-    function vendorForm() {
-        return {
-            budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}',
-            vendors: [],
-            isLocked: {{ $procurement->status !== 'approved' ? 'true' : 'false' }},
-
-            init() {
-                const existing = @json($procurement->vendors ?? []);
-                if (existing.length > 0) {
-                    this.vendors = existing.map(v => ({
-                        uid: this.newUid(),
-                        vendor_name:        v.vendor_name        || '',
-                        marketplace:        v.marketplace        || '',
-                        company_name:       v.company_name       || '',
-                        payment_method:     v.payment_method     || '',
-                        payment_bank:       v.payment_bank       || '',
-                        estimated_delivery: v.estimated_delivery || '',
-                        product_url:        v.product_url        || '',
-                        notes:              v.notes              || '',
-                        subtotal:           parseFloat(v.subtotal)         || 0,
-                        shipping_cost:      parseFloat(v.shipping_cost)    || 0,
-                        discount_voucher:   parseFloat(v.discount_voucher) || 0,
-                        tax_ppn:            parseFloat(v.tax_ppn)          || 0,
-                        total_before_tax:   parseFloat(v.total_before_tax) || 0,
-                        total_price:        parseFloat(v.total_price)      || 0,
-                        tax_note:           v.tax_note || 'Include Tax',
-                        items: (v.items || []).map(it => ({
-                            product_name: it.product_name || '',
-                            variant:      it.variant      || '',
-                            sku:          it.sku          || '',
-                            quantity:     parseInt(it.quantity)     || 1,
-                            unit_price:   parseFloat(it.unit_price) || 0,
-                            subtotal:     parseFloat(it.subtotal)   || 0,
-                            stock_status: it.stock_status || '',
-                            weight:       parseFloat(it.weight)     || 0,
-                        })),
-                    }));
-                } else if (!this.isLocked) {
-                    this.addVendor();
-                }
-            },
-
-            newUid() {
-                return 'v-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-            },
-
-            addVendor() {
-                if(this.isLocked) return;
-                this.vendors.push({
-                    uid: this.newUid(),
-                    vendor_name: '',
-                    marketplace: '',
-                    company_name: '',
-                    payment_method: '',
-                    payment_bank: '',
-                    estimated_delivery: '',
-                    product_url: '',
-                    notes: '',
-                    subtotal: 0,
-                    shipping_cost: 0,
-                    discount_voucher: 0,
-                    tax_ppn: 0,
-                    total_before_tax: 0,
-                    total_price: 0,
-                    tax_note: 'Include Tax',
-                    items: [],
-                });
-            },
-
-            removeVendor(idx) {
-                if(this.isLocked) return;
-                this.vendors.splice(idx, 1);
-            },
-
-            addItem(vendorIdx) {
-                if(this.isLocked) return;
-                this.vendors[vendorIdx].items.push({
-                    product_name: '',
-                    variant: '',
-                    sku: '',
-                    quantity: 1,
-                    unit_price: 0,
-                    subtotal: 0,
-                    stock_status: '',
-                    weight: 0,
-                });
-            },
-
-            removeItem(vendorIdx, itemIdx) {
-                if(this.isLocked) return;
-                this.vendors[vendorIdx].items.splice(itemIdx, 1);
-            },
-
-            isWinner(idx) {
-                const prices = this.vendors
-                    .map((v, i) => ({ i, price: parseFloat(v.total_price) || 0 }))
-                    .filter(x => x.price > 0);
-                if (prices.length === 0) return false;
-                const minPrice = Math.min(...prices.map(x => x.price));
-                return parseFloat(this.vendors[idx].total_price) === minPrice;
-            },
-        };
-    }
-
-    /* ═══════════════════════════════════════════════════════════════
-       SHARED FILE BUFFER — 1 input, usable by 2 scan buttons
-    ═══════════════════════════════════════════════════════════════ */
     let sharedFileBuffer = new DataTransfer();
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -613,7 +265,6 @@
             if (label) {
                 if (count > 0) {
                     label.innerText = `${count} file(s) collected (ready to process)`;
-                    label.classList.remove('text-gray-900');
                     label.classList.add('text-teal-600');
                 } else {
                     label.innerText = 'Click to select screenshots';
@@ -622,32 +273,20 @@
         });
     });
 
-    /* ═══════════════════════════════════════════════════════════════
-       TRANSFER FILES TO THE SUBMITTED FORM
-    ═══════════════════════════════════════════════════════════════ */
     function transferFiles(form, buttonId) {
         if (sharedFileBuffer.files.length === 0) {
             alert('Please select screenshots first before scanning.');
             return false;
         }
-
         const hiddenInput = form.querySelector('.hidden-file-input');
         if (hiddenInput) {
             hiddenInput.files = sharedFileBuffer.files;
         }
-
         const btn = document.getElementById(buttonId);
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = `
-                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                AI is processing...
-            `;
+            btn.innerHTML = `Processing...`;
         }
-
         return true;
     }
 </script>
