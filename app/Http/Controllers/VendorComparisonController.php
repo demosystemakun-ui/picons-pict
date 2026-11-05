@@ -40,7 +40,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       GLOBAL INDEX — Daftar semua PR yang memiliki comparison
+       GLOBAL INDEX
     ═══════════════════════════════════════════════════════════════ */
     public function globalIndex()
     {
@@ -53,18 +53,16 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE FINAL PR — Form untuk melengkapi data PR Final
+       CREATE FINAL PR
     ═══════════════════════════════════════════════════════════════ */
     public function createFinalPr(ProcurementRequest $procurement)
     {
-        // Pastikan sudah ada vendor pemenang
         if (!$procurement->winnerVendor) {
             return redirect()
                 ->route('procurement.comparisons.index', $procurement)
                 ->with('error', 'Please select a winning vendor first.');
         }
 
-        // Idempotent: kalau sudah final, langsung ke PDF
         if ($procurement->status === 'final_approved' && $procurement->final_number) {
             return redirect()
                 ->route('procurement.pdf.final', $procurement)
@@ -76,32 +74,32 @@ class VendorComparisonController extends Controller
         // ═══ GENERATE FORMAT OTOMATIS ═══
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
+        $prCode      = $procurement->no ?? 'OPS-PICT'; 
         
-        // Mengambil kode PR awal, contoh: OPS-PICT
-        $prCode = $procurement->no ?? 'OPS-PICT'; 
-        
-        // Format: 07/PR/OPS-PICT/XI-2026
+        // Format: /PR/OPS-PICT/XI-2026 (Angka depannya diisi manual oleh admin)
         $suggestedFinalNumber = '/PR/' . $prCode . '/' . $bulanRomawi . '-' . $tahun;
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE FINAL PR — Simpan data PR Final & redirect ke PDF
+       STORE FINAL PR
     ═══════════════════════════════════════════════════════════════ */
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
     {
-        // Guard: winner harus masih ada
         if (!$procurement->winnerVendor) {
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
-        // Validasi menggunakan field 'final_number' biasa
         $validated = $request->validate([
             'final_number'         => 'required|string|max:100|unique:procurement_requests,final_number,' . $procurement->id,
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
             'reason_choose_vendor' => 'required|string|max:2000',
+            'request_date'         => 'required|date',           // TAMBAHAN
+            'request_by'           => 'required|string|max:255', // TAMBAHAN
+            'division'             => 'required|string|max:255', // TAMBAHAN
+            'prepared_by'          => 'required|string|max:255', // TAMBAHAN
             'accounting_mgr_name'  => 'nullable|string|max:255',
             'cfo_name'             => 'nullable|string|max:255',
             'ceo_name'             => 'nullable|string|max:255',
@@ -112,6 +110,10 @@ class VendorComparisonController extends Controller
             'description'          => $validated['final_description'],
             'final_number'         => $validated['final_number'],
             'reason_choose_vendor' => $validated['reason_choose_vendor'],
+            'request_date'         => $validated['request_date'],   // TAMBAHAN
+            'request_by'           => $validated['request_by'],     // TAMBAHAN
+            'division'             => $validated['division'],       // TAMBAHAN
+            'prepared_by'          => $validated['prepared_by'],    // TAMBAHAN
             'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
             'cfo_name'             => $validated['cfo_name'] ?? null,
             'ceo_name'             => $validated['ceo_name'] ?? null,
@@ -119,14 +121,13 @@ class VendorComparisonController extends Controller
             'status'               => 'final_approved',
         ]);
 
-        // Redirect langsung ke PDF Final
         return redirect()
             ->route('procurement.pdf.final', $procurement)
             ->with('success', 'Final PR saved. PDF is ready.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SCAN — 3 entry point
+       SCAN & PROCESS (TIDAK BERUBAH)
     ═══════════════════════════════════════════════════════════════ */
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
@@ -143,11 +144,9 @@ class VendorComparisonController extends Controller
         return $this->processScan($request, $procurement, 'auto');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       PROCESS SCAN
-    ═══════════════════════════════════════════════════════════════ */
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
+        // ... (KODE PROCESS SCAN TETAP SAMA SEPERTI SEBELUMNYA) ...
         $request->validate([
             'screenshots'   => 'required|array|min:1',
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -308,7 +307,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE — Simpan / update data vendor
+       STORE VENDOR & LAINNYA (TIDAK BERUBAH)
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
@@ -390,25 +389,17 @@ class VendorComparisonController extends Controller
             ->with('success', 'Vendor data saved successfully.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       SELECT VENDOR — Manual pick winner
-    ═══════════════════════════════════════════════════════════════ */
     public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
     {
-        // Pastikan vendor milik procurement ini
         if ($vendor->procurement_request_id !== $procurement->id) {
             abort(404);
         }
 
-        // Hanya boleh ganti winner kalau status masih 'approved'
         if ($procurement->status !== 'approved') {
             return back()->with('error', 'Winner can only be changed while status is Approved.');
         }
 
-        // Reset semua winner
         $procurement->vendors()->update(['is_winner' => false]);
-
-        // Set yang baru
         $vendor->update(['is_winner' => true]);
 
         $procurement->update([
@@ -418,9 +409,6 @@ class VendorComparisonController extends Controller
         return back()->with('success', 'Winning vendor updated to: ' . $vendor->vendor_name);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       DESTROY
-    ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementVendor $vendor)
     {
         $procurement = $vendor->procurementRequest;
@@ -431,9 +419,6 @@ class VendorComparisonController extends Controller
         return back()->with('success', 'Vendor deleted successfully.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       AUTO-PICK WINNER
-    ═══════════════════════════════════════════════════════════════ */
     private function autoPickWinner(ProcurementRequest $procurement): void
     {
         $procurement->vendors()->update(['is_winner' => false]);
@@ -452,9 +437,6 @@ class VendorComparisonController extends Controller
         ]);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       HELPER: Konversi Bulan ke Romawi
-    ═══════════════════════════════════════════════════════════════ */
     private function getRomawi($number) {
         $map = [
             1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',

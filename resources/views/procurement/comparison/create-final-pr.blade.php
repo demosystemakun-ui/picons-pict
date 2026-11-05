@@ -111,7 +111,20 @@
             </header>
 
             <div class="p-6 space-y-4">
+                
+                {{-- BARIS 1: DATE & BUDGET TYPE --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">
+                            Date <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="date" name="request_date"
+                               value="{{ old('request_date', $procurement->request_date ?? date('Y-m-d')) }}"
+                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('request_date') border-rose-400 @enderror"
+                               required>
+                        @error('request_date')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                             Budget Type <span class="text-rose-500">*</span>
@@ -124,6 +137,48 @@
                             <option value="Non Budgeted" {{ old('budget_type', $procurement->budget_type) === 'Non Budgeted' ? 'selected' : '' }}>Non Budgeted</option>
                         </select>
                         @error('budget_type')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                {{-- BARIS 2: REQUEST BY & DIVISION --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">
+                            Request By <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="request_by"
+                               value="{{ old('request_by', $procurement->request_by) }}"
+                               placeholder="e.g. drjandak"
+                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('request_by') border-rose-400 @enderror"
+                               required>
+                        @error('request_by')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">
+                            Division <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="division"
+                               value="{{ old('division', $procurement->division) }}"
+                               placeholder="e.g. HRGA"
+                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('division') border-rose-400 @enderror"
+                               required>
+                        @error('division')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                {{-- BARIS 3: PREPARED BY & FINAL DESCRIPTION --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">
+                            Prepared By <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="prepared_by"
+                               value="{{ old('prepared_by', $procurement->prepared_by) }}"
+                               placeholder="e.g. adadadad"
+                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('prepared_by') border-rose-400 @enderror"
+                               required>
+                        @error('prepared_by')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
@@ -139,7 +194,7 @@
                     </div>
                 </div>
 
-                {{-- ═══ FINAL PR NUMBER (AUTO FORMAT) ═══ --}}
+                {{-- BARIS 4: FINAL PR NUMBER --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                         Final PR Number <span class="text-rose-500">*</span>
