@@ -1,7 +1,8 @@
 @php
     \Carbon\Carbon::setLocale('en');
     $rp    = fn ($n) => 'Rp ' . number_format($n, 0, ',', '.');
-    $d     = fn ($date) => $date ? $date->translatedFormat('j F Y') : '';
+    // Format tanggal: Monday, 13 April 2026
+    $d     = fn ($date) => $date ? $date->translatedFormat('l, j F Y') : '';
     $sg    = fn ($key, $field) => data_get($cashAdvance->signers ?? [], "$key.$field") ?? '';
 
     $minRows   = 10;
@@ -51,13 +52,19 @@
         </tr>
     </table>
 
-    {{-- TITLE --}}
+    {{-- TITLE & NOMOR SURAT --}}
     <table class="bd" style="margin-top:6px;">
         <tr class="purple">
             <td class="title" style="border-bottom:none;">CASH ADVANCE FORM</td>
         </tr>
         <tr class="purple">
-            <td class="c b" style="border-top:none;">{{ $cashAdvance->number }}</td>
+            <td class="c b" style="border-top:none;">
+                @if($cashAdvance->status === 'approved' && !str_starts_with($cashAdvance->number, 'DRAFT'))
+                    {{ $cashAdvance->number }}
+                @else
+                    <span class="italic opacity-80">Waiting for Admin Approval</span>
+                @endif
+            </td>
         </tr>
     </table>
 
