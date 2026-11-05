@@ -26,15 +26,19 @@ class CashAdvanceController extends Controller
         return view('procurement.cash-advance.index', compact('cashAdvances'));
     }
 
-    public function create()
-    {
-        $user = auth()->user();
-        return view('procurement.cash-advance.create', [
-            'number'       => CashAdvance::generateNumber(),
-            'departments'  => Department::orderBy('name')->pluck('name'),
-            'signerOptions'=> Signer::where('is_active', true)->get()->groupBy('slot'),
-        ]);
-    }
+   public function create(Request $request)
+{
+    $user = auth()->user();
+    $procurementId = $request->query('procurement_request_id');
+    $procurement = $procurementId ? \App\Models\ProcurementRequest::find($procurementId) : null;
+    
+    return view('procurement.cash-advance.create', [
+        'number'        => CashAdvance::generateNumber(),
+        'departments'   => Department::orderBy('name')->pluck('name'),
+        'signerOptions' => Signer::where('is_active', true)->get()->groupBy('slot'),
+        'procurement'   => $procurement, // Kirim data PR ke view
+    ]);
+}
 
     public function store(Request $request)
     {
