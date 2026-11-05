@@ -289,7 +289,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 1 — Analisa file
+       IMPORT STEP 1 — Analyze file
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
@@ -305,12 +305,12 @@ class InventoryStockController extends Controller
                 (int) $request->input('sheet', 0)
             );
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Gagal membaca file: ' . $e->getMessage()], 422);
+            return response()->json(['message' => 'Failed to read file: ' . $e->getMessage()], 422);
         }
 
         $rows = array_values($rows);
         if (count($rows) === 0) {
-            return response()->json(['message' => 'Sheet ini kosong.'], 422);
+            return response()->json(['message' => 'This sheet is empty.'], 422);
         }
 
         $headerIdx = $request->filled('header_row')
@@ -355,7 +355,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 2 — Proses import
+       IMPORT STEP 2 — Process import
     ═══════════════════════════════════════════════════════════════ */
     public function importProcess(Request $request)
     {
@@ -371,13 +371,13 @@ class InventoryStockController extends Controller
             'default_category_id' => 'nullable|integer|exists:categories,id',
             'default_unit_id'     => 'nullable|integer|exists:units,id',
         ], [
-            'excel_file.required'         => 'File Excel belum dipilih.',
-            'excel_file.mimes'            => 'Format file harus .xlsx, .xls, atau .csv.',
-            'excel_file.max'              => 'Ukuran file maksimal 5MB.',
-            'excel_file.uploaded'         => 'Upload gagal (kemungkinan melebihi batas upload_max_filesize di PHP).',
-            'mapping.department.required' => 'Kolom Departemen belum dipilih.',
-            'mapping.item_name.required'  => 'Kolom Nama Barang belum dipilih.',
-            'mapping.stock.required'      => 'Kolom Sisa Stok belum dipilih.',
+            'excel_file.required'         => 'Excel file has not been selected.',
+            'excel_file.mimes'            => 'File format must be .xlsx, .xls, or .csv.',
+            'excel_file.max'              => 'Maximum file size is 5MB.',
+            'excel_file.uploaded'         => 'Upload failed (possibly exceeding upload_max_filesize limit in PHP).',
+            'mapping.department.required' => 'Department column has not been selected.',
+            'mapping.item_name.required'  => 'Item Name column has not been selected.',
+            'mapping.stock.required'      => 'Remaining Stock column has not been selected.',
         ]);
 
         try {
@@ -386,7 +386,7 @@ class InventoryStockController extends Controller
                 (int) $request->input('sheet', 0)
             );
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to read Excel file: ' . $e->getMessage());
         }
 
         $map       = $request->input('mapping');
@@ -402,7 +402,7 @@ class InventoryStockController extends Controller
         $defaultCategoryId = $request->input('default_category_id');
         $defaultUnitId     = $request->input('default_unit_id');
         
-        // MENGATASI ERROR generation_expression DI MYSQL VERSI LAMA
+        // WORKAROUND FOR generation_expression ERROR ON OLDER MYSQL
         $needCategory = true;
         $needUnit     = true;
 
@@ -435,7 +435,7 @@ class InventoryStockController extends Controller
 
             if ($deptName === '') {
                 if ($lastDept === null) {
-                    $skipped[] = "Baris {$lineNum}: departemen kosong";
+                    $skipped[] = "Row {$lineNum}: department is empty";
                     continue;
                 }
                 $deptName = $lastDept;
@@ -445,17 +445,17 @@ class InventoryStockController extends Controller
             }
 
             if ($itemName === '' && $itemCode === '') {
-                $skipped[] = "Baris {$lineNum}: nama dan kode barang kosong";
+                $skipped[] = "Row {$lineNum}: item name and code are empty";
                 continue;
             }
 
             $qty = $this->parseQty($rawStock);
             if ($qty === null) {
-                $skipped[] = "Baris {$lineNum}: stok tidak valid (\"" . $this->cleanText($rawStock) . "\")";
+                $skipped[] = "Row {$lineNum}: invalid stock (\"" . $this->cleanText($rawStock) . "\")";
                 continue;
             }
             if ($qty < 0) {
-                $skipped[] = "Baris {$lineNum}: stok negatif ({$qty})";
+                $skipped[] = "Row {$lineNum}: negative stock ({$qty})";
                 continue;
             }
 
@@ -473,11 +473,11 @@ class InventoryStockController extends Controller
                     }
 
                     if ($needCategory && !$defaultCategoryId) {
-                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh kategori, pilih \"Kategori default\" di form import";
+                        $skipped[] = "Row {$lineNum}: new item \"{$itemCode}\" requires a category, select \"Default Category\" in the import form";
                         continue;
                     }
                     if ($needUnit && !$defaultUnitId) {
-                        $skipped[] = "Baris {$lineNum}: item baru \"{$itemCode}\" butuh satuan, pilih \"Satuan default\" di form import";
+                        $skipped[] = "Row {$lineNum}: new item \"{$itemCode}\" requires a unit, select \"Default Unit\" in the import form";
                         continue;
                     }
 
@@ -513,29 +513,29 @@ class InventoryStockController extends Controller
 
                 $imported++;
             } catch (\Throwable $e) {
-                $skipped[] = "Baris {$lineNum}: error - " . $e->getMessage();
+                $skipped[] = "Row {$lineNum}: error - " . $e->getMessage();
             }
         }
 
-        Log::info('Stock import selesai', [
+        Log::info('Stock import completed', [
             'user_id'  => auth()->id(),
             'imported' => $imported,
             'skipped'  => count($skipped),
             'detail'   => $skipped,
         ]);
 
-        $msg = "Berhasil import {$imported} data stok.";
-        if ($newItems > 0) $msg .= " {$newItems} item baru dibuat.";
-        if ($newDepts > 0) $msg .= " {$newDepts} departemen baru dibuat.";
-        if ($filled > 0)   $msg .= " {$filled} baris memakai departemen dari baris di atasnya.";
+        $msg = "Successfully imported {$imported} stock records.";
+        if ($newItems > 0) $msg .= " {$newItems} new items created.";
+        if ($newDepts > 0) $msg .= " {$newDepts} new departments created.";
+        if ($filled > 0)   $msg .= " {$filled} rows used the department from the row above.";
 
         $redirect = redirect()->back()->with('import_report', array_slice($skipped, 0, 30));
 
         if ($imported === 0) {
-            return $redirect->with('warning', 'Tidak ada data yang masuk. Cek kolom mapping dan alasan di bawah.');
+            return $redirect->with('warning', 'No data was imported. Check column mapping and reasons below.');
         }
         if (count($skipped) > 0) {
-            $msg .= ' ' . count($skipped) . ' baris dilewati.';
+            $msg .= ' ' . count($skipped) . ' rows skipped.';
             return $redirect->with('warning', $msg);
         }
 
@@ -543,7 +543,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       HELPER IMPORT
+       IMPORT HELPERS
     ═══════════════════════════════════════════════════════════════ */
     private function loadSheet(string $path, int $sheetIndex = 0): array
     {
@@ -767,7 +767,7 @@ class InventoryStockController extends Controller
         });
 
         return redirect()->route('inventory.stock.index')
-            ->with('success', 'Stok masuk berhasil dicatat.');
+            ->with('success', 'Incoming stock successfully recorded.');
     }
 
     public function useItemForm($id)
@@ -793,7 +793,7 @@ class InventoryStockController extends Controller
             $this->authorizeDepartment($stock);
 
             if ($stock->stock < $validated['used_stock']) {
-                $error = 'Jumlah pemakaian melebihi sisa stok yang tersedia!';
+                $error = 'The usage quantity exceeds the available stock!';
                 return;
             }
 
@@ -812,7 +812,7 @@ class InventoryStockController extends Controller
         }
 
         return redirect()->route('inventory.stock.index')
-            ->with('success', 'Stok berhasil dikurangi dan dicatat dalam sistem.');
+            ->with('success', 'Stock successfully reduced and recorded in the system.');
     }
 
     private function authorizeDepartment(DepartmentStock $stock): void

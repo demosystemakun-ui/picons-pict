@@ -309,15 +309,15 @@ class ConsumableRequestController extends Controller
 
         // Admin Departemen hanya bisa update status request dari departemennya
         if ($user->hasRole('Admin Departemen') && $consumableRequest->user->department_id !== $user->department_id) {
-            abort(403, 'Anda tidak dapat memproses request dari departemen lain.');
+            abort(403, 'You are not authorized to process requests from other departments.');
         }
 
         $validated = $request->validate([
             'status'        => 'required|in:approved,rejected,revision,pending',
             'revision_note' => 'required_if:status,revision|nullable|string|max:2000',
         ], [
-            'revision_note.required_if' => 'Catatan revisi wajib diisi ketika memilih status Revisi.',
-            'revision_note.max'         => 'Catatan revisi maksimal 2000 karakter.',
+          'revision_note.required_if' => 'Revision note is required when selecting the Revision status.',
+            'revision_note.max'         => 'Revision note maximum 2000 characters.',
         ]);
 
         $payload = ['status' => $validated['status']];
@@ -333,13 +333,13 @@ class ConsumableRequestController extends Controller
         $consumableRequest->update($payload);
 
         $messages = [
-            'approved' => 'Pengajuan berhasil disetujui.',
-            'rejected' => 'Pengajuan telah ditolak.',
-            'revision' => 'Pengajuan dikembalikan untuk revisi. Catatan telah dikirim ke pemohon.',
-            'pending'  => 'Status pengajuan dikembalikan ke pending.',
+           'approved' => 'Request has been approved.',
+'rejected' => 'Request has been rejected.',
+            'revision' => 'Request has been returned for revision. Note has been sent to the applicant.',
+            'pending'  => 'Request status has been returned to pending.',
         ];
 
-        return back()->with('success', $messages[$validated['status']] ?? 'Status berhasil diperbarui.');
+        return back()->with('success', $messages[$validated['status']] ?? 'Status successfully updated.');
     }
 
     public function myRequests()
@@ -429,7 +429,7 @@ class ConsumableRequestController extends Controller
         ]);
 
         return redirect()->route('purchase-requisitions.index')
-            ->with('success', 'Berhasil menyatukan Consumable Request menjadi Purchase Requisition (PR).');
+            ->with('success', 'Successfully consolidated Consumable Requests into Purchase Requisition (PR).');
     }
 
     public function processConsolidation(Request $request)
@@ -437,7 +437,7 @@ class ConsumableRequestController extends Controller
         $user = auth()->user();
         
         if (!$user->hasRole('Super Admin') && !$user->hasRole('Admin Utama')) {
-            abort(403, 'Hanya Admin Utama yang dapat melakukan konsolidasi lintas departemen.');
+            abort(403, 'Only Super Admin and Main Admin can perform cross-departmental consolidation.');
         }
 
         $validated = $request->validate([
@@ -448,8 +448,8 @@ class ConsumableRequestController extends Controller
             'request_ids'        => 'required|array|min:1',
             'request_ids.*'      => 'exists:consumable_requests,id',
         ], [
-            'no.required' => 'Nomor PR wajib diisi.',
-            'no.unique'   => 'Nomor PR sudah digunakan. Silakan masukkan nomor lain.',
+            'no.required' => 'PR Number is required.',
+            'no.unique'   => 'PR Number is already used. Please enter a different number.',
         ]);
 
         $consumableRequests = ConsumableRequest::with('items', 'user')
@@ -458,7 +458,7 @@ class ConsumableRequestController extends Controller
             ->get();
 
         if ($consumableRequests->isEmpty()) {
-            return back()->with('error', 'Tidak ada pengajuan approved yang valid untuk digabungkan.');
+            return back()->with('error', 'No valid approved requests available for consolidation.');
         }
 
         DB::beginTransaction();
@@ -506,11 +506,11 @@ class ConsumableRequestController extends Controller
                 'description'           => 'Gabungan Consumable Request: ' . $consumableRequests->pluck('subject')->implode(', '),
                 'is_repeat_order'       => true,
                 'is_goods'              => true,
-                'background'            => $validated['background'] ?: 'Konsolidasi otomatis dari ' . $consumableRequests->count() . ' Consumable Request yang sudah approved.',
-                'purpose'               => $validated['purpose'] ?: 'Pemenuhan kebutuhan consumable operasional.',
+                'background'            => $validated['background'] ?: 'Consolidation automatically from ' . $consumableRequests->count() . ' Approved Consumable Requests.',
+                'purpose'               => $validated['purpose'] ?: 'Meeting operational consumable needs.',
                 'required_spec'         => null,
-                'item_name'             => '(Multiple Items - Lihat Detail Lampiran)',
-                'item_requirement_note' => '(Multiple Items - Lihat Detail Lampiran)',
+                'item_name'             => '(Multiple Items - View Attachment Details)',
+                'item_requirement_note' => '(Multiple Items - View Attachment Details)',
                 'quantity'              => $totalQuantity,
                 'pic_name'              => $user->name,
                 'status'                => 'pending',
@@ -529,12 +529,12 @@ class ConsumableRequestController extends Controller
             DB::commit();
 
             return redirect()->route('procurement.print', $procurementRequest->id)
-                ->with('success', 'Consumable Request berhasil digabungkan menjadi PR.');
+                ->with('success', 'Consumable Request successfully consolidated into PR.');
 
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Merge Consumable to PR Error: ' . $e->getMessage());
-            return back()->with('error', 'Gagal menggabungkan Consumable Request: ' . $e->getMessage());
+            return back()->with('error', 'Failed to consolidate Consumable Request: ' . $e->getMessage());
         }
     }
 }
