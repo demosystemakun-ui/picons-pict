@@ -184,6 +184,9 @@
 {{-- Modal Create --}}
 @include('consumable-requests._modal')
 @include('consumable-requests._revision-modal')
+
+{{-- TAMBAHKAN BARIS INI AGAR MODAL MERGE MUNCUL --}}
+@include('consumable-requests._merge-modal')
 @endsection
 
 @push('scripts')
