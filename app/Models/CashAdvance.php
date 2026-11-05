@@ -34,6 +34,9 @@ class CashAdvance extends Model
         return 'Rp ' . number_format($this->total, 0, ',', '.');
     }
 
+    public function isPending(): bool { return $this->status === 'pending'; }
+    public function isApproved(): bool { return $this->status === 'approved'; }
+
     public static function generateNumber($date = null): string
     {
         $date  = $date ? \Carbon\Carbon::parse($date) : now();

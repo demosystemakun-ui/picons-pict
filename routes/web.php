@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\CashAdvanceController;
+use App\Http\Controllers\LiquidationController;
 
 /* ═══════════════════════════════════════════════════════════════════
    AUTHENTICATION
@@ -64,6 +65,10 @@ Route::post('cash-advances/{cashAdvance}/approve', [CashAdvanceController::class
 Route::get('cash-advances/{cashAdvance}/print', [CashAdvanceController::class, 'print'])->name('cash-advances.print');
 Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pdf'])->name('cash-advances.pdf');
 
+  Route::resource('liquidations', LiquidationController::class);
+    Route::post('liquidations/{liquidation}/approve', [LiquidationController::class, 'approve'])->name('liquidations.approve');
+    Route::get('liquidations/{liquidation}/print', [LiquidationController::class, 'print'])->name('liquidations.print');
+    Route::get('liquidations/{liquidation}/pdf', [LiquidationController::class, 'pdf'])->name('liquidations.pdf');
     /* ─────────────────────────────────────────────
        INVENTORY STOCK
     ───────────────────────────────────────────── */

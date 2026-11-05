@@ -26,19 +26,18 @@ class CashAdvanceController extends Controller
         return view('procurement.cash-advance.index', compact('cashAdvances'));
     }
 
-   public function create(Request $request)
-{
-    $user = auth()->user();
-    $procurementId = $request->query('procurement_request_id');
-    $procurement = $procurementId ? \App\Models\ProcurementRequest::find($procurementId) : null;
-    
-    return view('procurement.cash-advance.create', [
-        'number'        => CashAdvance::generateNumber(),
-        'departments'   => Department::orderBy('name')->pluck('name'),
-        'signerOptions' => Signer::where('is_active', true)->get()->groupBy('slot'),
-        'procurement'   => $procurement, // Kirim data PR ke view
-    ]);
-}
+    public function create(Request $request)
+    {
+        $procurementId = $request->query('procurement_request_id');
+        $procurement   = $procurementId ? \App\Models\ProcurementRequest::find($procurementId) : null;
+
+        return view('procurement.cash-advance.create', [
+            'number'        => CashAdvance::generateNumber(),
+            'departments'   => Department::orderBy('name')->pluck('name'),
+            'signerOptions' => Signer::where('is_active', true)->get()->groupBy('slot'),
+            'procurement'   => $procurement,
+        ]);
+    }
 
     public function store(Request $request)
     {
@@ -63,50 +62,6 @@ class CashAdvanceController extends Controller
         return view('procurement.cash-advance.show', compact('cashAdvance'));
     }
 
-    public function edit(CashAdvance $cashAdvance)
-    {
-        if ($cashAdvance->status !== 'pending') {
-            return back()->with('error', 'Approved forms cannot be edited.');
-        }
-
-        $cashAdvance->load('items');
-        return view('procurement.cash-advance.edit', [
-            'cashAdvance'  => $cashAdvance,
-            'departments'  => Department::orderBy('name')->pluck('name'),
-            'signerOptions'=> Signer::where('is_active', true)->get()->groupBy('slot'),
-        ]);
-    }
-
-    public function update(Request $request, CashAdvance $cashAdvance)
-    {
-        if ($cashAdvance->status !== 'pending') {
-            return back()->with('error', 'Approved forms cannot be updated.');
-        }
-
-        $data = $this->validated($request);
-        $items = $data['items'];
-        unset($data['items']);
-
-        DB::transaction(function () use ($data, $items, $cashAdvance) {
-            $cashAdvance->update($data);
-            $cashAdvance->items()->delete();
-            $cashAdvance->items()->createMany($items);
-        });
-
-        return redirect()->route('cash-advances.show', $cashAdvance)
-            ->with('success', 'Cash Advance updated.');
-    }
-
-    public function destroy(CashAdvance $cashAdvance)
-    {
-        if ($cashAdvance->status !== 'pending') {
-            return back()->with('error', 'Approved forms cannot be deleted.');
-        }
-
-        $cashAdvance->delete();
-        return redirect()->route('cash-advances.index')->with('success', 'Form deleted.');
-    }
-
     public function approve(Request $request, CashAdvance $cashAdvance)
     {
         $request->validate([
@@ -125,12 +80,6 @@ class CashAdvanceController extends Controller
         return back()->with('success', 'Cash Advance approved with number: ' . $request->number);
     }
 
-    public function print(CashAdvance $cashAdvance)
-    {
-        $cashAdvance->load('items');
-        return view('procurement.cash-advance.print', compact('cashAdvance'));
-    }
-
     public function pdf(CashAdvance $cashAdvance)
     {
         $cashAdvance->load('items');
@@ -142,27 +91,27 @@ class CashAdvanceController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'number'           => 'nullable|string',
+            'number'                 => 'nullable|string',
             'procurement_request_id' => 'nullable|exists:procurement_requests,id',
-            'request_date'     => 'required|date',
-            'requested_by'     => 'required|string|max:150',
-            'nik'              => 'nullable|string|max:50',
-            'position'         => 'nullable|string|max:100',
-            'department'       => 'nullable|string|max:100',
-            'cost_department'  => 'nullable|string|max:100',
-            'delivery_address' => 'nullable|string',
-            'attachment'       => 'nullable|string',
-            'notes'            => 'nullable|string',
-            'bank_name'        => 'nullable|string|max:100',
-            'account_name'     => 'nullable|string|max:150',
-            'account_number'   => 'nullable|string|max:50',
-            'signers'          => 'nullable|array',
-            'items'                => 'required|array|min:1',
+            'request_date'           => 'required|date',
+            'requested_by'           => 'required|string|max:150',
+            'nik'                    => 'nullable|string|max:50',
+            'position'               => 'nullable|string|max:100',
+            'department'             => 'nullable|string|max:100',
+            'cost_department'        => 'nullable|string|max:100',
+            'delivery_address'       => 'nullable|string',
+            'attachment'             => 'nullable|string',
+            'notes'                  => 'nullable|string',
+            'bank_name'              => 'nullable|string|max:100',
+            'account_name'           => 'nullable|string|max:150',
+            'account_number'         => 'nullable|string|max:50',
+            'signers'                => 'nullable|array',
+            'items'                  => 'required|array|min:1',
             'items.*.item_description' => 'required|string|max:255',
-            'items.*.purpose'      => 'nullable|string|max:255',
-            'items.*.qty'          => 'required|integer|min:1',
-            'items.*.unit'         => 'required|string|max:30',
-            'items.*.price'        => 'required|numeric|min:0',
+            'items.*.purpose'        => 'nullable|string|max:255',
+            'items.*.qty'            => 'required|integer|min:1',
+            'items.*.unit'           => 'required|string|max:30',
+            'items.*.price'          => 'required|numeric|min:0',
         ]);
     }
 }
