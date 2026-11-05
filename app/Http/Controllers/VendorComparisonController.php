@@ -18,14 +18,14 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Halaman comparison (PERBAIKAN: view & validasi)
+       INDEX — Detail Comparison per PR
     ═══════════════════════════════════════════════════════════════ */
     public function index(ProcurementRequest $procurement)
     {
         $user = auth()->user();
 
-        // Validasi: Hanya PR yang sudah approved/processed yang bisa akses comparison
-        if (!in_array($procurement->status, ['approved', 'processed'])) {
+        // Validasi: Hanya PR approved/processed yang bisa akses comparison
+        if (!in_array($procurement->status, ['approved', 'processed', 'final_approved'])) {
             return redirect()
                 ->route('procurement.show', $procurement)
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
@@ -37,15 +37,27 @@ class VendorComparisonController extends Controller
         }
 
         $procurement->load('vendors.items', 'winnerVendor');
-        $vendors = $procurement->vendors()->get();
 
-        // PERBAIKAN: Gunakan view 'comparison.index' (bukan 'create')
-        return view('procurement.comparison.global-index', compact('procurement', 'vendors'));
+        // ✅ PERBAIKAN: Panggil 'comparison.index' (bukan 'global-index')
+        return view('procurement.comparison.index', compact('procurement'));
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       GLOBAL INDEX — Daftar semua PR yang memiliki comparison
+    ═══════════════════════════════════════════════════════════════ */
+    public function globalIndex()
+    {
+        $procurements = ProcurementRequest::whereHas('vendors')
+            ->with(['vendors', 'winnerVendor', 'department'])
+            ->latest()
+            ->paginate(15);
+
+        return view('procurement.comparison.global-index', compact('procurements'));
     }
 
     /* ═══════════════════════════════════════════════════════════════
        SCAN — 3 entry point
-    ══════════════════════════════════════════════════════════════════ */
+    ═══════════════════════════════════════════════════════════════ */
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');
@@ -79,7 +91,7 @@ class VendorComparisonController extends Controller
             }
 
             $groupedVendors = [];
-            
+
             foreach ($extracted as $item) {
                 $marketplace = strtolower(trim($item['marketplace'] ?? ''));
                 if (empty($marketplace) || $marketplace === 'auto' || $marketplace === 'others') {
@@ -101,9 +113,9 @@ class VendorComparisonController extends Controller
                     foreach ($item['items'] as $it) {
                         $exists = false;
                         foreach ($groupedVendors[$marketplace]['items'] as &$existingItem) {
-                            $isSameSku = !empty($it['sku']) && $existingItem['sku'] === $it['sku'];
+                            $isSameSku  = !empty($it['sku']) && $existingItem['sku'] === $it['sku'];
                             $isSameName = empty($it['sku']) && strtolower($existingItem['product_name']) === strtolower($it['product_name']);
-                            
+
                             if ($isSameSku || $isSameName) {
                                 $existingItem['quantity'] += ($it['quantity'] ?? 1);
                                 $existingItem['subtotal'] += ($it['subtotal'] ?? 0);
@@ -141,7 +153,7 @@ class VendorComparisonController extends Controller
                 if ($existingVendor) {
                     foreach ($data['items'] as $newItem) {
                         $existingItem = $existingVendor->items()
-                            ->where(function($q) use ($newItem) {
+                            ->where(function ($q) use ($newItem) {
                                 if (!empty($newItem['sku'])) {
                                     $q->where('sku', $newItem['sku']);
                                 } else {
@@ -152,7 +164,7 @@ class VendorComparisonController extends Controller
                         if ($existingItem) {
                             $existingItem->update([
                                 'quantity' => $existingItem->quantity + ($newItem['quantity'] ?? 1),
-                                'subtotal' => $existingItem->subtotal + ($newItem['subtotal'] ?? 0)
+                                'subtotal' => $existingItem->subtotal + ($newItem['subtotal'] ?? 0),
                             ]);
                         } else {
                             $existingVendor->items()->create([
@@ -169,26 +181,25 @@ class VendorComparisonController extends Controller
                             ]);
                         }
                     }
-                    
-                    $newSubtotal = $existingVendor->items()->sum('subtotal');
+
+                    $newSubtotal       = $existingVendor->items()->sum('subtotal');
                     $newTotalBeforeTax = $newSubtotal + $existingVendor->shipping_cost - $existingVendor->discount_voucher;
                     $existingVendor->update([
                         'subtotal'         => $newSubtotal,
                         'total_before_tax' => $newTotalBeforeTax,
-                        'total_price'      => $newTotalBeforeTax + $existingVendor->tax_ppn
+                        'total_price'      => $newTotalBeforeTax + $existingVendor->tax_ppn,
                     ]);
-
                 } else {
                     $vendor = $procurement->vendors()->create([
-                        'vendor_name'        => $data['vendor_name'],
-                        'marketplace'        => $data['marketplace'],
-                        'subtotal'           => $itemsSubtotal,
-                        'shipping_cost'      => $data['shipping_cost'],
-                        'discount_voucher'   => $data['discount_voucher'],
-                        'tax_ppn'            => $data['tax_ppn'],
-                        'total_before_tax'   => $totalBeforeTax,
-                        'total_price'        => $totalPrice,
-                        'sort_order'         => 1,
+                        'vendor_name'      => $data['vendor_name'],
+                        'marketplace'      => $data['marketplace'],
+                        'subtotal'         => $itemsSubtotal,
+                        'shipping_cost'    => $data['shipping_cost'],
+                        'discount_voucher' => $data['discount_voucher'],
+                        'tax_ppn'          => $data['tax_ppn'],
+                        'total_before_tax' => $totalBeforeTax,
+                        'total_price'      => $totalPrice,
+                        'sort_order'       => 1,
                     ]);
 
                     foreach ($data['items'] as $j => $item) {
@@ -262,7 +273,7 @@ class VendorComparisonController extends Controller
         ]);
 
         $procurement->update([
-            'budget_type' => $validated['budget_type'] ?? null
+            'budget_type' => $validated['budget_type'] ?? null,
         ]);
 
         $procurement->vendors()->delete();
