@@ -1,6 +1,3 @@
-{{--
-  Cash Advance Form Document
---}}
 @php
     \Carbon\Carbon::setLocale('en');
     $rp    = fn ($n) => 'Rp ' . number_format($n, 0, ',', '.');
@@ -31,16 +28,12 @@
     .ca .sign .gap { border: none; width: 1.25%; }
     .ca .sign .name { font-size: 9px; font-weight: bold; }
     @media print {
-        .ca .purple {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
+        .ca .purple { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
 </style>
 
 <div class="ca">
-
-    {{-- HEADER / KOP SURAT --}}
+    {{-- KOP SURAT --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr>
             <td style="width: 20%; text-align: left;">
@@ -102,7 +95,7 @@
         </tr>
     </table>
 
-    {{-- ITEM TABLE --}}
+    {{-- TABLE ITEMS --}}
     <table class="bd items" style="margin-top:6px;">
         <thead>
             <tr class="purple c b">

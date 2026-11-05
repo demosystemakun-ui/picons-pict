@@ -62,6 +62,12 @@ class CashAdvanceController extends Controller
         return view('procurement.cash-advance.show', compact('cashAdvance'));
     }
 
+    public function show(CashAdvance $cashAdvance)
+{
+    $cashAdvance->load('items');
+    return view('procurement.cash-advance.show', compact('cashAdvance'));
+}
+
     public function approve(Request $request, CashAdvance $cashAdvance)
     {
         $request->validate([
