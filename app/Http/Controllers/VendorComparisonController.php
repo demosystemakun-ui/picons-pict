@@ -81,7 +81,7 @@ class VendorComparisonController extends Controller
         $prCode = $procurement->no ?? 'OPS-PICT'; 
         
         // Format: 07/PR/OPS-PICT/XI-2026
-        $suggestedFinalNumber = '07/PR/' . $prCode . '/' . $bulanRomawi . '-' . $tahun;
+        $suggestedFinalNumber = '/PR/' . $prCode . '/' . $bulanRomawi . '-' . $tahun;
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
