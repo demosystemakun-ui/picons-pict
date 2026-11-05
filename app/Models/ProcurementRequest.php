@@ -47,6 +47,7 @@ class ProcurementRequest extends Model
         'coo_name',
 
         'status',
+         'procurement_method',
         'review_notes',
 
         'budget_type',
