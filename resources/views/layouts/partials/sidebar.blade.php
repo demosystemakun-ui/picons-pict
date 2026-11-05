@@ -128,7 +128,7 @@
                 $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];
             }
 
-            $procurementLinks[] = ['route' => null,                 'label' => 'Cash Advance'];
+                $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
             $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
             $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
         @endphp

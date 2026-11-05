@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\CashAdvanceController;
 
 /* ═══════════════════════════════════════════════════════════════════
    AUTHENTICATION
@@ -56,6 +57,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users/{user}/nonaktif', [UserController::class, 'nonaktif'])->name('users.nonaktif');
         Route::resource('users', UserController::class)->except(['show']);
     });
+
+    // ═══ CASH ADVANCE ═══
+Route::resource('cash-advances', CashAdvanceController::class);
+Route::post('cash-advances/{cashAdvance}/approve', [CashAdvanceController::class, 'approve'])->name('cash-advances.approve');
+Route::get('cash-advances/{cashAdvance}/print', [CashAdvanceController::class, 'print'])->name('cash-advances.print');
+Route::get('cash-advances/{cashAdvance}/pdf', [CashAdvanceController::class, 'pdf'])->name('cash-advances.pdf');
 
     /* ─────────────────────────────────────────────
        INVENTORY STOCK

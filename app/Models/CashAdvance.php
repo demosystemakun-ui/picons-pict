@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class CashAdvance extends Model
+{
+    protected $guarded = [];
+
+    protected $casts = [
+        'request_date' => 'date',
+        'approved_at'  => 'datetime',
+        'signers'      => 'array',
+    ];
+
+    public function items()
+    {
+        return $this->hasMany(CashAdvanceItem::class);
+    }
+
+    public function procurementRequest()
+    {
+        return $this->belongsTo(ProcurementRequest::class);
+    }
+
+    public function getTotalAttribute(): int
+    {
+        return $this->items->sum(fn ($i) => $i->qty * $i->price);
+    }
+
+    public function getTotalFormattedAttribute(): string
+    {
+        return 'Rp ' . number_format($this->total, 0, ',', '.');
+    }
+
+    public static function generateNumber($date = null): string
+    {
+        $date  = $date ? \Carbon\Carbon::parse($date) : now();
+        $roman = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][$date->month];
+        $seq   = static::whereYear('request_date', $date->year)->count() + 1;
+
+        return sprintf('DRAFT-CA-%03d/OPS-PICT/%s/%d', $seq, $roman, $date->year);
+    }
+}
