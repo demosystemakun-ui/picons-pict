@@ -45,6 +45,13 @@
                 PR from Consumable
             </a>
             
+            {{-- TAB BARU: PR TAHAP 1 --}}
+            <a href="{{ route('procurement.index', ['stage' => 'tahap1']) }}" 
+               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
+                      {{ request('stage') == 'tahap1' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                PR Tahap 1
+            </a>
+
             {{-- TAB BARU: PR FINAL (TAHAP 2) --}}
             <a href="{{ route('procurement.index', ['stage' => 'final']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
@@ -174,7 +181,7 @@
                                         <i data-lucide="eye" class="w-4 h-4"></i>
                                     </a>
 
-                                    {{-- TOMBOL PRINT PINTAR (Pilih template berdasarkan status) --}}
+                                    {{-- TOMBOL PRINT PINTAR --}}
                                     <button type="button" 
                                             onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" 
                                             class="p-1.5 text-gray-400 hover:text-blue-600 rounded transition" 
