@@ -45,14 +45,12 @@
                 PR from Consumable
             </a>
             
-            {{-- TAB BARU: PR TAHAP 1 --}}
             <a href="{{ route('procurement.index', ['stage' => 'tahap1']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
                       {{ request('stage') == 'tahap1' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
                 PR Tahap 1
             </a>
 
-            {{-- TAB BARU: VENDOR COMPARISON (TAHAP 2) --}}
             <a href="{{ route('procurement.index', ['stage' => 'final']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
                       {{ request('stage') == 'final' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
@@ -119,7 +117,6 @@
                             ];
                             $currMethod = $r->procurement_method ?? 'po';
                             
-                            // Cek apakah semua TTD sudah di-approve
                             $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -163,16 +160,15 @@
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
                                     
-                                    {{-- TOMBOL AKSI UTAMA: JIKA DI TAB VENDOR COMPARISON --}}
+                                    {{-- TOMBOL AKSI: JIKA DI TAB VENDOR COMPARISON --}}
                                     @if(request('stage') == 'final')
                                         <a href="{{ route('procurement.comparisons.index', $r) }}" 
-                                           class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition mr-1">
+                                           class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
                                             <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Input Vendor
                                         </a>
                                     @else
                                         {{-- TOMBOL AKSI STANDAR (TAB LAIN) --}}
                                         
-                                        {{-- Approve Format (Hanya jika Pending) --}}
                                         @if($currStatus === 'pending')
                                             <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Format">
                                                 <i data-lucide="check-circle" class="w-4 h-4"></i>
@@ -186,7 +182,6 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        {{-- Approve TTD --}}
                                         @if($currStatus === 'approved' && !$isAllSigned)
                                             <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')" class="inline">
                                                 @csrf @method('PATCH')
@@ -204,25 +199,24 @@
                                         <a href="{{ route('procurement.show', $r) }}" class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition" title="View Details">
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
-                                    @endif
 
-                                    {{-- TOMBOL PRINT & PDF (TETAP ADA DI SEMUA TAB) --}}
-                                    <button type="button" 
-                                            onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" 
-                                            class="p-1.5 text-gray-400 hover:text-blue-600 rounded transition" 
-                                            title="Print Form">
-                                        <i data-lucide="printer" class="w-4 h-4"></i>
-                                    </button>
+                                        {{-- TOMBOL PRINT & PDF HANYA MUNCUL DI SINI (Bukan di Tab Final) --}}
+                                        <button type="button" 
+                                                onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" 
+                                                class="p-1.5 text-gray-400 hover:text-blue-600 rounded transition" 
+                                                title="Print Form">
+                                            <i data-lucide="printer" class="w-4 h-4"></i>
+                                        </button>
 
-                                    <a href="{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Download PDF">
-                                        <i data-lucide="file-down" class="w-4 h-4"></i>
-                                    </a>
-
-                                    {{-- Edit Data (Hanya Pending/Revision) --}}
-                                    @if(in_array($currStatus, ['pending', 'revision']))
-                                        <a href="{{ route('procurement.edit', $r) }}" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Edit Data">
-                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        <a href="{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Download PDF">
+                                            <i data-lucide="file-down" class="w-4 h-4"></i>
                                         </a>
+
+                                        @if(in_array($currStatus, ['pending', 'revision']))
+                                            <a href="{{ route('procurement.edit', $r) }}" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Edit Data">
+                                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                                            </a>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
