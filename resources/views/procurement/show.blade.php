@@ -492,7 +492,7 @@
         btnElement.disabled = true;
         btnElement.innerHTML = 'Processing...';
 
-        fetch(`{{ url('/procurement/' . $procurementRequest->id . '/signature') }}`, {
+        fetch(`{{ route('procurement.signature.update', $procurementRequest->id) }}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -501,18 +501,24 @@
             },
             body: JSON.stringify({ signature_field: field })
         })
-        .then(res => res.json())
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || data.error || 'Server Error');
+            }
+            return data;
+        })
         .then(data => {
             if(data.success) {
-                window.location.reload(); // Refresh agar warna jadi hijau dan tombol unlock muncul
+                window.location.reload(); 
             } else {
-                alert(data.error || 'Terjadi kesalahan.');
+                alert('Gagal: ' + (data.error || 'Terjadi kesalahan.'));
                 btnElement.disabled = false;
                 btnElement.innerHTML = originalText;
             }
         })
         .catch(err => {
-            alert('Gagal memproses validasi.');
+            alert('Error: ' + err.message);
             btnElement.disabled = false;
             btnElement.innerHTML = originalText;
         });
