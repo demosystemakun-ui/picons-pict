@@ -25,7 +25,6 @@ class ProcurementRequestController extends Controller
             $query->where('department_id', $user->department_id);
         }
 
-        // Filter Source (Manual / Consumable)
         if ($request->filled('source')) {
             $query->where('source', $request->source);
         }
@@ -48,7 +47,6 @@ class ProcurementRequestController extends Controller
         $suggestedNo = ProcurementRequest::generateNumber();
         $departments = Department::orderBy('name')->get(); 
         
-        // Ambil data prefill dari Consumable Request (jika ada)
         $prefill = session('prefill_pr_data');
 
         return view('procurement.create', compact('suggestedNo', 'departments', 'prefill'));
@@ -76,14 +74,12 @@ class ProcurementRequestController extends Controller
             'fem_manager_name'      => 'nullable|string|max:255',
             'coo_name'              => 'nullable|string|max:255',
 
-            // Validasi untuk Items (jika diinput manual)
             'items'                       => 'nullable|array',
             'items.*.item_name'           => 'required_with:items|string|max:255',
             'items.*.item_requirement_note' => 'nullable|string',
             'items.*.quantity'            => 'required_with:items|numeric|min:0.01',
             'items.*.unit'                => 'nullable|string|max:50',
 
-            // Validasi ID Consumable Request yang digabungkan
             'consumable_request_ids'      => 'nullable|array',
             'consumable_request_ids.*'    => 'exists:consumable_requests,id'
         ]);
@@ -104,7 +100,6 @@ class ProcurementRequestController extends Controller
 
             $itemsData = $validated['items'] ?? [];
             
-            // Fallback jika item lama masih menggunakan format single input
             if (empty($itemsData) && $request->filled('item_name')) {
                 $itemsData[] = [
                     'item_name' => $request->input('item_name'),
@@ -114,7 +109,6 @@ class ProcurementRequestController extends Controller
                 ];
             }
 
-            // Set ringkasan item untuk tabel utama
             $validated['item_name'] = count($itemsData) > 1 
                 ? '(Multiple Items - View Details)' 
                 : ($itemsData[0]['item_name'] ?? '-');
@@ -127,10 +121,8 @@ class ProcurementRequestController extends Controller
 
             unset($validated['order_type'], $validated['items'], $validated['consumable_request_ids']);
 
-            // Simpan PR
             $procurementRequest = ProcurementRequest::create($validated);
 
-            // Simpan Item PR
             foreach ($itemsData as $item) {
                 $procurementRequest->items()->create([
                     'item_name' => $item['item_name'],
@@ -140,7 +132,6 @@ class ProcurementRequestController extends Controller
                 ]);
             }
 
-            // Update status Consumable Request jika ini hasil merge
             if ($request->has('consumable_request_ids')) {
                 ConsumableRequest::whereIn('id', $request->consumable_request_ids)
                     ->update([
@@ -334,6 +325,24 @@ class ProcurementRequestController extends Controller
 
         $procurement = $this->mapToPrintData($procurementRequest);
         return view('procurement.print', compact('procurement'));
+    }
+
+    public function printFinal(ProcurementRequest $procurementRequest)
+    {
+        $user = auth()->user();
+        
+        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $procurement = $this->mapToPrintData($procurementRequest);
+        $procurementRequest->load('vendors.items', 'winnerVendor');
+
+        $procurement['vendors'] = $procurementRequest->vendors()->get()->toArray();
+        $winner = $procurementRequest->winnerVendor;
+        $procurement['winner'] = $winner ? $winner->toArray() : null;
+
+        return view('procurement.print-final', compact('procurement'));
     }
 
     public function pdf(ProcurementRequest $procurementRequest)

@@ -160,22 +160,16 @@ Route::middleware(['auth'])->group(function () {
         // ═══════════════════════════════════════════════════════════
         Route::prefix('/{procurement}/comparisons')->name('comparisons.')->group(function () {
 
-            // Index & store vendor
             Route::get('/',  [VendorComparisonController::class, 'index'])->name('index');
             Route::post('/', [VendorComparisonController::class, 'store'])->name('store');
 
-            // AI Scan
             Route::post('/scan',          [VendorComparisonController::class, 'scanImage'])->name('scan');
             Route::post('/scan-monotaro', [VendorComparisonController::class, 'scanMonotaro'])->name('scan.monotaro');
             Route::post('/scan-others',   [VendorComparisonController::class, 'scanOthers'])->name('scan.others');
 
-            // Select winner (manual override)
             Route::patch('/{vendor}/select', [VendorComparisonController::class, 'selectVendor'])->name('select');
-
-            // Delete vendor
             Route::delete('/{vendor}', [VendorComparisonController::class, 'destroy'])->name('destroy');
 
-            // ✅ CREATE FINAL PR — form & simpan
             Route::get('/final-pr/create', [VendorComparisonController::class, 'createFinalPr'])->name('final-pr.create');
             Route::post('/final-pr/store', [VendorComparisonController::class, 'storeFinalPr'])->name('final-pr.store');
         });
@@ -186,8 +180,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
         Route::get('/{procurementRequest}/pdf',       [ProcurementRequestController::class, 'pdf'])->name('pdf');
         Route::get('/{procurementRequest}/print',     [ProcurementRequestController::class, 'print'])->name('print');
+        
+        // ✅ TAMBAHKAN ROUTE PRINT FINAL DI SINI
+        Route::get('/{procurementRequest}/print-final', [ProcurementRequestController::class, 'printFinal'])->name('print.final');
 
-        // ✅ ROUTE VALIDASI TTD PER KOLOM (DIPERBAIKI)
         Route::patch('/{procurementRequest}/signature', [ProcurementRequestController::class, 'updateSignatureStatus'])
             ->name('signature.update');
 
@@ -213,7 +209,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{procurement}/purchases',        [PurchaseController::class, 'store'])->name('purchases.store');
 
         // ═══════════════════════════════════════════════════════════
-        // CRUD PR — PALING BAWAH agar wildcard tidak menangkap route di atas
+        // CRUD PR — PALING BAWAH
         // ═══════════════════════════════════════════════════════════
         Route::get('/{procurementRequest}',      [ProcurementRequestController::class, 'show'])->name('show');
         Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');

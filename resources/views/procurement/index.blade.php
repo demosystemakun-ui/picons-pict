@@ -26,7 +26,7 @@
         </a>
     </div>
 
-    {{-- TAB FILTER BY PR SOURCE & STAGE --}}
+    {{-- TAB FILTER --}}
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
             <a href="{{ route('procurement.index') }}" 
@@ -88,7 +88,6 @@
                             
                             $currStatus = $r->status ?? 'pending';
                             
-                            // Label jadi lebih rapi (Final_approved -> Final Approved)
                             $statusLabels = [
                                 'pending'        => 'Pending',
                                 'approved'       => 'Approved',
@@ -101,7 +100,6 @@
                             ];
                             $statusLabel = $statusLabels[$currStatus] ?? ucwords(str_replace('_', ' ', $currStatus));
 
-                            // Method Badge Config
                             $methodColors = [
                                 'po'             => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
                                 'cash_advance'   => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/50',
@@ -115,7 +113,6 @@
                             $currMethod = $r->procurement_method ?? 'po';
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            {{-- COLUMN: PR NO & SOURCE BADGE --}}
                             <td class="px-4 py-3">
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $r->no }}</div>
                                 <div class="mt-1">
@@ -131,7 +128,6 @@
                                 </div>
                             </td>
 
-                            {{-- COLUMN: PROCUREMENT METHOD --}}
                             <td class="px-4 py-3">
                                 <span class="inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium {{ $methodColors[$currMethod] ?? $methodColors['po'] }}">
                                     {{ $methodLabels[$currMethod] ?? 'PO' }}
@@ -158,31 +154,18 @@
                                 <div class="flex items-center justify-end gap-1">
                                     {{-- Approval Actions (Hanya Muncul Jika Pending) --}}
                                     @if($currStatus === 'pending')
-                                        <button type="button" 
-                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" 
-                                                class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" 
-                                                title="Approve Request">
+                                        <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Request">
                                             <i data-lucide="check-circle" class="w-4 h-4"></i>
                                         </button>
-
-                                        <button type="button" 
-                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" 
-                                                class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" 
-                                                title="Request Revision">
+                                        <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Request Revision">
                                             <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                         </button>
-
-                                        <button type="button" 
-                                                onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" 
-                                                class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" 
-                                                title="Reject Request">
+                                        <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" title="Reject Request">
                                             <i data-lucide="x-circle" class="w-4 h-4"></i>
                                         </button>
-
                                         <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                     @endif
 
-                                    {{-- Other Action Buttons --}}
                                     <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
                                         <i data-lucide="git-compare" class="w-4 h-4"></i>
                                     </a>
@@ -191,14 +174,16 @@
                                         <i data-lucide="eye" class="w-4 h-4"></i>
                                     </a>
 
+                                    {{-- TOMBOL PRINT PINTAR (Pilih template berdasarkan status) --}}
                                     <button type="button" 
-                                            onclick="printDirect('{{ route('procurement.print', $r) }}')" 
+                                            onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" 
                                             class="p-1.5 text-gray-400 hover:text-blue-600 rounded transition" 
                                             title="Print Form">
                                         <i data-lucide="printer" class="w-4 h-4"></i>
                                     </button>
 
-                                    <a href="{{ route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Save as PDF">
+                                    {{-- TOMBOL PDF PINTAR --}}
+                                    <a href="{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="p-1.5 text-gray-400 hover:text-teal-600 rounded transition" title="Download PDF">
                                         <i data-lucide="file-down" class="w-4 h-4"></i>
                                     </a>
 
@@ -233,10 +218,7 @@
 {{-- Approval & Review Modal --}}
 <div id="actionModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-        {{-- Backdrop --}}
         <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeActionModal()"></div>
-
-        {{-- Modal Content --}}
         <div class="relative inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
             <form id="actionModalForm" action="" method="POST" class="p-6">
                 @csrf
@@ -244,18 +226,15 @@
                 <input type="hidden" name="status" id="modalStatusInput" value="">
 
                 <div class="flex items-start gap-4">
-                    {{-- Icon Container --}}
                     <div id="modalIconContainer" class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full">
                         <i id="modalIcon" data-lucide="help-circle" class="w-5 h-5"></i>
                     </div>
-
                     <div class="flex-1 mt-1">
                         <h3 id="modalTitle" class="text-base font-semibold text-gray-900 dark:text-white leading-6"></h3>
                         <p id="modalDocNumber" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
                     </div>
                 </div>
 
-                {{-- Review Notes Area --}}
                 <div id="notesContainer" class="mt-5 space-y-1.5">
                     <label for="review_notes" id="notesLabel" class="block text-xs font-medium text-gray-700 dark:text-gray-300">
                         Notes & Reason <span class="text-rose-500">*</span>
@@ -265,7 +244,6 @@
                         placeholder="Provide a clear reason or instruction..."></textarea>
                 </div>
 
-                {{-- Modal Action Buttons --}}
                 <div class="mt-6 flex items-center justify-end gap-3">
                     <button type="button" onclick="closeActionModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         Cancel
@@ -295,7 +273,6 @@ function printDirect(url) {
         iframe.style.border = '0';
         document.body.appendChild(iframe);
     }
-    
     iframe.src = url;
     iframe.onload = function() {
         setTimeout(function() {
@@ -328,7 +305,6 @@ function openActionModal(actionUrl, actionType, docNo) {
         icon.setAttribute('data-lucide', 'check');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition';
         btn.innerText = 'Approve';
-        
         notesLabel.innerHTML = 'Additional Notes <span class="text-xs text-gray-400 font-normal">(Optional)</span>';
         notesInput.required = false;
         notesInput.placeholder = 'Add a note if necessary...';
@@ -339,7 +315,6 @@ function openActionModal(actionUrl, actionType, docNo) {
         icon.setAttribute('data-lucide', 'rotate-ccw');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition';
         btn.innerText = 'Send Revision';
-        
         notesLabel.innerHTML = 'Revision Instructions <span class="text-rose-500">*</span>';
         notesInput.required = true;
         notesInput.placeholder = 'Explain which parts need to be fixed...';
@@ -350,15 +325,11 @@ function openActionModal(actionUrl, actionType, docNo) {
         icon.setAttribute('data-lucide', 'x');
         btn.className = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition';
         btn.innerText = 'Reject';
-        
         notesLabel.innerHTML = 'Rejection Reason <span class="text-rose-500">*</span>';
         notesInput.required = true;
         notesInput.placeholder = 'Explain why this request is rejected...';
     }
-
-    if (window.lucide) {
-        lucide.createIcons();
-    }
+    if (window.lucide) lucide.createIcons();
 }
 
 function closeActionModal() {
