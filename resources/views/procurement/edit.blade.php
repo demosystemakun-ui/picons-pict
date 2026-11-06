@@ -65,50 +65,72 @@
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">General Information</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Basic details of the procurement request</p>
             </header>
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Date <span class="text-red-500">*</span></label>
-                    <input type="date" name="date" required
-                           value="{{ old('date', optional($procurementRequest->date)->format('Y-m-d')) }}"
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
+            
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="date" required
+                               value="{{ old('date', optional($procurementRequest->date)->format('Y-m-d')) }}"
+                               class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Department <span class="text-red-500">*</span></label>
+                        <select name="department_id" required class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
+                            <option value="">— Select Department —</option>
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}" {{ old('department_id', $procurementRequest->department_id) == $dept->id ? 'selected' : '' }}>
+                                    {{ $dept->name }} ({{ $dept->code ?? '-' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Requested By <span class="text-red-500">*</span></label>
+                        <input type="text" name="request_by" required value="{{ old('request_by', $procurementRequest->request_by) }}"
+                               class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Prepared By <span class="text-red-500">*</span></label>
+                        <input type="text" name="prepared_by" required value="{{ old('prepared_by', $procurementRequest->prepared_by) }}"
+                               class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Procurement Description <span class="text-red-500">*</span></label>
+                        <input type="text" name="description" required value="{{ old('description', $procurementRequest->description) }}"
+                               class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Department <span class="text-red-500">*</span></label>
-                    <select name="department_id" required class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
-                        <option value="">— Select Department —</option>
-                        @foreach($departments as $dept)
-                            <option value="{{ $dept->id }}" {{ old('department_id', $procurementRequest->department_id) == $dept->id ? 'selected' : '' }}>
-                                {{ $dept->name }} ({{ $dept->code ?? '-' }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Requested By <span class="text-red-500">*</span></label>
-                    <input type="text" name="request_by" required value="{{ old('request_by', $procurementRequest->request_by) }}"
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Prepared By <span class="text-red-500">*</span></label>
-                    <input type="text" name="prepared_by" required value="{{ old('prepared_by', $procurementRequest->prepared_by) }}"
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Procurement Description <span class="text-red-500">*</span></label>
-                    <input type="text" name="description" required value="{{ old('description', $procurementRequest->description) }}"
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Order Type</label>
-                    <div class="flex flex-wrap gap-4">
-                        @foreach(['new_order' => 'New Order', 'repeat_order' => 'Repeat Order', 'goods' => 'Goods', 'services' => 'Services'] as $key => $label)
-                            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <input type="radio" name="order_type" value="{{ $key }}"
-                                       {{ old('order_type', $activeOrderType) === $key ? 'checked' : '' }}
-                                       class="rounded-full border-gray-300 text-primary-600 focus:ring-primary-500">
-                                {{ $label }}
-                            </label>
-                        @endforeach
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Order Type</label>
+                        <div class="flex flex-wrap gap-4">
+                            @foreach(['new_order' => 'New Order', 'repeat_order' => 'Repeat Order', 'goods' => 'Goods', 'services' => 'Services'] as $key => $label)
+                                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input type="radio" name="order_type" value="{{ $key }}"
+                                           {{ old('order_type', $activeOrderType) === $key ? 'checked' : '' }}
+                                           class="rounded-full border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    {{ $label }}
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                            Procurement Method <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex flex-wrap gap-4">
+                            @foreach(['po' => 'Purchase Order (PO)', 'cash_advance' => 'Cash Advance', 'reimbursement' => 'Reimbursement'] as $key => $label)
+                                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input type="radio" name="procurement_method" value="{{ $key }}"
+                                           {{ old('procurement_method', $procurementRequest->procurement_method ?? 'po') === $key ? 'checked' : '' }}
+                                           class="rounded-full border-gray-300 text-primary-600 focus:ring-primary-500" required>
+                                    {{ $label }}
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>
@@ -122,19 +144,19 @@
             </header>
             <div class="p-6 space-y-5">
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Background</label>
+                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Background</label>
                     <textarea name="background" rows="3"
-                              class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5 resize-y">{{ old('background', $procurementRequest->background) }}</textarea>
+                              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">{{ old('background', $procurementRequest->background) }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Purpose</label>
+                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Purpose</label>
                     <textarea name="purpose" rows="3"
-                              class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5 resize-y">{{ old('purpose', $procurementRequest->purpose) }}</textarea>
+                              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">{{ old('purpose', $procurementRequest->purpose) }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Required Specification</label>
+                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Required Specification</label>
                     <textarea name="required_spec" rows="3"
-                              class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5 resize-y">{{ old('required_spec', $procurementRequest->required_spec) }}</textarea>
+                              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">{{ old('required_spec', $procurementRequest->required_spec) }}</textarea>
                 </div>
             </div>
         </section>
@@ -147,7 +169,7 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Requested goods or services — can be added/removed</p>
                 </div>
                 <button type="button" onclick="addItemRow()"
-                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Add Item
                 </button>
@@ -155,13 +177,13 @@
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-900/50">
+                    <thead class="bg-gray-50/80 dark:bg-gray-900/50">
                         <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-10">No.</th>
+                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-10 text-center">No.</th>
                             <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-1/4">Item Name</th>
                             <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Requirement Note</th>
-                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-24">Qty</th>
-                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-24">Unit</th>
+                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-20 text-center">Qty</th>
+                            <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-20 text-center">Unit</th>
                             <th class="py-3 px-4 text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase w-40">Picture</th>
                             <th class="py-3 px-4 w-10"></th>
                         </tr>
@@ -169,34 +191,34 @@
                     <tbody id="itemsBody" class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($itemsForForm as $item)
                             <tr class="item-row align-top">
-                                <td class="py-4 px-4"><span class="row-number text-sm font-medium text-gray-500"></span></td>
-                                <td class="py-4 px-4">
+                                <td class="py-3 px-4 text-center"><span class="row-number text-sm font-medium text-gray-500"></span></td>
+                                <td class="py-3 px-4">
                                     <textarea name="items[{{ $loop->index }}][item_name]" rows="2" required
-                                              class="w-full rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y">{{ $item->item_name }}</textarea>
+                                              class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">{{ $item->item_name }}</textarea>
                                 </td>
-                                <td class="py-4 px-4">
+                                <td class="py-3 px-4">
                                     <textarea name="items[{{ $loop->index }}][item_requirement_note]" rows="2"
-                                              class="w-full rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y">{{ $item->item_requirement_note }}</textarea>
+                                              class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">{{ $item->item_requirement_note }}</textarea>
                                 </td>
-                                <td class="py-4 px-4">
+                                <td class="py-3 px-4">
                                     <input type="number" step="0.01" name="items[{{ $loop->index }}][quantity]" value="{{ $item->quantity }}" min="0.01" required
-                                           class="w-full border-0 border-b border-gray-200 dark:border-gray-700 dark:bg-transparent dark:text-white text-sm px-1 py-2 text-center focus:ring-0 focus:border-primary-500">
+                                           class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                                 </td>
-                                <td class="py-4 px-4">
+                                <td class="py-3 px-4">
                                     <input type="text" name="items[{{ $loop->index }}][unit]" value="{{ $item->unit ?? 'Pcs' }}"
-                                           class="w-full border-0 border-b border-gray-200 dark:border-gray-700 dark:bg-transparent dark:text-white text-sm px-1 py-2 text-center focus:ring-0 focus:border-primary-500">
+                                           class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                                 </td>
-                                <td class="py-4 px-4">
+                                <td class="py-3 px-4">
                                     <input type="hidden" name="items[{{ $loop->index }}][existing_picture]" value="{{ $item->picture }}">
                                     @if($item->picture)
-                                        <img src="{{ Storage::url($item->picture) }}" class="h-10 w-10 object-cover rounded-md border border-gray-200 dark:border-gray-700 mb-1.5">
+                                        <img src="{{ Storage::url($item->picture) }}" class="h-10 w-10 object-cover rounded-md border border-gray-200 dark:border-gray-600 mb-1.5">
                                     @endif
                                     <input type="file" name="items[{{ $loop->index }}][picture]" accept="image/*"
                                            class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-gray-100 dark:file:bg-gray-700 dark:text-gray-300">
                                 </td>
-                                <td class="py-4 px-4 text-center">
+                                <td class="py-3 px-4 text-center">
                                     <button type="button" onclick="removeItemRow(this)"
-                                            class="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 inline-flex">
+                                            class="text-red-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 inline-flex transition-colors">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </td>
@@ -206,10 +228,10 @@
                 </table>
             </div>
 
-            <div class="p-6 border-t border-gray-100 dark:border-gray-700">
-                <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Target Purchase</label>
+            <div class="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30">
+                <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Target Purchase</label>
                 <textarea name="target_purchase" rows="2"
-                          class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5 resize-y">{{ old('target_purchase', $procurementRequest->target_purchase) }}</textarea>
+                          class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">{{ old('target_purchase', $procurementRequest->target_purchase) }}</textarea>
             </div>
         </section>
 
@@ -218,7 +240,7 @@
             <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Approval &amp; Signatures</h2>
             </header>
-            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                 @foreach([
                     ['name' => 'pic_name', 'label' => 'PIC', 'value' => $procurementRequest->pic_name],
                     ['name' => 'ops_manager_name', 'label' => 'Ops Manager', 'value' => $procurementRequest->ops_manager_name],
@@ -226,9 +248,9 @@
                     ['name' => 'coo_name', 'label' => 'COO', 'value' => $procurementRequest->coo_name],
                 ] as $sig)
                     <div>
-                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ $sig['label'] }}</label>
+                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">{{ $sig['label'] }}</label>
                         <input type="text" name="{{ $sig['name'] }}" value="{{ old($sig['name'], $sig['value']) }}"
-                               class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2.5">
+                               class="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-3 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">
                     </div>
                 @endforeach
             </div>
@@ -242,7 +264,7 @@
                 </p>
                 <div class="flex items-center gap-3 w-full sm:w-auto">
                     <a href="{{ route('procurement.show', $procurementRequest) }}"
-                       class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                       class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         Cancel
                     </a>
                     <button type="submit"
@@ -269,32 +291,34 @@
         const tbody = document.getElementById('itemsBody');
         const tr = document.createElement('tr');
         tr.className = 'item-row align-top';
+        
+        // Menggunakan template literal tanpa escape character (\)
         tr.innerHTML = `
-            <td class="py-4 px-4"><span class="row-number text-sm font-medium text-gray-500"></span></td>
-            <td class="py-4 px-4">
+            <td class="py-3 px-4 text-center"><span class="row-number text-sm font-medium text-gray-500"></span></td>
+            <td class="py-3 px-4">
                 <textarea name="items[${itemIndex}][item_name]" rows="2" required
-                          class="w-full rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y"></textarea>
+                          class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
             </td>
-            <td class="py-4 px-4">
+            <td class="py-3 px-4">
                 <textarea name="items[${itemIndex}][item_requirement_note]" rows="2"
-                          class="w-full rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y"></textarea>
+                          class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
             </td>
-            <td class="py-4 px-4">
+            <td class="py-3 px-4">
                 <input type="number" step="0.01" name="items[${itemIndex}][quantity]" value="1" min="0.01" required
-                       class="w-full border-0 border-b border-gray-200 dark:border-gray-700 dark:bg-transparent dark:text-white text-sm px-1 py-2 text-center focus:ring-0 focus:border-primary-500">
+                       class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
             </td>
-            <td class="py-4 px-4">
+            <td class="py-3 px-4">
                 <input type="text" name="items[${itemIndex}][unit]" value="Pcs"
-                       class="w-full border-0 border-b border-gray-200 dark:border-gray-700 dark:bg-transparent dark:text-white text-sm px-1 py-2 text-center focus:ring-0 focus:border-primary-500">
+                       class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
             </td>
-            <td class="py-4 px-4">
+            <td class="py-3 px-4">
                 <input type="hidden" name="items[${itemIndex}][existing_picture]" value="">
                 <input type="file" name="items[${itemIndex}][picture]" accept="image/*"
                        class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-gray-100 dark:file:bg-gray-700 dark:text-gray-300">
             </td>
-            <td class="py-4 px-4 text-center">
+            <td class="py-3 px-4 text-center">
                 <button type="button" onclick="removeItemRow(this)"
-                        class="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 inline-flex">
+                        class="text-red-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 inline-flex transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
