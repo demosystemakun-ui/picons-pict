@@ -125,8 +125,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Add Vendor Manually</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Input data perbandingan secara manual</p>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Add Vendors Manually</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Input multiple vendor data at once</p>
                 </div>
             </div>
             <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -139,40 +139,46 @@
         <div x-show="open" x-collapse class="p-6 border-t border-gray-100 dark:border-gray-700">
             <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST" class="space-y-4">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name / Store <span class="text-red-500">*</span></label>
-                        <input type="text" name="vendor_name" required placeholder="e.g. Toko Bangunan Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace (Optional)</label>
-                        <input type="text" name="marketplace" placeholder="e.g. Shopee, Tokopedia, Offline" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <div id="vendorRowsContainer" class="space-y-3">
+                    {{-- Baris Pertama (Default) --}}
+                    <div class="vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30">
+                        <div class="md:col-span-3">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="vendors[0][vendor_name]" required placeholder="e.g. Toko Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace</label>
+                            <input type="text" name="vendors[0][marketplace]" placeholder="Shopee" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
+                            <input type="number" name="vendors[0][subtotal]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir (Rp)</label>
+                            <input type="number" name="vendors[0][shipping_cost]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                        </div>
+                        <div class="md:col-span-2 flex items-center gap-2">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon (Rp)</label>
+                                <input type="number" name="vendors[0][discount_voucher]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <button type="button" onclick="this.closest('.vendor-row').remove()" class="mt-5 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Hapus Baris">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
-                        <input type="number" name="subtotal" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Shipping (Rp)</label>
-                        <input type="number" name="shipping_cost" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Discount (Rp)</label>
-                        <input type="number" name="discount_voucher" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tax/PPN (Rp)</label>
-                        <input type="number" name="tax_ppn" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                    </div>
-                </div>
-
-                <div class="flex justify-end pt-2">
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Save Vendor
+                <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-3">
+                    <button type="button" onclick="addVendorRow()" class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400 w-full sm:w-auto">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Add Another Vendor
+                    </button>
+                    
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        Save All Vendors
                     </button>
                 </div>
             </form>
@@ -356,6 +362,43 @@
             btn.innerHTML = `Processing...`;
         }
         return true;
+    }
+
+    // Fungsi untuk menambah baris input manual
+    let vendorIndex = 1;
+    function addVendorRow() {
+        const container = document.getElementById('vendorRowsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30 mt-3';
+        newRow.innerHTML = `
+            <div class="md:col-span-3">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-red-500">*</span></label>
+                <input type="text" name="vendors[\${vendorIndex}][vendor_name]" required placeholder="e.g. Toko Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace</label>
+                <input type="text" name="vendors[\${vendorIndex}][marketplace]" placeholder="Shopee" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
+                <input type="number" name="vendors[\${vendorIndex}][subtotal]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir (Rp)</label>
+                <input type="number" name="vendors[\${vendorIndex}][shipping_cost]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-2 flex items-center gap-2">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon (Rp)</label>
+                    <input type="number" name="vendors[\${vendorIndex}][discount_voucher]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                </div>
+                <button type="button" onclick="this.closest('.vendor-row').remove()" class="mt-5 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Hapus Baris">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+        `;
+        container.appendChild(newRow);
+        vendorIndex++;
     }
 </script>
 @endpush
