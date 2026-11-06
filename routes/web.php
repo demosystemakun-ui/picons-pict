@@ -187,6 +187,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{procurementRequest}/pdf',       [ProcurementRequestController::class, 'pdf'])->name('pdf');
         Route::get('/{procurementRequest}/print',     [ProcurementRequestController::class, 'print'])->name('print');
 
+        // ✅ ROUTE VALIDASI TTD PER KOLOM (DIPERBAIKI)
+        Route::patch('/{procurementRequest}/signature', [ProcurementRequestController::class, 'updateSignatureStatus'])
+            ->name('signature.update');
+
         Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
             ->name('validate-signature')
             ->middleware('role:Super Admin');
@@ -198,9 +202,6 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurementRequest}/status', [ProcurementRequestController::class, 'updateStatus'])
             ->name('status')
             ->middleware('role:Super Admin');
-
-            Route::patch('/procurement/{procurementRequest}/signature', [App\Http\Controllers\ProcurementRequestController::class, 'updateSignatureStatus'])
-    ->name('procurement.signature.update');
 
         // ═══════════════════════════════════════════════════════════
         // PURCHASE ORDER (PO) & RECEIVING
