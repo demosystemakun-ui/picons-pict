@@ -338,17 +338,27 @@
         </tr>
     </table>
 
-    {{-- SIGNATURES --}}
+     {{-- SIGNATURES --}}
     <table class="sign-table">
         <tr>
             @foreach ($signatures as $sign)
                 @php
                     $role = is_array($sign) ? ($sign['role'] ?? '') : $sign;
                     $name = is_array($sign) ? ($sign['name'] ?? '') : '';
+                    $isApproved = is_array($sign) ? ($sign['approved'] ?? false) : false;
                 @endphp
                 <td class="sig-col">
                     <div class="sig-box">
-                        <div class="sig-space">{{ $name }}</div>
+                        <div class="sig-space" style="position: relative;">
+                            {{ $name }}
+                            
+                            {{-- TAMPILKAN STEMPEL APPROVED JIKA SUDAH VALIDASI --}}
+                            @if($isApproved)
+                                <div style="margin-top: 6px; font-size: 8.5px; color: #15803d; font-weight: bold; letter-spacing: 0.5px;">
+                                    [ APPROVED ]
+                                </div>
+                            @endif
+                        </div>
                         <div class="sig-label">{{ $role }}</div>
                     </div>
                 </td>
