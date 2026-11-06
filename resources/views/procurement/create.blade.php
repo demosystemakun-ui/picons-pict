@@ -4,51 +4,50 @@
 @section('page-title', 'New Procurement Request')
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6 pb-12">
+<div class="max-w-5xl mx-auto pb-24">
 
-    {{-- Page Header --}}
-    <div class="flex items-start justify-between gap-4">
+    {{-- PAGE HEADER --}}
+    <div class="flex items-start justify-between gap-4 mb-5">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                Procurement Request
-            </h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div class="flex items-center gap-2 flex-wrap">
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Procurement Request
+                </h1>
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    {{ isset($prefill) ? 'Merged Draft' : 'New Draft' }}
+                </span>
+            </div>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Submit a procurement request for goods or services with complete and structured details.
             </p>
         </div>
-        <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-primary-50 dark:bg-primary-900/30 px-3 py-1 text-xs font-medium text-primary-700 dark:text-primary-300 ring-1 ring-inset ring-primary-200 dark:ring-primary-800">
-            <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span>
-            {{ isset($prefill) ? 'Merged Draft' : 'New Draft' }}
-        </span>
     </div>
 
-    {{-- Alert jika ini dari Consumable Request --}}
+    {{-- PREFILL NOTICE --}}
     @if(isset($prefill))
-        <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 px-5 py-4 flex items-start gap-3">
-            <svg class="h-5 w-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div class="mb-4 flex items-start gap-2.5 rounded-md border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-900/20 px-3.5 py-2.5">
+            <svg class="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <div>
-                <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300">Data Otomatis Dimuat</h3>
-                <p class="mt-1 text-sm text-blue-700 dark:text-blue-400">
-                    Form ini telah diisi otomatis dari <strong>Consolidation Consumable Request</strong>. Silakan periksa kembali data dan barang bawaan sebelum menyimpan PR.
+            <div class="text-xs">
+                <p class="font-semibold text-blue-800 dark:text-blue-300">Data loaded automatically</p>
+                <p class="text-blue-700 dark:text-blue-400 mt-0.5">
+                    This form was prefilled from a <strong>Consolidated Consumable Request</strong>. Review the items and details before saving.
                 </p>
             </div>
         </div>
     @endif
 
-    {{-- Error Alert --}}
+    {{-- ERROR ALERT --}}
     @if ($errors->any())
-        <div class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/60 px-5 py-4">
-            <div class="flex gap-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+        <div class="mb-4 rounded-md border border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-900/20 px-3.5 py-2.5">
+            <div class="flex items-start gap-2.5">
+                <svg class="h-4 w-4 flex-shrink-0 text-red-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
                 </svg>
-                <div>
-                    <h3 class="text-sm font-semibold text-red-800 dark:text-red-300">
-                        There are {{ $errors->count() }} errors in the form
-                    </h3>
-                    <ul class="mt-2 list-disc list-inside space-y-0.5 text-sm text-red-700 dark:text-red-300/90">
+                <div class="text-xs">
+                    <p class="font-semibold text-red-800 dark:text-red-300">{{ $errors->count() }} validation {{ $errors->count() === 1 ? 'error' : 'errors' }}</p>
+                    <ul class="mt-1 list-disc list-inside space-y-0.5 text-red-700 dark:text-red-300/90">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
@@ -61,335 +60,315 @@
     <form method="POST" action="{{ route('procurement.store') }}" class="space-y-6">
         @csrf
 
-        {{-- Hidden input untuk menyimpan ID CR yang digabungkan --}}
         @if(isset($prefill['request_ids']))
             @foreach($prefill['request_ids'] as $id)
                 <input type="hidden" name="consumable_request_ids[]" value="{{ $id }}">
             @endforeach
         @endif
 
-        {{-- SECTION 1: General Information --}}
-        <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">General Information</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Basic details of the procurement request</p>
-                    </div>
-                </div>
-            </header>
+        {{-- =========================================================
+             SECTION 1 — GENERAL INFORMATION
+        ========================================================== --}}
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    General Information
+                </h2>
+            </div>
 
-            <div class="p-6 space-y-5">
-                <div class="grid sm:grid-cols-2 gap-5">
-                    <div>
-                        <label for="no" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+            <div class="p-5 space-y-4">
+                {{-- Row 1: no + date --}}
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                    <div class="sm:col-span-7">
+                        <label for="no" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             Reference No. <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="no" name="no" 
+                        <input type="text" id="no" name="no"
                                value="{{ old('no', $prefill['no'] ?? $suggestedNo) }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                               class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                     </div>
-                    <div>
-                        <label for="date" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    <div class="sm:col-span-5">
+                        <label for="date" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             Date <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" id="date" name="date" 
+                        <input type="date" id="date" name="date"
                                value="{{ old('date', date('Y-m-d')) }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                               class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                     </div>
                 </div>
 
-                <div class="grid sm:grid-cols-3 gap-5">
-                    <div>
-                        <label for="request_by" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                {{-- Row 2: request_by + department + prepared_by --}}
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                    <div class="sm:col-span-4">
+                        <label for="request_by" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             Request By <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="request_by" name="request_by" 
+                        <input type="text" id="request_by" name="request_by"
                                value="{{ old('request_by', auth()->user()->name) }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                               class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                     </div>
-                    
-                    {{-- DEPARTMENT DROPDOWN --}}
-                    <div>
-                        <label for="department_id" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    <div class="sm:col-span-4">
+                        <label for="department_id" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             Division / Department <span class="text-red-500">*</span>
                         </label>
                         <select name="department_id" id="department_id" required
-                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition @error('department_id') border-red-500 @enderror">
+                                class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-2.5 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none @error('department_id') border-red-500 @enderror">
                             <option value="" disabled {{ old('department_id', auth()->user()->department_id ?? '') ? '' : 'selected' }}>— Select Department —</option>
-                            
                             @foreach($departments as $dept)
                                 <option value="{{ $dept->id }}" {{ old('department_id', auth()->user()->department_id ?? '') == $dept->id ? 'selected' : '' }}>
                                     {{ $dept->name }} ({{ $dept->code ?? '-' }})
                                 </option>
                             @endforeach
-                            
                         </select>
                         @error('department_id')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            <p class="mt-1 text-[11px] text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
-
-                    <div>
-                        <label for="prepared_by" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    <div class="sm:col-span-4">
+                        <label for="prepared_by" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                             Prepared By <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="prepared_by" name="prepared_by" 
+                        <input type="text" id="prepared_by" name="prepared_by"
                                value="{{ old('prepared_by', auth()->user()->name) }}" required
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                               class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                     </div>
                 </div>
 
+                {{-- Row 3: description --}}
                 <div>
-                    <label for="description" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    <label for="description" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                         Description <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="description" name="description" 
+                    <input type="text" id="description" name="description"
                            value="{{ old('description', isset($prefill) ? 'Consolidation of Consumable Requests' : '') }}" required
                            placeholder="A short summary of this procurement request"
-                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                           class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                        Order Type <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        @foreach ([
-                            'new_order'    => 'New Order',
-                            'repeat_order' => 'Repeat Order',
-                            'goods'        => 'Goods',
-                            'services'     => 'Services',
-                        ] as $value => $text)
-                            <label class="relative flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300 has-[:checked]:ring-2 has-[:checked]:ring-primary-500/20">
-                                <input type="radio" name="order_type" value="{{ $value }}"
-                                       {{ old('order_type', 'goods') === $value ? 'checked' : '' }}
-                                       class="sr-only">
-                                {{ $text }}
-                            </label>
-                        @endforeach
+                {{-- Row 4: order type + procurement method (side by side) --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    <div>
+                        <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                            Order Type <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach ([
+                                'new_order'    => 'New Order',
+                                'repeat_order' => 'Repeat Order',
+                                'goods'        => 'Goods',
+                                'services'     => 'Services',
+                            ] as $value => $text)
+                                <label class="flex cursor-pointer items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition hover:border-primary-400 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300">
+                                    <input type="radio" name="order_type" value="{{ $value }}"
+                                           {{ old('order_type', 'goods') === $value ? 'checked' : '' }}
+                                           class="sr-only">
+                                    {{ $text }}
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
-                </div>
 
-                {{-- PROCUREMENT METHOD --}}
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                        Procurement Method <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        @foreach ([
-                            'po'             => 'Purchase Order (PO)',
-                            'cash_advance'   => 'Cash Advance',
-                            'reimbursement'  => 'Reimbursement',
-                        ] as $value => $text)
-                            <label class="relative flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/20 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300 has-[:checked]:ring-2 has-[:checked]:ring-primary-500/20">
-                                <input type="radio" name="procurement_method" value="{{ $value }}"
-                                       {{ old('procurement_method', 'po') === $value ? 'checked' : '' }}
-                                       class="sr-only">
-                                {{ $text }}
-                            </label>
-                        @endforeach
+                    <div>
+                        <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                            Procurement Method <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-1 gap-2">
+                            @foreach ([
+                                'po'            => 'Purchase Order (PO)',
+                                'cash_advance'  => 'Cash Advance',
+                                'reimbursement' => 'Reimbursement',
+                            ] as $value => $text)
+                                <label class="flex cursor-pointer items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition hover:border-primary-400 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:checked]:text-primary-700 dark:has-[:checked]:bg-primary-900/30 dark:has-[:checked]:text-primary-300">
+                                    <input type="radio" name="procurement_method" value="{{ $value }}"
+                                           {{ old('procurement_method', 'po') === $value ? 'checked' : '' }}
+                                           class="sr-only">
+                                    {{ $text }}
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        {{-- SECTION 2: Justification --}}
-        <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
+        {{-- =========================================================
+             SECTION 2 — JUSTIFICATION
+        ========================================================== --}}
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Justification
+                </h2>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="background" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                            Background
+                        </label>
+                        <textarea id="background" name="background" rows="3"
+                                  placeholder="Why do you want to purchase this?"
+                                  class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('background', $prefill['background'] ?? '') }}</textarea>
                     </div>
                     <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Justification</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Reason and purpose of the procurement</p>
+                        <label for="purpose" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                            Purpose
+                        </label>
+                        <textarea id="purpose" name="purpose" rows="3"
+                                  placeholder="What is the impact? What happens if not purchased?"
+                                  class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('purpose', $prefill['purpose'] ?? '') }}</textarea>
                     </div>
                 </div>
-            </header>
-
-            <div class="p-6 space-y-5">
-                <div>
-                    <label for="background" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                        Background
-                    </label>
-                    <textarea id="background" name="background" rows="3"
-                              placeholder="Why would you like to purchase?"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('background', $prefill['background'] ?? '') }}</textarea>
-                </div>
 
                 <div>
-                    <label for="purpose" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                        Purpose
-                    </label>
-                    <textarea id="purpose" name="purpose" rows="3"
-                              placeholder="What is the effect of purchasing it? What if it is not purchased?"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('purpose', $prefill['purpose'] ?? '') }}</textarea>
-                </div>
-
-                <div>
-                    <label for="required_spec" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    <label for="required_spec" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                         Required Spec
                     </label>
-                    <textarea id="required_spec" name="required_spec" rows="4"
-                              placeholder="Details and reason of it"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('required_spec', $prefill['required_spec'] ?? '') }}</textarea>
+                    <textarea id="required_spec" name="required_spec" rows="3"
+                              placeholder="Detailed specification and the reason behind it"
+                              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('required_spec', $prefill['required_spec'] ?? '') }}</textarea>
                 </div>
             </div>
         </section>
 
-        {{-- SECTION 3: Item Request --}}
-        <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Item Request</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Details of goods or services requested</p>
-                    </div>
-                </div>
-            </header>
-
-            <div class="p-6 space-y-5">
-                
-                {{-- KONDISI 1: JIKA DARI MERGE CONSUMABLE (BANYAK ITEM) --}}
+        {{-- =========================================================
+             SECTION 3 — ITEM REQUEST
+        ========================================================== --}}
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Item Request
+                </h2>
                 @if(isset($prefill['items']) && count($prefill['items']) > 0)
-                    <div class="space-y-3">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Barang-barang di bawah ini ditarik otomatis dari Consumable Request:</p>
+                    <span class="text-[11px] text-gray-500">
+                        {{ count($prefill['items']) }} {{ count($prefill['items']) === 1 ? 'item' : 'items' }} from Consumable Request
+                    </span>
+                @endif
+            </div>
+
+            <div class="p-5 space-y-4">
+
+                {{-- CASE 1: FROM MERGED CONSUMABLE REQUEST --}}
+                @if(isset($prefill['items']) && count($prefill['items']) > 0)
+                    <div class="space-y-2">
                         @foreach($prefill['items'] as $index => $item)
-                            <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                                <div class="grid sm:grid-cols-6 gap-4">
-                                    <div class="sm:col-span-4">
-                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Item Name</label>
+                            <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 p-3">
+                                <div class="grid grid-cols-12 gap-2">
+                                    <div class="col-span-12 sm:col-span-5">
+                                        <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Item Name</label>
                                         <input type="text" name="items[{{ $index }}][item_name]" value="{{ $item['item_name'] }}" required
-                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                               class="w-full h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2.5">
                                     </div>
-                                    <div class="sm:col-span-1">
-                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Qty</label>
+                                    <div class="col-span-4 sm:col-span-1">
+                                        <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Qty</label>
                                         <input type="number" name="items[{{ $index }}][quantity]" value="{{ $item['quantity'] }}" min="0.01" step="any" required
-                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                               class="w-full h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2.5">
                                     </div>
-                                    <div class="sm:col-span-1">
-                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Unit</label>
+                                    <div class="col-span-4 sm:col-span-1">
+                                        <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Unit</label>
                                         <input type="text" name="items[{{ $index }}][unit]" value="{{ $item['unit'] ?? 'Pcs' }}"
-                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                               class="w-full h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2.5">
                                     </div>
-                                    <div class="sm:col-span-6">
-                                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Requirement / Specification</label>
+                                    <div class="col-span-12 sm:col-span-5">
+                                        <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Requirement / Spec</label>
                                         <input type="text" name="items[{{ $index }}][item_requirement_note]" value="{{ $item['item_requirement_note'] ?? '' }}"
-                                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 bg-white dark:bg-gray-900">
+                                               class="w-full h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2.5">
                                     </div>
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 @else
-                    {{-- KONDISI 2: JIKA INPUT MANUAL (BIASA) --}}
-                    <div class="grid sm:grid-cols-6 gap-5">
-                        <div class="sm:col-span-3">
-                            <label for="item_name" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                                Request Purchase Item <span class="text-red-500">*</span>
+                    {{-- CASE 2: MANUAL INPUT --}}
+                    <div class="grid grid-cols-12 gap-3">
+                        <div class="col-span-12 sm:col-span-5">
+                            <label for="item_name" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                                Requested Item <span class="text-red-500">*</span>
                             </label>
                             <input type="text" id="item_name" name="items[0][item_name]" value="{{ old('item_name') }}" required
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                         </div>
-                        <div class="sm:col-span-2">
-                            <label for="item_requirement_note" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                        <div class="col-span-12 sm:col-span-4">
+                            <label for="item_requirement_note" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                                 Match Requirement?
                             </label>
                             <input type="text" id="item_requirement_note" name="items[0][item_requirement_note]" value="{{ old('item_requirement_note') }}"
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                         </div>
-                        <div class="sm:col-span-1">
-                            <label for="quantity" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                        <div class="col-span-4 sm:col-span-1">
+                            <label for="quantity" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                                 Qty <span class="text-red-500">*</span>
                             </label>
                             <input type="number" min="1" id="quantity" name="items[0][quantity]" value="{{ old('quantity', 1) }}" required
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                         </div>
-                        <div class="sm:col-span-1">
-                            <label for="unit" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                        <div class="col-span-4 sm:col-span-2">
+                            <label for="unit" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                                 Unit
                             </label>
                             <input type="text" id="unit" name="items[0][unit]" value="{{ old('unit', 'Pcs') }}"
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                         </div>
                     </div>
                 @endif
 
-                <div>
-                    <label for="target_purchase" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                <div class="pt-1">
+                    <label for="target_purchase" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                         Target to Purchase
                     </label>
                     <textarea id="target_purchase" name="target_purchase" rows="2"
-                              placeholder="Consider the install schedule"
-                              class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition resize-none">{{ old('target_purchase') }}</textarea>
+                              placeholder="Consider the installation schedule"
+                              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('target_purchase') }}</textarea>
                 </div>
             </div>
         </section>
 
-        {{-- SECTION 4: Approval Chain --}}
-        <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Approval Chain</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Document approval chain</p>
-                    </div>
-                </div>
-            </header>
+        {{-- =========================================================
+             SECTION 4 — APPROVAL CHAIN
+        ========================================================== --}}
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Approval Chain
+                </h2>
+            </div>
 
-            <div class="p-6">
-                <div class="grid sm:grid-cols-4 gap-5">
+            <div class="p-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     @foreach ([
-                        ['name' => 'pic_name', 'label' => 'PIC'],
+                        ['name' => 'pic_name',         'label' => 'PIC'],
                         ['name' => 'ops_manager_name', 'label' => 'Ops Manager'],
                         ['name' => 'fem_manager_name', 'label' => 'FEM Manager'],
-                        ['name' => 'coo_name', 'label' => 'COO'],
+                        ['name' => 'coo_name',         'label' => 'COO'],
                     ] as $field)
                         <div>
-                            <label for="{{ $field['name'] }}" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                            <label for="{{ $field['name'] }}" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                                 {{ $field['label'] }}
                             </label>
                             <input type="text" id="{{ $field['name'] }}" name="{{ $field['name'] }}" value="{{ old($field['name']) }}"
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition">
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
                         </div>
                     @endforeach
                 </div>
             </div>
         </section>
 
-        {{-- Action Bar --}}
+        {{-- STICKY ACTION BAR --}}
         <div class="sticky bottom-4 z-10">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-5 py-3.5 shadow-lg">
-                <p class="text-xs text-gray-500 dark:text-gray-400 order-2 sm:order-1">
-                    Make sure all data is correct before saving.
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur px-4 py-2.5 shadow-lg">
+                <p class="hidden sm:block text-xs text-gray-500 dark:text-gray-400">
+                    Please verify all data is correct before saving.
                 </p>
-                <div class="flex items-center gap-3 order-1 sm:order-2 w-full sm:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
                     <a href="{{ url()->previous() }}"
-                       class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                       class="flex-1 sm:flex-none inline-flex items-center justify-center h-9 px-3.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         Cancel
                     </a>
                     <button type="submit"
-                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-primary-600 hover:bg-primary-700 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                         </svg>
                         Save Request
                     </button>
