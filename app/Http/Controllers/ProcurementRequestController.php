@@ -25,8 +25,14 @@ class ProcurementRequestController extends Controller
             $query->where('department_id', $user->department_id);
         }
 
+        // Filter Source (Manual / Consumable)
         if ($request->filled('source')) {
             $query->where('source', $request->source);
+        }
+
+        // Filter Stage (Tab PR Final / Tahap 2)
+        if ($request->filled('stage') && $request->stage === 'final') {
+            $query->whereIn('status', ['processed', 'final_approved', 'received', 'completed']);
         }
 
         $requests = $query->paginate(15)->appends($request->all());

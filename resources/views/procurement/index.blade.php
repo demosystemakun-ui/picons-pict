@@ -26,12 +26,12 @@
         </a>
     </div>
 
-    {{-- TAB FILTER BY PR SOURCE --}}
+    {{-- TAB FILTER BY PR SOURCE & STAGE --}}
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
             <a href="{{ route('procurement.index') }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
-                      {{ !request('source') ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                      {{ !request('source') && !request('stage') ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
                 All PRs
             </a>
             <a href="{{ route('procurement.index', ['source' => 'manual']) }}" 
@@ -43,6 +43,14 @@
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
                       {{ request('source') == 'consumable' ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
                 PR from Consumable
+            </a>
+            
+            {{-- TAB BARU: PR FINAL (TAHAP 2) --}}
+            <a href="{{ route('procurement.index', ['stage' => 'final']) }}" 
+               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
+                      {{ request('stage') == 'final' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                PR Final (Tahap 2)
+                <span class="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full dark:bg-indigo-900/50 dark:text-indigo-300">Final</span>
             </a>
         </nav>
     </div>
@@ -68,30 +76,36 @@
                     @forelse ($requests as $r)
                         @php
                             $statusColors = [
-                                'pending'  => 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
-                                'approved' => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
-                                'rejected' => 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
-                                'revision' => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
-                                'processed' => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50',
-                                'received' => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
-                                'completed' => 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-700',
+                                'pending'        => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
+                                'approved'       => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
+                                'rejected'       => 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
+                                'revision'       => 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50',
+                                'processed'      => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50',
+                                'final_approved' => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
+                                'received'       => 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800/50',
+                                'completed'      => 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
                             ];
-                            $statusLabels = [
-                                'pending'  => 'Pending',
-                                'approved' => 'Approved',
-                                'rejected' => 'Rejected',
-                                'revision' => 'Needs Revision',
-                                'processed' => 'Processed (Purchased)',
-                                'received' => 'Received',
-                                'completed' => 'Completed',
-                            ];
+                            
                             $currStatus = $r->status ?? 'pending';
+                            
+                            // Label jadi lebih rapi (Final_approved -> Final Approved)
+                            $statusLabels = [
+                                'pending'        => 'Pending',
+                                'approved'       => 'Approved',
+                                'rejected'       => 'Rejected',
+                                'revision'       => 'Needs Revision',
+                                'processed'      => 'Processed (Purchased)',
+                                'final_approved' => 'Final Approved',
+                                'received'       => 'Received',
+                                'completed'      => 'Completed',
+                            ];
+                            $statusLabel = $statusLabels[$currStatus] ?? ucwords(str_replace('_', ' ', $currStatus));
 
                             // Method Badge Config
                             $methodColors = [
-                                'po'             => 'bg-blue-50 text-blue-700 border-blue-200',
-                                'cash_advance'   => 'bg-purple-50 text-purple-700 border-purple-200',
-                                'reimbursement'  => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                'po'             => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+                                'cash_advance'   => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/50',
+                                'reimbursement'  => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50',
                             ];
                             $methodLabels = [
                                 'po'             => 'PO',
@@ -127,16 +141,16 @@
                             <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ $r->date->format('d/m/Y') }}</td>
                             <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ $r->request_by }}</td>
                             <td class="px-4 py-3">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                                     {{ $r->division }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-xs truncate" title="{{ $r->description }}">{{ $r->description }}</td>
-                            <td class="px-4 py-3 text-center font-medium text-gray-900 dark:text-white">{{ $r->quantity }}</td>
+                            <td class="px-4 py-3 text-center font-medium text-gray-900 dark:text-white">{{ $r->quantity + 0 }}</td>
                             
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium {{ $statusColors[$currStatus] ?? $statusColors['pending'] }}">
-                                    {{ $statusLabels[$currStatus] ?? ucfirst($currStatus) }}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-semibold {{ $statusColors[$currStatus] ?? $statusColors['pending'] }}">
+                                    {{ $statusLabel }}
                                 </span>
                             </td>
 
