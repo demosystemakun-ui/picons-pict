@@ -29,9 +29,13 @@ class ProcurementRequestController extends Controller
             $query->where('source', $request->source);
         }
 
-        // Filter Stage (Tab PR Final / Tahap 2)
-        if ($request->filled('stage') && $request->stage === 'final') {
-            $query->whereIn('status', ['processed', 'final_approved', 'received', 'completed']);
+        // Filter Stage (Tab Tahap 1 & Tahap 2)
+        if ($request->filled('stage')) {
+            if ($request->stage === 'tahap1') {
+                $query->whereIn('status', ['pending', 'approved', 'rejected', 'revision']);
+            } elseif ($request->stage === 'final') {
+                $query->whereIn('status', ['processed', 'final_approved', 'received', 'completed']);
+            }
         }
 
         $requests = $query->paginate(15)->appends($request->all());
@@ -40,7 +44,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE (Menerima data prefill dari Consumable Request)
+       CREATE
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
