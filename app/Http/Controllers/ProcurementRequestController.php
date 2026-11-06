@@ -496,6 +496,41 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
+       UPDATE SIGNATURE STATUS (Validasi TTD per kolom)
+    ═══════════════════════════════════════════════════════════════ */
+    public function updateSignatureStatus(Request $request, ProcurementRequest $procurementRequest)
+    {
+        $request->validate([
+            'signature_field' => 'required|string|in:pic_name,ops_manager_name,fem_manager_name,coo_name'
+        ]);
+
+        $field = $request->input('signature_field');
+        
+        $columnMap = [
+            'pic_name'         => 'is_pic_approved',
+            'ops_manager_name' => 'is_ops_approved',
+            'fem_manager_name' => 'is_fem_approved',
+            'coo_name'         => 'is_coo_approved',
+        ];
+
+        if (!array_key_exists($field, $columnMap)) {
+            return response()->json(['error' => 'Invalid field'], 400);
+        }
+
+        $statusColumn = $columnMap[$field];
+        
+        // Toggle status validasi
+        $procurementRequest->update([
+            $statusColumn => !$procurementRequest->$statusColumn
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'status'  => $procurementRequest->$statusColumn
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
        UPDATE STATUS
     ═══════════════════════════════════════════════════════════════ */
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)
@@ -616,10 +651,10 @@ class ProcurementRequestController extends Controller
             'target_purchase' => $model->target_purchase,
 
             'signatures' => [
-                ['role' => 'PIC',         'name' => $model->pic_name],
-                ['role' => 'Ops Manager', 'name' => $model->ops_manager_name],
-                ['role' => 'FEM Manager', 'name' => $model->fem_manager_name],
-                ['role' => 'COO',         'name' => $model->coo_name],
+                ['role' => 'PIC',         'name' => $model->pic_name,         'approved' => (bool) $model->is_pic_approved],
+                ['role' => 'Ops Manager', 'name' => $model->ops_manager_name, 'approved' => (bool) $model->is_ops_approved],
+                ['role' => 'FEM Manager', 'name' => $model->fem_manager_name, 'approved' => (bool) $model->is_fem_approved],
+                ['role' => 'COO',         'name' => $model->coo_name,         'approved' => (bool) $model->is_coo_approved],
             ],
         ];
     }

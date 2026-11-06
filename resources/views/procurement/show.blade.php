@@ -34,6 +34,12 @@
     ];
 
     $canCreateCA = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
+
+    // Cek apakah semua TTD sudah di-approve
+    $isAllSigned = $procurementRequest->is_pic_approved 
+                && $procurementRequest->is_ops_approved 
+                && $procurementRequest->is_fem_approved 
+                && $procurementRequest->is_coo_approved;
 @endphp
 
 @section('content')
@@ -89,18 +95,25 @@
                     </button>
                 </form>
             @elseif($currStatus === 'approved')
-                @if($procurementRequest->vendors->isEmpty())
-                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
-                        <i data-lucide="scale" class="w-3.5 h-3.5"></i> Price Comparison
-                    </a>
-                @elseif(!$procurementRequest->winnerVendor)
-                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
-                        <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Select Winner
-                    </a>
+                {{-- Tombol ini HANYA muncul jika semua TTD sudah di-approve --}}
+                @if($isAllSigned)
+                    @if($procurementRequest->vendors->isEmpty())
+                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
+                            <i data-lucide="scale" class="w-3.5 h-3.5"></i> Price Comparison
+                        </a>
+                    @elseif(!$procurementRequest->winnerVendor)
+                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+                            <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Select Winner
+                        </a>
+                    @else
+                        <a href="{{ route('procurement.purchases.create', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
+                            <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Process PO
+                        </a>
+                    @endif
                 @else
-                    <a href="{{ route('procurement.purchases.create', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
-                        <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Process PO
-                    </a>
+                    <button type="button" disabled class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-200 dark:border-gray-700" title="Selesaikan semua validasi TTD terlebih dahulu">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Waiting for Signatures
+                    </button>
                 @endif
             @elseif($currStatus === 'received')
                 <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
@@ -113,7 +126,7 @@
             @endif
 
             {{-- Cash Advance & Liquidation --}}
-            @if($canCreateCA && in_array($currStatus, ['approved', 'processed', 'received']))
+            @if($canCreateCA && (in_array($currStatus, ['processed', 'received']) || ($currStatus === 'approved' && $isAllSigned)))
                 <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurementRequest->id]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i> Cash Advance
                 </a>
@@ -279,7 +292,7 @@
                                         </div>
                                     </td>
                                     <td class="py-3 px-4 text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ $item->item_requirement_note ?: '—' }}</td>
-                                    <td class="py-3 px-4 text-center font-semibold text-gray-900 dark:text-white">{{ $item->quantity }}</td>
+                                    <td class="py-3 px-4 text-center font-semibold text-gray-900 dark:text-white">{{ $item->quantity + 0 }}</td>
                                     <td class="py-3 px-4 text-center text-gray-600 dark:text-gray-300">{{ $item->unit ?: '—' }}</td>
                                     <td class="py-3 px-4">
                                         @if($item->picture)
@@ -296,7 +309,7 @@
                         <tfoot class="bg-gray-50/70 dark:bg-gray-900/40">
                             <tr>
                                 <td colspan="3" class="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Qty</td>
-                                <td class="py-3 px-4 text-center font-bold text-gray-900 dark:text-white">{{ $procurementRequest->items->sum('quantity') }}</td>
+                                <td class="py-3 px-4 text-center font-bold text-gray-900 dark:text-white">{{ $procurementRequest->items->sum('quantity') + 0 }}</td>
                                 <td colspan="2"></td>
                             </tr>
                         </tfoot>
@@ -316,7 +329,7 @@
                     </div>
                     <div>
                         <span class="text-xs text-gray-500 block mb-1">Quantity</span>
-                        <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->quantity }}</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->quantity + 0 }}</span>
                     </div>
                     <div class="sm:col-span-4">
                         <span class="text-xs text-gray-500 block mb-1">Requirement Note</span>
@@ -333,14 +346,49 @@
         {{-- SECTION 4: SIGNATURES --}}
         <section class="p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Approval &amp; Signatures</h2>
+            
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach($approvals as $approval)
-                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center bg-gray-50/50 dark:bg-gray-900/30">
-                        <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-2">{{ $approval['label'] }}</span>
-                        <p class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ $approval['value'] ?: '—' }}</p>
+                @php
+                    $signatures = [
+                        ['label' => 'PIC',         'value' => $procurementRequest->pic_name,         'field' => 'pic_name',         'approved' => $procurementRequest->is_pic_approved],
+                        ['label' => 'Ops Manager', 'value' => $procurementRequest->ops_manager_name, 'field' => 'ops_manager_name', 'approved' => $procurementRequest->is_ops_approved],
+                        ['label' => 'FEM Manager', 'value' => $procurementRequest->fem_manager_name, 'field' => 'fem_manager_name', 'approved' => $procurementRequest->is_fem_approved],
+                        ['label' => 'COO',         'value' => $procurementRequest->coo_name,         'field' => 'coo_name',         'approved' => $procurementRequest->is_coo_approved],
+                    ];
+                @endphp
+
+                @foreach($signatures as $sig)
+                    <div class="rounded-lg border {{ $sig['approved'] ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30' }} p-3 text-center flex flex-col justify-between transition-colors">
+                        
+                        <div>
+                            <span class="text-[10px] font-semibold uppercase tracking-wider {{ $sig['approved'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' }} block mb-2">
+                                {{ $sig['label'] }}
+                            </span>
+                            <p class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{{ $sig['value'] ?: '—' }}</p>
+                        </div>
+
+                        {{-- STATUS & BUTTON --}}
+                        <div class="mt-3 pt-3 border-t {{ $sig['approved'] ? 'border-emerald-200 dark:border-emerald-800/50' : 'border-gray-200 dark:border-gray-700' }}">
+                            @if($sig['approved'])
+                                <span class="inline-flex items-center justify-center gap-1 w-full text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    Approved
+                                </span>
+                            @else
+                                <button type="button" 
+                                        onclick="validateSignature('{{ $sig['field'] }}', this)"
+                                        class="w-full inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                    Validate Signature
+                                </button>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>
+            
+            <p class="text-[11px] text-gray-500 mt-4 text-center">
+                *Silakan validasi setiap kolom setelah tanda tangan basah dibubuhkan pada dokumen cetak.
+            </p>
         </section>
 
     </div>
@@ -435,6 +483,40 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeActionModal();
     });
+
+    // Fungsi untuk validasi TTD
+    window.validateSignature = function(field, btnElement) {
+        if (!confirm('Apakah Anda yakin ingin memvalidasi tanda tangan pada kolom ini?')) return;
+
+        const originalText = btnElement.innerHTML;
+        btnElement.disabled = true;
+        btnElement.innerHTML = 'Processing...';
+
+        fetch(`{{ url('/procurement/' . $procurementRequest->id . '/signature') }}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ signature_field: field })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                window.location.reload(); // Refresh agar warna jadi hijau dan tombol unlock muncul
+            } else {
+                alert(data.error || 'Terjadi kesalahan.');
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalText;
+            }
+        })
+        .catch(err => {
+            alert('Gagal memproses validasi.');
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalText;
+        });
+    };
 })();
 </script>
 @endpush

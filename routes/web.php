@@ -199,6 +199,9 @@ Route::middleware(['auth'])->group(function () {
             ->name('status')
             ->middleware('role:Super Admin');
 
+            Route::patch('/procurement/{procurementRequest}/signature', [App\Http\Controllers\ProcurementRequestController::class, 'updateSignatureStatus'])
+    ->name('procurement.signature.update');
+
         // ═══════════════════════════════════════════════════════════
         // PURCHASE ORDER (PO) & RECEIVING
         // ═══════════════════════════════════════════════════════════
