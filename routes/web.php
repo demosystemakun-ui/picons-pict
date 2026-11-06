@@ -180,12 +180,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
         Route::get('/{procurementRequest}/pdf',       [ProcurementRequestController::class, 'pdf'])->name('pdf');
         Route::get('/{procurementRequest}/print',     [ProcurementRequestController::class, 'print'])->name('print');
-        
-        // ✅ TAMBAHKAN ROUTE PRINT FINAL DI SINI
         Route::get('/{procurementRequest}/print-final', [ProcurementRequestController::class, 'printFinal'])->name('print.final');
 
         Route::patch('/{procurementRequest}/signature', [ProcurementRequestController::class, 'updateSignatureStatus'])
             ->name('signature.update');
+
+        // ✅ ROUTE BARU UNTUK APPROVE ALL SIGNATURES
+        Route::patch('/{procurementRequest}/approve-all-signatures', [ProcurementRequestController::class, 'approveAllSignatures'])
+            ->name('approve-all-signatures');
 
         Route::patch('/{procurementRequest}/validate-signature', [ProcurementRequestController::class, 'validateSignature'])
             ->name('validate-signature')
