@@ -84,10 +84,10 @@
                         @php
                             $statusColors = [
                                 'pending'        => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
-                                'approved'       => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
+                                'approved'       => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50', // Biru untuk Pending TTD
                                 'rejected'       => 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
                                 'revision'       => 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50',
-                                'processed'      => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50',
+                                'processed'      => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
                                 'final_approved' => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
                                 'received'       => 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800/50',
                                 'completed'      => 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
@@ -96,8 +96,8 @@
                             $currStatus = $r->status ?? 'pending';
                             
                             $statusLabels = [
-                                'pending'        => 'Pending',
-                                'approved'       => 'Approved',
+                                'pending'        => 'Pending Review',
+                                'approved'       => 'Pending TTD',
                                 'rejected'       => 'Rejected',
                                 'revision'       => 'Needs Revision',
                                 'processed'      => 'Processed (Purchased)',
@@ -118,6 +118,9 @@
                                 'reimbursement'  => 'Reimbursement',
                             ];
                             $currMethod = $r->procurement_method ?? 'po';
+                            
+                            // Cek apakah semua TTD sudah di-approve
+                            $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-4 py-3">
@@ -159,9 +162,9 @@
 
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    {{-- Approval Actions (Hanya Muncul Jika Pending) --}}
+                                    {{-- TOMBOL APPROVE FORMAT (Hanya jika Pending) --}}
                                     @if($currStatus === 'pending')
-                                        <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Request">
+                                        <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Format">
                                             <i data-lucide="check-circle" class="w-4 h-4"></i>
                                         </button>
                                         <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-amber-600 rounded transition" title="Request Revision">
@@ -170,6 +173,17 @@
                                         <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'rejected', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded transition" title="Reject Request">
                                             <i data-lucide="x-circle" class="w-4 h-4"></i>
                                         </button>
+                                        <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                                    @endif
+
+                                    {{-- TOMBOL APPROVE TTD (Hanya jika Approved/Pending TTD dan belum semua TTD approve) --}}
+                                    @if($currStatus === 'approved' && !$isAllSigned)
+                                        <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')" class="inline">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="px-2 py-1 text-[10px] font-semibold rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800 transition">
+                                                Approve TTD
+                                            </button>
+                                        </form>
                                         <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                     @endif
 

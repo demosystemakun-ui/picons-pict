@@ -561,9 +561,10 @@ class ProcurementRequestController extends Controller
             'is_ops_approved' => true,
             'is_fem_approved' => true,
             'is_coo_approved' => true,
+            'status'          => 'processed', // Pindah ke Tahap 2
         ]);
 
-        return back()->with('success', 'All signatures have been validated successfully.');
+        return back()->with('success', 'All signatures validated. PR moved to Tahap 2.');
     }
 
     /* ═══════════════════════════════════════════════════════════════
