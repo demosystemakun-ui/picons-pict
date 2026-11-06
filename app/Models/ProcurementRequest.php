@@ -46,6 +46,11 @@ class ProcurementRequest extends Model
         'fem_manager_name',
         'coo_name',
 
+         'is_pic_approved',
+        'is_ops_approved',
+        'is_fem_approved',
+        'is_coo_approved',
+
         'status',
          'procurement_method',
         'review_notes',
