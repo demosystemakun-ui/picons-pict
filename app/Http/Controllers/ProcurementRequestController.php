@@ -469,9 +469,9 @@ class ProcurementRequestController extends Controller
             return back()->with('error', 'Invalid PR status for validation. Current status: ' . $procurementRequest->status);
         }
 
+        // Cukup ubah status, JANGAN isi review_notes agar tidak muncul alert merah
         $procurementRequest->update([
-            'status'       => 'processed',
-            'review_notes' => 'PR Awal signed by Manager. Validated by Admin: ' . auth()->user()->name,
+            'status' => 'processed',
         ]);
 
         return redirect()
@@ -543,6 +543,21 @@ class ProcurementRequestController extends Controller
             'success' => true,
             'status'  => $procurementRequest->$statusColumn
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       APPROVE ALL SIGNATURES (Global)
+    ═══════════════════════════════════════════════════════════════ */
+    public function approveAllSignatures(Request $request, ProcurementRequest $procurementRequest)
+    {
+        $procurementRequest->update([
+            'is_pic_approved' => true,
+            'is_ops_approved' => true,
+            'is_fem_approved' => true,
+            'is_coo_approved' => true,
+        ]);
+
+        return back()->with('success', 'All signatures have been validated successfully.');
     }
 
     /* ═══════════════════════════════════════════════════════════════

@@ -345,7 +345,20 @@
 
         {{-- SECTION 4: SIGNATURES --}}
         <section class="p-6">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Approval &amp; Signatures</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Approval &amp; Signatures</h2>
+                
+                {{-- TOMBOL VALIDASI GLOBAL --}}
+                @if(!$isAllSigned && in_array($currStatus, ['approved', 'processed']))
+                    <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan (PR Awal & PR Final)?')">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+                            <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                            Approve All Signatures
+                        </button>
+                    </form>
+                @endif
+            </div>
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 @php
