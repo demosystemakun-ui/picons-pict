@@ -10,7 +10,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6 pb-12">
+<div class="max-w-5xl mx-auto space-y-6 pb-12" x-data="{ open: false }">
 
     {{-- ═══ HEADER ═══ --}}
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -116,7 +116,7 @@
          MANUAL INPUT SECTION (Hanya jika status approved)
     ═══════════════════════════════════════════════════════════════ --}}
     @if($procurement->status === 'approved')
-    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden" x-data="{ open: false }">
+    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between cursor-pointer" @click="open = !open">
             <div class="flex items-center gap-3">
                 <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -370,27 +370,29 @@
         const container = document.getElementById('vendorRowsContainer');
         const newRow = document.createElement('div');
         newRow.className = 'vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30 mt-3';
+        
+        // PERBAIKAN: Menggunakan ${vendorIndex} dengan benar
         newRow.innerHTML = `
             <div class="md:col-span-3">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-red-500">*</span></label>
-                <input type="text" name="vendors[\${vendorIndex}][vendor_name]" required placeholder="e.g. Toko Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <input type="text" name="vendors[${vendorIndex}][vendor_name]" required placeholder="e.g. Toko Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace</label>
-                <input type="text" name="vendors[\${vendorIndex}][marketplace]" placeholder="Shopee" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <input type="text" name="vendors[${vendorIndex}][marketplace]" placeholder="Shopee" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
-                <input type="number" name="vendors[\${vendorIndex}][subtotal]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <input type="number" name="vendors[${vendorIndex}][subtotal]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir (Rp)</label>
-                <input type="number" name="vendors[\${vendorIndex}][shipping_cost]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <input type="number" name="vendors[${vendorIndex}][shipping_cost]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
             <div class="md:col-span-2 flex items-center gap-2">
                 <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon (Rp)</label>
-                    <input type="number" name="vendors[\${vendorIndex}][discount_voucher]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                    <input type="number" name="vendors[${vendorIndex}][discount_voucher]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
                 </div>
                 <button type="button" onclick="this.closest('.vendor-row').remove()" class="mt-5 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Hapus Baris">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
