@@ -126,9 +126,8 @@ class VendorComparisonController extends Controller
                 'status'               => 'final_approved',
             ]);
 
-            // 2. 🌟 AUTO-GENERATE CASH ADVANCE JIKA METODE CASH ADVANCE
+            // 2. AUTO-GENERATE CASH ADVANCE JIKA METODE CASH ADVANCE
             if ($procurement->procurement_method === 'cash_advance') {
-                // Cek agar tidak duplikat jika disubmit 2x
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
                 
                 if (!$existingCa) {
@@ -143,7 +142,6 @@ class VendorComparisonController extends Controller
                         'notes'                  => 'Otomatis dibuat dari PR: ' . $procurement->final_number,
                     ]);
 
-                    // Pindahkan item dari vendor winner ke item Cash Advance
                     if ($procurement->winnerVendor) {
                         foreach ($procurement->winnerVendor->items as $item) {
                             $ca->items()->create([
@@ -351,7 +349,7 @@ class VendorComparisonController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE VENDOR & LAINNYA
+       STORE VENDOR MANUAL (MULTI-ROW)
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
@@ -371,7 +369,7 @@ class VendorComparisonController extends Controller
             'vendors.*.discount_voucher'       => 'nullable|numeric|min:0',
             'vendors.*.tax_ppn'                => 'nullable|numeric|min:0',
             'vendors.*.total_before_tax'       => 'nullable|numeric|min:0',
-            'vendors.*.total_price'            => 'required|numeric|min:0',
+            // 'vendors.*.total_price'         => 'required|numeric|min:0', // <--- DIHAPUS KARENA DIHITUNG OTOMATIS
             'vendors.*.tax_note'               => 'nullable|string|max:50',
 
             'vendors.*.items'                       => 'nullable|array',
@@ -392,6 +390,15 @@ class VendorComparisonController extends Controller
         $procurement->vendors()->delete();
 
         foreach ($validated['vendors'] as $i => $v) {
+            // Hitung total otomatis
+            $subtotal    = $v['subtotal'] ?? 0;
+            $shipping    = $v['shipping_cost'] ?? 0;
+            $discount    = $v['discount_voucher'] ?? 0;
+            $tax         = $v['tax_ppn'] ?? 0;
+            
+            $totalBeforeTax = $subtotal + $shipping - $discount;
+            $totalPrice     = $totalBeforeTax + $tax;
+
             $vendor = $procurement->vendors()->create([
                 'vendor_name'        => $v['vendor_name'],
                 'marketplace'        => $v['marketplace'] ?? null,
@@ -401,12 +408,12 @@ class VendorComparisonController extends Controller
                 'estimated_delivery' => $v['estimated_delivery'] ?? null,
                 'product_url'        => $v['product_url'] ?? null,
                 'notes'              => $v['notes'] ?? null,
-                'subtotal'           => $v['subtotal'] ?? 0,
-                'shipping_cost'      => $v['shipping_cost'] ?? 0,
-                'discount_voucher'   => $v['discount_voucher'] ?? 0,
-                'tax_ppn'            => $v['tax_ppn'] ?? 0,
-                'total_before_tax'   => $v['total_before_tax'] ?? 0,
-                'total_price'        => $v['total_price'],
+                'subtotal'           => $subtotal,
+                'shipping_cost'      => $shipping,
+                'discount_voucher'   => $discount,
+                'tax_ppn'            => $tax,
+                'total_before_tax'   => $totalBeforeTax,
+                'total_price'        => $totalPrice,
                 'tax_note'           => $v['tax_note'] ?? null,
                 'sort_order'         => $i + 1,
             ]);
