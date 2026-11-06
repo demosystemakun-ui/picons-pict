@@ -6,12 +6,12 @@
 @php
     /* ═══ STATUS CONFIG ═══ */
     $statusMeta = [
-        'pending'   => ['label' => 'Pending',                 'color' => 'bg-amber-500'],
-        'approved'  => ['label' => 'Approved',                'color' => 'bg-emerald-500'],
+        'pending'   => ['label' => 'Pending Review',          'color' => 'bg-amber-500'],
+        'approved'  => ['label' => 'Pending TTD',             'color' => 'bg-blue-500'],
         'rejected'  => ['label' => 'Rejected',                'color' => 'bg-red-500'],
         'revision'  => ['label' => 'Needs Revision',          'color' => 'bg-orange-500'],
-        'processed' => ['label' => 'Processed (Purchased)',   'color' => 'bg-blue-500'],
-        'received'  => ['label' => 'Received',                'color' => 'bg-indigo-500'],
+        'processed' => ['label' => 'Processed (Purchased)',   'color' => 'bg-indigo-500'],
+        'received'  => ['label' => 'Received',                'color' => 'bg-purple-500'],
         'completed' => ['label' => 'Completed',               'color' => 'bg-slate-500'],
     ];
     $currStatus = $procurementRequest->status ?? 'pending';
@@ -71,12 +71,12 @@
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
             @if($currStatus === 'pending')
-                <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Are you sure you want to approve this request?')" class="inline">
+                <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin memvalidasi format PR ini?')" class="inline">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="status" value="approved">
                     <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve Format
                     </button>
                 </form>
                 <button type="button" onclick="openActionModal('revision')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
