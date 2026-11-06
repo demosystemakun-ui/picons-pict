@@ -127,7 +127,7 @@
                     <select id="department" name="department" required
                             class="w-full border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-white text-sm px-3 py-2 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                         <option value="">— Select Department —</option>
-                        @foreach($departments as $dept)
+@foreach(($departments ?? []) as $dept)
                             <option value="{{ $dept }}" {{ old('department') == $dept ? 'selected' : '' }}>
                                 {{ $dept }}
                             </option>

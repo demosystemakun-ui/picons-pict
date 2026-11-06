@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Department;
 
 class ConsumableRequestController extends Controller
 {
@@ -35,16 +36,20 @@ class ConsumableRequestController extends Controller
         return view('consumable-requests.index', compact('requests'));
     }
 
-    public function create()
-    {
-        return view('consumable-requests.create');
-    }
-
-    public function createForm()
-    {
-        return view('consumable-requests._form');
-    }
-
+  public function create()
+{
+    return view('consumable-requests.create', $this->formData());
+}
+  public function createForm()
+{
+    return view('consumable-requests._form', $this->formData());
+}
+private function formData(): array
+{
+    return [
+        'departments' => Department::orderBy('name')->pluck('name'),
+    ];
+}
     public function store(Request $request)
     {
         $validated = $request->validate([
