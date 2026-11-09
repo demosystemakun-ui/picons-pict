@@ -80,30 +80,45 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($requests as $r)
                         @php
-                            $statusColors = [
-                                'pending'        => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
-                                'approved'       => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50',
-                                'rejected'       => 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
-                                'revision'       => 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50',
-                                'processed'      => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
-                                'final_approved' => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
-                                'received'       => 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800/50',
-                                'completed'      => 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-                            ];
-                            
                             $currStatus = $r->status ?? 'pending';
+                            $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
+
+                            // ═══ LOGIKA TAMPILAN STATUS ═══
+                            // Jika status masih 'approved' tapi TTD sudah lengkap, ubah tampilannya
+                            $displayStatus = $currStatus;
+                            if ($currStatus === 'approved' && $isAllSigned) {
+                                $displayStatus = 'ready_for_vendor';
+                            }
+
+                            $statusColors = [
+                                'pending'            => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
+                                'approved'           => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50',
+                                'ready_for_vendor'   => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
+                                'rejected'           => 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
+                                'revision'           => 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50',
+                                'processed'          => 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
+                                'pending_review_final'=> 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
+                                'pending_final_sign' => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
+                                'final_approved'     => 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800/50',
+                                'received'           => 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800/50',
+                                'completed'          => 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+                            ];
                             
                             $statusLabels = [
-                                'pending'        => 'Pending Review',
-                                'approved'       => 'Pending TTD',
-                                'rejected'       => 'Rejected',
-                                'revision'       => 'Needs Revision',
-                                'processed'      => 'Processed (Purchased)',
-                                'final_approved' => 'Final Approved',
-                                'received'       => 'Received',
-                                'completed'      => 'Completed',
+                                'pending'             => 'Pending Review',
+                                'approved'            => 'Pending TTD',
+                                'ready_for_vendor'    => 'Ready for Vendor',
+                                'rejected'            => 'Rejected',
+                                'revision'            => 'Needs Revision',
+                                'processed'           => 'Processed (Purchased)',
+                                'pending_review_final'=> 'Pending Review Final',
+                                'pending_final_sign'  => 'Pending Final Sign',
+                                'final_approved'      => 'Final Approved',
+                                'received'            => 'Received',
+                                'completed'           => 'Completed',
                             ];
-                            $statusLabel = $statusLabels[$currStatus] ?? ucwords(str_replace('_', ' ', $currStatus));
+
+                            $statusLabel = $statusLabels[$displayStatus] ?? ucwords(str_replace('_', ' ', $displayStatus));
 
                             $methodColors = [
                                 'po'             => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
@@ -116,8 +131,6 @@
                                 'reimbursement'  => 'Reimbursement',
                             ];
                             $currMethod = $r->procurement_method ?? 'po';
-                            
-                            $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-4 py-3">
@@ -152,7 +165,7 @@
                             <td class="px-4 py-3 text-center font-medium text-gray-900 dark:text-white">{{ $r->quantity + 0 }}</td>
                             
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-semibold {{ $statusColors[$currStatus] ?? $statusColors['pending'] }}">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-semibold {{ $statusColors[$displayStatus] ?? $statusColors['pending'] }}">
                                     {{ $statusLabel }}
                                 </span>
                             </td>
@@ -193,8 +206,8 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        {{-- Tombol Vendor Comparison (Disembunyikan jika masih 'approved', muncul jika sudah 'processed' ke atas) --}}
-                                        @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']))
+                                        {{-- Tombol Vendor Comparison (Disembunyikan jika masih 'approved' & belum signed, muncul jika sudah 'processed' ke atas ATAU sudah signed) --}}
+                                        @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']) || ($currStatus === 'approved' && $isAllSigned))
                                             <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
                                                 <i data-lucide="git-compare" class="w-4 h-4"></i>
                                             </a>

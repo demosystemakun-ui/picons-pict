@@ -40,6 +40,12 @@
                 && $procurementRequest->is_ops_approved 
                 && $procurementRequest->is_fem_approved 
                 && $procurementRequest->is_coo_approved;
+
+    // ═══ PERBAIKAN TAMPILAN HEADER ═══
+    // Jika status masih 'approved' TAPI TTD sudah lengkap, ubah tampilannya
+    if ($currStatus === 'approved' && $isAllSigned) {
+        $meta = ['label' => 'Ready for Vendor Selection', 'color' => 'bg-indigo-500'];
+    }
 @endphp
 
 @section('content')
