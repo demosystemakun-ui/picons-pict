@@ -272,10 +272,10 @@
                             Menunggu Validasi TTD Manajer
                         @elseif($isPendingFinalReview)
                             Menunggu Review Format PR Final
-                        @elseif($isProcessed)
+                        @elseif($isProcessed || $procurement->status === 'approved')
                             Vendor Selected — Ready for Final PR
                         @else
-                            Vendor Selected — Waiting for PR Awal Validation
+                            Waiting for Configuration
                         @endif
                     </div>
                     <div class="text-xs text-gray-600 dark:text-gray-400">
@@ -285,10 +285,8 @@
                             Silakan cetak PDF, minta TTD basah Manajer, lalu klik tombol Validate.
                         @elseif($isPendingFinalReview)
                             Silakan periksa kembali data format PR Final, lalu klik Approve Format.
-                        @elseif($isProcessed)
+                        @elseif($isProcessed || $procurement->status === 'approved')
                             Silakan lanjut ke pembuatan Form Final PR.
-                        @else
-                            Print the PR Awal, get Manager signature, then validate.
                         @endif
                     </div>
                 </div>
@@ -332,8 +330,8 @@
                             View Final PR PDF
                         </a>
 
-                    {{-- 4. JIKA SUDAH PILIH VENDOR (PROCESSED) --}}
-                    @elseif($isProcessed)
+                    {{-- 4. JIKA SUDAH PILIH VENDOR (PROCESSED / APPROVED) --}}
+                    @elseif($isProcessed || $procurement->status === 'approved')
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
