@@ -1,4 +1,4 @@
-<!-- @extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'All Vendor Comparisons')
 @section('page-title', 'All Vendor Comparisons')
@@ -42,10 +42,12 @@
                     @forelse($procurements as $procurement)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-5 py-4 font-mono font-semibold text-gray-900 dark:text-white">
-                                {{ $procurement->no }}
+                                {{-- PERBAIKAN: Tampilkan Nomor Final jika ada, jika tidak tampilkan Nomor Awal --}}
+                                {{ $procurement->final_number ?? $procurement->no }}
+                                
                                 @if($procurement->final_number)
-                                    <div class="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
-                                        Final: {{ $procurement->final_number }}
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-sans">
+                                        PR Awal: {{ $procurement->no }}
                                     </div>
                                 @endif
                             </td>
@@ -58,10 +60,10 @@
                             </td>
                             <td class="px-5 py-4 text-center">
                                 @php
-                                    // PERBAIKAN: Menambahkan 'pending_final_sign' agar terdeteksi di halaman list
                                     $statusColors = [
                                         'approved'           => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
                                         'processed'          => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                        'pending_review_final'=> 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
                                         'pending_final_sign' => 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
                                         'final_approved'     => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
                                         'received'           => 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -70,6 +72,7 @@
                                     $statusLabels = [
                                         'approved'           => 'Approved',
                                         'processed'          => 'PR Awal Validated',
+                                        'pending_review_final'=> 'Pending Review Final',
                                         'pending_final_sign' => 'Pending Final Sign',
                                         'final_approved'     => 'Final Approved',
                                         'received'           => 'Received',
@@ -118,4 +121,4 @@
         @endif
     </section>
 </div>
-@endsection -->
+@endsection
