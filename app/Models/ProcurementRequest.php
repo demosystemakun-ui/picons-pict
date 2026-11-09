@@ -20,6 +20,7 @@ class ProcurementRequest extends Model
     protected $fillable = [
         'no',
         'date',
+        'request_date', // <--- TAMBAHKAN INI
         'department_id',
         'request_by',
         'division',
@@ -46,17 +47,18 @@ class ProcurementRequest extends Model
         'fem_manager_name',
         'coo_name',
 
-         'is_pic_approved',
+        'is_pic_approved',
         'is_ops_approved',
         'is_fem_approved',
         'is_coo_approved',
 
         'status',
-         'procurement_method',
+        'procurement_method',
         'review_notes',
 
         'budget_type',
         'reason_choose_vendor',
+        'final_number', // <--- TAMBAHKAN INI
         'final_total_price',
         'accounting_mgr_name',
         'ceo_name',
@@ -67,6 +69,7 @@ class ProcurementRequest extends Model
 
     protected $casts = [
         'date'              => 'datetime',
+        'request_date'      => 'date', // <--- TAMBAHKAN INI (opsional, untuk format tanggal)
         'is_new_order'      => 'boolean',
         'is_repeat_order'   => 'boolean',
         'is_goods'          => 'boolean',
@@ -78,57 +81,38 @@ class ProcurementRequest extends Model
        RELATIONS
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Item-item detail PR.
-     */
     public function items()
     {
         return $this->hasMany(ProcurementRequestItem::class);
     }
 
-    /**
-     * Semua vendor comparison untuk PR ini (urut dari termurah).
-     * Menggunakan tabel procurement_vendors (sistem baru).
-     */
     public function vendors()
     {
         return $this->hasMany(ProcurementVendor::class)->orderBy('total_price');
     }
 
-    /**
-     * Vendor pemenang (harga terendah / is_winner = true).
-     */
     public function winnerVendor()
     {
         return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
     }
 
-    /**
-     * User yang membuat PR.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Departemen pemohon.
-     */
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    /**
-     * Dokumen arsip (jika ada).
-     */
     public function documents()
     {
         return $this->morphMany(DocumentArchive::class, 'documentable');
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       BOOT — Auto-normalize order type (hanya 1 yang boleh true)
+       BOOT
     ═══════════════════════════════════════════════════════════════ */
     protected static function booted()
     {
@@ -155,11 +139,6 @@ class ProcurementRequest extends Model
        HELPERS
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Generate nomor PR otomatis.
-     * Format: /PR/{DIVISION}/{PREFIX}-{ROMAN_MONTH}-{YEAR}
-     * Contoh: /PR/OPS/PICT-IX-2026
-     */
     public static function generateNumber(string $division = 'OPS', string $prefix = 'PICT'): string
     {
         $romans = [
@@ -176,28 +155,19 @@ class ProcurementRequest extends Model
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       SCOPES (Opsional)
+       SCOPES
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Scope: PR dengan status Pending.
-     */
     public function scopePending($query)
     {
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    /**
-     * Scope: PR yang sudah disetujui dan siap diproses.
-     */
     public function scopeApproved($query)
     {
         return $query->where('status', self::STATUS_APPROVED);
     }
 
-    /**
-     * Scope: PR milik departemen tertentu.
-     */
     public function scopeForDepartment($query, $departmentId)
     {
         return $query->where('department_id', $departmentId);
