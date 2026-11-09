@@ -194,17 +194,17 @@
                     </div>
                 </div>
 
-                {{-- BARIS 4: FINAL PR NUMBER (PERBAIKAN: READONLY & HANYA AMBIL DARI SUGGESTED) --}}
+                {{-- BARIS 4: FINAL PR NUMBER (MANUAL INPUT) --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                         Final PR Number <span class="text-rose-500">*</span>
                     </label>
                     <input type="text" name="final_number"
-                           value="{{ old('final_number', $suggestedFinalNumber) }}"
+                           value="{{ old('final_number', $procurement->final_number) }}"
                            placeholder="e.g. 01/PR/OPS/PICT-XI-2026"
-                           class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 font-mono bg-gray-50 focus:border-teal-500 focus:ring-teal-500 @error('final_number') border-rose-400 @enderror"
-                           readonly required>
-                    <p class="mt-1.5 text-xs text-gray-500">Format bulan dan tahun sudah otomatis. Nomor urut akan bertambah sesuai data terakhir.</p>
+                           class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 font-mono focus:border-teal-500 focus:ring-teal-500 @error('final_number') border-rose-400 @enderror"
+                           required>
+                    <p class="mt-1.5 text-xs text-gray-500">Silakan isi nomor PR Final secara manual. Pastikan nomor belum pernah digunakan.</p>
                     @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
