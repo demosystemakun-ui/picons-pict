@@ -1,4 +1,4 @@
-@extends('layouts.app')
+<!-- @extends('layouts.app')
 
 @section('title', 'All Vendor Comparisons')
 @section('page-title', 'All Vendor Comparisons')
@@ -118,4 +118,4 @@
         @endif
     </section>
 </div>
-@endsection
+@endsection -->

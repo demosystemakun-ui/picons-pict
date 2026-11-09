@@ -1,4 +1,4 @@
-@extends('layouts.app')
+<!-- @extends('layouts.app')
 
 @section('title', 'Vendor Comparison')
 @section('page-title', 'Vendor Price Comparison')
@@ -433,4 +433,4 @@
         vendorIndex++;
     }
 </script>
-@endpush
+@endpush -->
