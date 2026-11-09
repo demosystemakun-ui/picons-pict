@@ -184,14 +184,32 @@
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
                                     
-                                    {{-- TOMBOL AKSI: JIKA DI TAB VENDOR COMPARISON --}}
+                                    {{-- ═══ JIKA DI TAB VENDOR COMPARISON (TAHAP 2) ═══ --}}
                                     @if(request('stage') == 'final')
-                                        <a href="{{ route('procurement.comparisons.index', $r) }}" 
-                                           class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
-                                            <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Input Vendor
+                                        
+                                        {{-- 1. Tombol View Draft PDF (Selalu muncul di tab ini) --}}
+                                        <a href="{{ route('procurement.pdf.final', $r) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-teal-600 bg-white text-teal-700 hover:bg-teal-50 transition">
+                                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Draft PDF
                                         </a>
+
+                                        {{-- 2. Tombol Approve Format (Hanya muncul jika status pending_review_final) --}}
+                                        @if($currStatus === 'pending_review_final')
+                                            <form action="{{ route('procurement.approve-final-format', $r) }}" method="POST" class="inline">
+                                                @csrf @method('PATCH')
+                                                <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
+                                                    <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve Review
+                                                </button>
+                                            </form>
+                                        
+                                        {{-- 3. Tombol Detail Final PR (Jika sudah di-approve / validasi) --}}
+                                        @elseif(in_array($currStatus, ['pending_final_sign', 'final_approved', 'received', 'completed']))
+                                            <a href="{{ route('procurement.comparisons.index', $r) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+                                                <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Detail Final PR
+                                            </a>
+                                        @endif
+
                                     @else
-                                        {{-- TOMBOL AKSI STANDAR (TAB LAIN) --}}
+                                        {{-- ═══ TOMBOL AKSI STANDAR (TAB LAIN) ═══ --}}
                                         
                                         @if($currStatus === 'pending')
                                             <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Format">
