@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProcurementRequestController extends Controller
 {
-    public function index(Request $request)
+        public function index(Request $request)
     {
         $user  = auth()->user();
         $query = ProcurementRequest::latest();
@@ -28,10 +28,19 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tampilkan PR yang belum punya vendor pemenang (Tahap 1)
-                // Termasuk status pending, approved, dan revision
-                $query->whereDoesntHave('winnerVendor')
-                      ->whereIn('status', ['pending', 'approved', 'revision']);
+                // JANGAN filter winnerVendor agar histori tetap muncul.
+                // Tampilkan semua status yang relevan untuk Tahap 1
+                $query->whereIn('status', [
+                    'pending', 
+                    'approved', 
+                    'revision', 
+                    'processed', 
+                    'pending_review_final', 
+                    'pending_final_sign', 
+                    'final_approved', 
+                    'received', 
+                    'completed'
+                ]);
                       
             } elseif ($request->stage === 'final') {
                 // Tampilkan PR yang sudah masuk tahap final (Tahap 2)
