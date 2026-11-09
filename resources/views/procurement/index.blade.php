@@ -83,8 +83,6 @@
                             $currStatus = $r->status ?? 'pending';
                             $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
 
-                            // ═══ LOGIKA TAMPILAN STATUS ═══
-                            // Jika status masih 'approved' tapi TTD sudah lengkap, ubah tampilannya
                             $displayStatus = $currStatus;
                             if ($currStatus === 'approved' && $isAllSigned) {
                                 $displayStatus = 'ready_for_vendor';
@@ -134,17 +132,30 @@
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-4 py-3">
-                                <div class="font-medium text-gray-900 dark:text-white">{{ $r->no }}</div>
-                                <div class="mt-1">
-                                    @if($r->source === 'consumable')
-                                        <span class="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50">
-                                            CONSUMABLE
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
-                                            MANUAL
-                                        </span>
+                                <div class="flex flex-col gap-1">
+                                    {{-- PRIORITASKAN NOMOR FINAL JIKA ADA --}}
+                                    <div class="font-medium text-gray-900 dark:text-white font-mono">
+                                        {{ $r->final_number ?? $r->no }}
+                                    </div>
+                                    
+                                    {{-- TAMPILKAN NOMOR AWAL SEBAGAI REFERENSI KECIL --}}
+                                    @if($r->final_number)
+                                        <div class="text-[10px] text-gray-500 dark:text-gray-400">
+                                            PR Awal: {{ $r->no }}
+                                        </div>
                                     @endif
+
+                                    <div class="mt-1">
+                                        @if($r->source === 'consumable')
+                                            <span class="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50">
+                                                CONSUMABLE
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                                                MANUAL
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
                             </td>
 
@@ -195,7 +206,7 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        {{-- Tombol Approve TTD (Muncul jika status 'approved' tapi belum semua TTD dicentang) --}}
+                                        {{-- Tombol Approve TTD --}}
                                         @if($currStatus === 'approved' && !$isAllSigned)
                                             <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')" class="inline">
                                                 @csrf @method('PATCH')
@@ -206,7 +217,7 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        {{-- Tombol Vendor Comparison (Disembunyikan jika masih 'approved' & belum signed, muncul jika sudah 'processed' ke atas ATAU sudah signed) --}}
+                                        {{-- Tombol Vendor Comparison --}}
                                         @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']) || ($currStatus === 'approved' && $isAllSigned))
                                             <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
                                                 <i data-lucide="git-compare" class="w-4 h-4"></i>
@@ -217,7 +228,7 @@
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
 
-                                        {{-- TOMBOL PRINT & PDF HANYA MUNCUL DI SINI (Bukan di Tab Final) --}}
+                                        {{-- TOMBOL PRINT & PDF --}}
                                         <button type="button" 
                                                 onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" 
                                                 class="p-1.5 text-gray-400 hover:text-blue-600 rounded transition" 
