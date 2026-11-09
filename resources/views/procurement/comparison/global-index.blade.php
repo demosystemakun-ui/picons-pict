@@ -41,15 +41,23 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     @forelse($procurements as $procurement)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            <td class="px-5 py-4 font-mono font-semibold text-gray-900 dark:text-white">
-                                {{-- PERBAIKAN: Tampilkan Nomor Final jika ada, jika tidak tampilkan Nomor Awal --}}
-                                {{ $procurement->final_number ?? $procurement->no }}
-                                
-                                @if($procurement->final_number)
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-sans">
-                                        PR Awal: {{ $procurement->no }}
-                                    </div>
-                                @endif
+                            <td class="px-5 py-4">
+                                <div class="flex flex-col gap-1">
+                                    {{-- Nomor PR Awal (Referensi) --}}
+                                    <span class="font-mono font-semibold text-gray-900 dark:text-white">
+                                        {{ $procurement->no }}
+                                    </span>
+                                    
+                                    {{-- Nomor PR Final/Draft (Hasil Inputan) --}}
+                                    @if($procurement->final_number)
+                                        <span class="inline-flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                            {{ $procurement->final_number }}
+                                        </span>
+                                    @else
+                                        <span class="text-[10px] text-gray-400 italic">No Final PR yet</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-5 py-4 text-gray-700 dark:text-gray-300">{{ $procurement->division }}</td>
                             <td class="px-5 py-4 text-gray-700 dark:text-gray-300 max-w-xs truncate">{{ $procurement->description }}</td>
