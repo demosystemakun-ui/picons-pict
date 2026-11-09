@@ -101,20 +101,21 @@
         background: #fff;
     }
 
-    /* ═══ CSS WATERMARK ═══ */
+    /* ═══ CSS WATERMARK (DIPERBAIKI) ═══ */
     .watermark {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 130px;
+        font-size: 140px;
         font-weight: bold;
-        color: rgba(200, 200, 200, 0.25); /* Warna abu-abu transparan */
-        z-index: -1000;
+        color: rgba(180, 180, 180, 0.4); /* Lebih tegas */
+        z-index: 9999; /* Memastikan di atas tabel */
         text-align: center;
         white-space: nowrap;
         pointer-events: none;
         font-family: sans-serif;
+        letter-spacing: 10px;
     }
     /* ═══════════════════ */
 
@@ -123,6 +124,7 @@
         background: #fff;
         margin: 0 auto;
         padding: 0;
+        position: relative;
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -211,6 +213,8 @@
         border-collapse: collapse;
         border: none !important;
         page-break-inside: avoid;
+        position: relative;
+        z-index: 1;
     }
     .sign-table td {
         border: none !important;
@@ -241,11 +245,11 @@
 </head>
 <body>
 
-{{-- ═══ TAMBAHAN WATERMARK DRAFT ═══ --}}
+{{-- ═══ WATERMARK DRAFT ═══ --}}
 @if(isset($isDraft) && $isDraft)
     <div class="watermark">DRAFT</div>
 @endif
-{{-- ═════════════════════════════════ --}}
+{{-- ═══════════════════════ --}}
 
 <div class="sheet">
     <table class="main-table">

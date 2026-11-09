@@ -90,6 +90,24 @@
         print-color-adjust: exact;
     }
 
+    /* ═══ CSS WATERMARK DRAFT ═══ */
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 150px;
+        font-weight: 900;
+        color: rgba(200, 200, 200, 0.35); /* Warna abu-abu transparan */
+        z-index: 9999; /* Menimpa semua elemen (termasuk tabel) */
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+        font-family: sans-serif;
+        letter-spacing: 5px;
+    }
+    /* ═══════════════════════════ */
+
     .sheet {
         width: 100%;
         max-width: 186mm;
@@ -97,6 +115,7 @@
         background: #fff;
         border: none;
         padding: 0;
+        position: relative; /* Penting untuk tumpukan z-index */
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -191,6 +210,8 @@
         border-collapse: collapse;
         border: none !important;
         page-break-inside: avoid;
+        position: relative;
+        z-index: 1;
     }
     .sign-table td {
         border: none !important;
@@ -241,6 +262,12 @@
 </style>
 </head>
 <body>
+
+{{-- ═══ TAMBAHAN WATERMARK DRAFT ═══ --}}
+@if(isset($isDraft) && $isDraft)
+    <div class="watermark">DRAFT</div>
+@endif
+{{-- ═════════════════════════════════ --}}
 
 <div class="sheet">
     <table class="main-table">
