@@ -187,12 +187,12 @@
                                     {{-- ═══ JIKA DI TAB VENDOR COMPARISON (TAHAP 2) ═══ --}}
                                     @if(request('stage') == 'final')
                                         
-                                        {{-- 1. Tombol View Draft PDF (Selalu muncul di tab ini) --}}
+                                        {{-- 1. Tombol View Draft PDF --}}
                                         <a href="{{ route('procurement.pdf.final', $r) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-teal-600 bg-white text-teal-700 hover:bg-teal-50 transition">
                                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Draft PDF
                                         </a>
 
-                                        {{-- 2. Tombol Approve Format (Hanya muncul jika status pending_review_final) --}}
+                                        {{-- 2. Tombol Approve Format --}}
                                         @if($currStatus === 'pending_review_final')
                                             <form action="{{ route('procurement.approve-final-format', $r) }}" method="POST" class="inline">
                                                 @csrf @method('PATCH')
@@ -201,16 +201,29 @@
                                                 </button>
                                             </form>
                                         
-                                        {{-- 3. Tombol Detail Final PR (Jika sudah di-approve / validasi) --}}
-                                        @elseif(in_array($currStatus, ['pending_final_sign', 'final_approved', 'received', 'completed']))
-                                            <a href="{{ route('procurement.comparisons.index', $r) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
-                                                <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Detail Final PR
+                                        {{-- 3. Tombol Validate TTD --}}
+                                        @elseif($currStatus === 'pending_final_sign')
+                                            <form action="{{ route('procurement.validate-final-signature', $r) }}" method="POST" class="inline">
+                                                @csrf @method('PATCH')
+                                                {{-- Wajib ada karena Controller memvalidasi final_number --}}
+                                                <input type="hidden" name="final_number" value="{{ $r->final_number }}"> 
+                                                
+                                                <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition" onclick="return confirm('Apakah Manajer sudah menandatangani dokumen ini?')">
+                                                    <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Validate TTD
+                                                </button>
+                                            </form>
+
+                                        {{-- 4. Tombol Detail Final (Jika sudah selesai) --}}
+                                        @elseif(in_array($currStatus, ['final_approved', 'received', 'completed']))
+                                            <a href="{{ route('procurement.comparisons.index', $r) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-600 hover:bg-slate-700 text-white shadow-sm transition">
+                                                <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Detail Final
                                             </a>
                                         @endif
 
                                     @else
                                         {{-- ═══ TOMBOL AKSI STANDAR (TAB LAIN) ═══ --}}
                                         
+                                        {{-- Tombol Approve/Revisi/Reject untuk status PENDING --}}
                                         @if($currStatus === 'pending')
                                             <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="p-1.5 text-gray-400 hover:text-emerald-600 rounded transition" title="Approve Format">
                                                 <i data-lucide="check-circle" class="w-4 h-4"></i>
@@ -224,7 +237,7 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        {{-- Tombol Approve TTD --}}
+                                        {{-- Tombol Approve TTD (Tahap 1) --}}
                                         @if($currStatus === 'approved' && !$isAllSigned)
                                             <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')" class="inline">
                                                 @csrf @method('PATCH')
@@ -410,5 +423,3 @@ function closeActionModal() {
 }
 </script>
 @endpush
-
-<!-- /dari hai -->

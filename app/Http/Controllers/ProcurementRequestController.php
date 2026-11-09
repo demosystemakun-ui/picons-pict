@@ -28,9 +28,13 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                $query->where('status', 'approved')
-                      ->whereDoesntHave('winnerVendor');
+                // Tampilkan PR yang belum punya vendor pemenang (Tahap 1)
+                // Termasuk status pending, approved, dan revision
+                $query->whereDoesntHave('winnerVendor')
+                      ->whereIn('status', ['pending', 'approved', 'revision']);
+                      
             } elseif ($request->stage === 'final') {
+                // Tampilkan PR yang sudah masuk tahap final (Tahap 2)
                 $query->whereHas('winnerVendor')
                       ->whereIn('status', [
                           'processed', 
@@ -331,9 +335,7 @@ class ProcurementRequestController extends Controller
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
-        // ═══ TAMBAHKAN INI ═══
         $isDraft = $procurementRequest->status === 'pending_review_final';
-        // ═════════════════════
 
         return view('procurement.print-final', compact('procurement', 'isDraft'));
     }
@@ -432,9 +434,7 @@ class ProcurementRequestController extends Controller
         $procurement['ceo_name']             = $procurementRequest->ceo_name;
         $procurement['cfo_name']             = $procurementRequest->cfo_name;
 
-        // ═══ TAMBAHKAN INI ═══
         $isDraft = $procurementRequest->status === 'pending_review_final';
-        // ═════════════════════
 
         $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement', 'isDraft'))
             ->setPaper('a4', 'portrait');
@@ -482,8 +482,8 @@ class ProcurementRequestController extends Controller
             'final_number.unique'   => 'This final number is already used.',
         ]);
 
-        if ($procurementRequest->status !== 'processed') {
-            return back()->with('error', 'PR Final can only be validated after PR Awal is processed.');
+        if ($procurementRequest->status !== 'pending_final_sign') {
+            return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
         }
 
         if (!$procurementRequest->winnerVendor) {
