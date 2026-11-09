@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\ProcurementRequest;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
-use App\Models\InventoryStock; // Pastikan Model ini ada
+use App\Models\DepartmentStock;
+use App\Models\StockIn;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -188,6 +189,7 @@ class PurchaseController extends Controller
             'items.*.id' => 'required|exists:purchase_items,id',
             'items.*.qty_received' => 'required|integer|min:0',
             'items.*.qty_damaged' => 'required|integer|min:0|lte:items.*.qty_received',
+            'items.*.stock_item_id' => 'nullable|exists:items,id',
             'items.*.breakdowns' => 'nullable|array',
             'items.*.breakdowns.*.department_id' => 'required_with:items.*.breakdowns|exists:departments,id',
             'items.*.breakdowns.*.qty_received' => 'required_with:items.*.breakdowns|integer|min:0',
@@ -220,17 +222,37 @@ class PurchaseController extends Controller
                         throw new \Exception("Total alokasi departemen ({$totalAlokasi}) tidak sama dengan Qty Datang ({$qtyReceived}) untuk item {$item->product_name}.");
                     }
 
+                    // Barang stok (master Item) yang dituju harus dipilih
+                    $stockItemId = $data['stock_item_id'] ?? null;
+                    if (!$stockItemId) {
+                        throw new \Exception("Pilih barang stok untuk item {$item->product_name} sebelum mengalokasikan ke departemen.");
+                    }
+
                     foreach ($data['breakdowns'] as $bd) {
-                        if ($bd['qty_received'] > 0) {
-                            // Catat ke inventaris departemen
-                            InventoryStock::create([
-                                'department_id' => $bd['department_id'],
-                                'item_name'     => $item->product_name,
-                                'quantity'      => $bd['qty_received'],
-                                'type'          => 'in',
-                                'notes'         => 'Penerimaan PO ' . $purchase->po_number,
-                            ]);
+                        $qty = (int) $bd['qty_received'];
+                        if ($qty <= 0) {
+                            continue;
                         }
+
+                        // Sama seperti InventoryStockController@store:
+                        // tambah stok departemen + catat riwayat StockIn
+                        $departmentStock = DepartmentStock::firstOrCreate(
+                            [
+                                'department_id' => $bd['department_id'],
+                                'item_id'       => $stockItemId,
+                            ],
+                            ['stock' => 0]
+                        );
+
+                        $departmentStock->stock += $qty;
+                        $departmentStock->save();
+
+                        StockIn::create([
+                            'department_stock_id' => $departmentStock->id,
+                            'user_id'             => auth()->id(),
+                            'quantity_in'         => $qty,
+                            'note'                => 'Penerimaan PO ' . $purchase->po_number,
+                        ]);
                     }
                 }
             }

@@ -10,6 +10,7 @@
     $vendor      = $purchase->vendor;
     $items       = $purchase->items;
     $departments = \App\Models\Department::orderBy('name')->get(['id', 'name']);
+    $stockItems  = \App\Models\Item::orderBy('item_name')->get(['id', 'item_code', 'item_name']);
 
     /* ═══ STATUS PO ═══ */
     $statusMeta = [
@@ -207,6 +208,26 @@
                                        value="{{ old("items.$i.qty_damaged", 0) }}"
                                        class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
                             </div>
+                        </div>
+
+                        {{-- Barang stok tujuan (master Item di Department Stock) --}}
+                        @php
+                            $guess         = $stockItems->first(fn ($s) => mb_strtolower(trim($s->item_name)) === mb_strtolower(trim($item->product_name)));
+                            $selectedStock = old("items.$i.stock_item_id", $guess?->id);
+                        @endphp
+                        <div class="max-w-md">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Barang di Stok Departemen <span class="text-gray-400 font-normal">(wajib jika ada alokasi)</span>
+                            </label>
+                            <select name="items[{{ $i }}][stock_item_id]"
+                                    class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                                <option value="">— Pilih barang stok —</option>
+                                @foreach($stockItems as $s)
+                                    <option value="{{ $s->id }}" @selected((string) $selectedStock === (string) $s->id)>
+                                        {{ $s->item_code }} — {{ $s->item_name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         {{-- Alokasi per departemen (opsional) --}}
