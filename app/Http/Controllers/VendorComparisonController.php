@@ -180,9 +180,13 @@ class VendorComparisonController extends Controller
         // Pastikan status valid (pending_review_final atau kosong)
         if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
             $procurement->update([
-                'status' => 'pending_final_sign', // Lanjut ke tahap minta TTD
+                'status' => 'pending_final_sign',
             ]);
-            return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
+            
+            // Paksa refresh halaman dengan redirect ke route yang sama
+            return redirect()
+                ->route('procurement.comparisons.index', $procurement)
+                ->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurement->status . '".');
@@ -198,10 +202,12 @@ class VendorComparisonController extends Controller
         }
 
         $procurement->update([
-            'status' => 'final_approved', // <--- Ubah ke final_approved agar tombol PO muncul
+            'status' => 'final_approved',
         ]);
 
-        return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
+        return redirect()
+            ->route('procurement.comparisons.index', $procurement)
+            ->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
 
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
