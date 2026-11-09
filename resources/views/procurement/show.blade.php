@@ -148,14 +148,16 @@
                 </form>
             @endif
 
-            <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
+                       @if($currStatus !== 'pending')
+                <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
 
-            <a href="{{ route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print
-            </a>
-            <a href="{{ route('procurement.pdf', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
-            </a>
+                <a href="{{ route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print
+                </a>
+                <a href="{{ route('procurement.pdf', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+                </a>
+            @endif
         </div>
     </div>
 
