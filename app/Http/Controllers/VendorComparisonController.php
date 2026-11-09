@@ -23,7 +23,7 @@ class VendorComparisonController extends Controller
     {
         $user = auth()->user();
 
-        if (!in_array($procurement->status, ['approved', 'processed', 'pending_final_sign', 'final_approved'])) {
+        if (!in_array($procurement->status, ['approved', 'processed', 'pending_review_final', 'pending_final_sign', 'final_approved'])) {
             return redirect()
                 ->route('procurement.show', $procurement)
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
@@ -64,14 +64,14 @@ class VendorComparisonController extends Controller
 
         $procurement->load('winnerVendor.items', 'department');
 
-        // ═══ PERBAIKAN: PANGGIL FUNGSI GENERATOR NOMOR BARU ═══
+        // Panggil fungsi generator nomor
         $suggestedFinalNumber = $this->generateFinalNumber($procurement);
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
 
     /**
-     * FUNGSI BARU: Generate nomor PR Final otomatis bertambah
+     * Generate nomor PR Final otomatis bertambah
      */
     private function generateFinalNumber(ProcurementRequest $procurement): string
     {
@@ -90,7 +90,6 @@ class VendorComparisonController extends Controller
             $lastNumber = (int) substr($lastPr->final_number, 0, 2);
             $nextNumber = $lastNumber + 1;
         } else {
-            // Jika belum ada, mulai dari 1
             $nextNumber = 1;
         }
 
@@ -122,11 +121,11 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update PR Final (Status: MENUNGGU TTD FINAL)
+            // 1. Update PR Final (Status: MENUNGGU REVIEW ADMIN)
             $procurement->update([
                 'budget_type'          => $validated['budget_type'],
                 'description'          => $validated['final_description'],
-                'final_number'         => $validated['final_number'], // Menggunakan inputan dari form
+                'final_number'         => $validated['final_number'],
                 'reason_choose_vendor' => $validated['reason_choose_vendor'],
                 'request_date'         => $validated['request_date'],   
                 'request_by'           => $validated['request_by'],     
@@ -136,7 +135,7 @@ class VendorComparisonController extends Controller
                 'cfo_name'             => $validated['cfo_name'] ?? null,
                 'ceo_name'             => $validated['ceo_name'] ?? null,
                 'final_total_price'    => $procurement->winnerVendor->total_price,
-                'status'               => 'pending_final_sign', // <--- STATUS BARU: Menunggu Validasi TTD
+                'status'               => 'pending_review_final', // <--- STATUS BARU: Menunggu Review Format
             ]);
 
             // 2. AUTO-GENERATE CASH ADVANCE DRAFT (Jika metode CA)
@@ -171,15 +170,32 @@ class VendorComparisonController extends Controller
 
             DB::commit();
 
+            // Jangan redirect ke PDF, tapi kembali ke halaman comparison
             return redirect()
-                ->route('procurement.pdf.final', $procurement)
-                ->with('success', 'Final PR saved. Please print, get Manager signature, then validate TTD.');
+                ->route('procurement.comparisons.index', $procurement)
+                ->with('success', 'Final PR saved. Waiting for Admin format review.');
 
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Store Final PR Error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Failed to save Final PR: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * FUNGSI BARU: Approve Format Final PR (Review Admin)
+     */
+    public function approveFinalFormat(ProcurementRequest $procurement)
+    {
+        if ($procurement->status !== 'pending_review_final') {
+            return back()->with('error', 'Status tidak valid untuk menyetujui format.');
+        }
+
+        $procurement->update([
+            'status' => 'pending_final_sign', // Lanjut ke tahap minta TTD
+        ]);
+
+        return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
     }
 
     /**
@@ -192,7 +208,7 @@ class VendorComparisonController extends Controller
         }
 
         $procurement->update([
-            'status' => 'final_approved', // <--- Baru ubah ke final_approved di sini
+            'status' => 'final_approved', // <--- Ubah ke final_approved agar tombol PO muncul
         ]);
 
         return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');

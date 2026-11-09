@@ -192,6 +192,11 @@ Route::middleware(['auth'])->group(function () {
             ->name('validate-signature')
             ->middleware('role:Super Admin');
 
+        // ✅ ROUTE BARU UNTUK APPROVE FORMAT FINAL PR (TAHAP 2)
+        Route::patch('/{procurementRequest}/approve-final-format', [VendorComparisonController::class, 'approveFinalFormat'])
+            ->name('approve-final-format')
+            ->middleware('role:Super Admin');
+
         // ✅ ROUTE BARU UNTUK VALIDASI TTD FINAL (TAHAP 3)
         Route::patch('/{procurementRequest}/validate-final-signature', [VendorComparisonController::class, 'validateFinalSignature'])
             ->name('validate-final-signature')

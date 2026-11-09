@@ -5,9 +5,12 @@
 
 @php
     $hasVendors = $procurement->vendors->count() > 0;
-    $isPendingFinalSign = $procurement->status === 'pending_final_sign'; 
-    $isFinalApproved = in_array($procurement->status, ['final_approved', 'received', 'completed']);
-    $isProcessed = $procurement->status === 'processed'; 
+    
+    // Status untuk alur baru
+    $isPendingFinalReview = $procurement->status === 'pending_review_final'; // Menunggu review admin
+    $isPendingFinalSign   = $procurement->status === 'pending_final_sign';   // Menunggu TTD Manajer
+    $isFinalApproved      = in_array($procurement->status, ['final_approved', 'received', 'completed']);
+    $isProcessed          = $procurement->status === 'processed';            // PR Awal sudah validasi TTD
     
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 @endphp
@@ -263,6 +266,8 @@
                             Final PR Validated
                         @elseif($isPendingFinalSign)
                             Menunggu Validasi TTD Manajer
+                        @elseif($isPendingFinalReview)
+                            Menunggu Review Format PR Final
                         @elseif($isProcessed)
                             PR Awal Validated — Ready for Final PR
                         @else
@@ -274,6 +279,8 @@
                             You can now proceed to the PO/Cash Advance/Reimbursement process.
                         @elseif($isPendingFinalSign)
                             Silakan cetak PDF, minta TTD basah Manajer, lalu klik tombol Validate.
+                        @elseif($isPendingFinalReview)
+                            Silakan periksa kembali data format PR Final, lalu klik Approve Format.
                         @elseif($isProcessed)
                             Fill in the Final PR form (Budget, Date, Request By, etc.) to generate the PDF.
                         @else
@@ -284,8 +291,18 @@
                 
                 <div class="flex flex-wrap items-center gap-2">
                     
-                    {{-- 1. JIKA STATUSNYA MENUNGGU TTD FINAL (BARU DIBUAT) --}}
-                    @if($isPendingFinalSign)
+                    {{-- 1. JIKA STATUS BARU SIMPAN (MENUNGGU REVIEW ADMIN) --}}
+                    @if($isPendingFinalReview)
+                        <form action="{{ route('procurement.approve-final-format', $procurement) }}" method="POST">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
+                                <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                Approve Format
+                            </button>
+                        </form>
+
+                    {{-- 2. JIKA FORMAT SUDAH DI-APPROVE (MUNCUL PRINT PDF & VALIDASI TTD) --}}
+                    @elseif($isPendingFinalSign)
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             Print PR Final
                         </a>
@@ -297,7 +314,7 @@
                             </button>
                         </form>
 
-                    {{-- 2. JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) --}}
+                    {{-- 3. JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) --}}
                     @elseif($isFinalApproved)
                         @if($procurement->procurement_method === 'po')
                             <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Create PO</a>
@@ -311,7 +328,7 @@
                             View Final PR PDF
                         </a>
 
-                    {{-- 3. JIKA MASIH TAHAP PR AWAL --}}
+                    {{-- 4. JIKA MASIH TAHAP PR AWAL --}}
                     @elseif($isProcessed)
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
