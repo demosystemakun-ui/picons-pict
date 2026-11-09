@@ -64,41 +64,31 @@ class VendorComparisonController extends Controller
 
         $procurement->load('winnerVendor.items', 'department');
 
-        // Panggil fungsi generator nomor
         $suggestedFinalNumber = $this->generateFinalNumber($procurement);
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
 
-    /**
-     * Generate nomor PR Final otomatis bertambah
-     */
     private function generateFinalNumber(ProcurementRequest $procurement): string
     {
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
-        
-        // Ambil kode PR (misal OPS/PICT) dari nomor PR Awal (04/PR/OPS/PICT-XI-2026)
         $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
 
-        // Cari nomor PR Final terakhir di database untuk kode PR yang sama
         $lastPr = ProcurementRequest::whereNotNull('final_number')
             ->where('final_number', 'like', "%/PR/{$prCode}-%")
             ->orderBy('id', 'desc')
             ->first();
 
         if ($lastPr && $lastPr->final_number) {
-            // Ambil 2 digit pertama sebagai nomor urut (misal dari "01/PR/...")
             $lastNumber = (int) substr($lastPr->final_number, 0, 2);
             $nextNumber = $lastNumber + 1;
         } else {
             $nextNumber = 1;
         }
 
-        // Format 2 digit (01, 02, dst.)
         $formattedNumber = str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
 
-        // HASIL AKHIR: 01/PR/OPS/PICT-XI-2026
         return $formattedNumber . '/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
     }
 
@@ -124,7 +114,6 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update PR Final (Status: MENUNGGU REVIEW ADMIN)
             $procurement->update([
                 'budget_type'          => $validated['budget_type'],
                 'description'          => $validated['final_description'],
@@ -138,10 +127,9 @@ class VendorComparisonController extends Controller
                 'cfo_name'             => $validated['cfo_name'] ?? null,
                 'ceo_name'             => $validated['ceo_name'] ?? null,
                 'final_total_price'    => $procurement->winnerVendor->total_price,
-                'status'               => 'pending_review_final', // <--- STATUS BARU: Menunggu Review Format
+                'status'               => 'pending_review_final',
             ]);
 
-            // 2. AUTO-GENERATE CASH ADVANCE DRAFT (Jika metode CA)
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
                 
@@ -173,7 +161,6 @@ class VendorComparisonController extends Controller
 
             DB::commit();
 
-            // Jangan redirect ke PDF, tapi kembali ke halaman comparison
             return redirect()
                 ->route('procurement.comparisons.index', $procurement)
                 ->with('success', 'Final PR saved. Waiting for Admin format review.');
@@ -190,16 +177,15 @@ class VendorComparisonController extends Controller
      */
     public function approveFinalFormat(ProcurementRequest $procurement)
     {
-        // Toleransi jika ada typo di database
-        if (!in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
-            return back()->with('error', 'Gagal Approve. Status saat ini di database: "' . $procurement->status . '". Seharusnya: "pending_review_final".');
+        // Jika status kosong ("") atau pending_review_final
+        if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
+            $procurement->update([
+                'status' => 'pending_final_sign', // Lanjut ke tahap minta TTD
+            ]);
+            return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
-        $procurement->update([
-            'status' => 'pending_final_sign', // Lanjut ke tahap minta TTD
-        ]);
-
-        return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
+        return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurement->status . '".');
     }
 
     /**
@@ -487,7 +473,6 @@ class VendorComparisonController extends Controller
             abort(404);
         }
 
-        // Izinkan pemilihan vendor selama status masih 'approved' (belum masuk Tahap 2)
         if ($procurement->status !== 'approved') {
             return back()->with('error', 'Winner can only be changed while status is Approved.');
         }
@@ -495,11 +480,9 @@ class VendorComparisonController extends Controller
         $procurement->vendors()->update(['is_winner' => false]);
         $vendor->update(['is_winner' => true]);
 
-        // ═══ UBAH STATUS KE PROCESSED DI SINI ═══
-        // Karena vendor sudah dipilih, PR siap masuk ke Tahap 2 (Final PR)
         $procurement->update([
             'final_total_price' => $vendor->total_price,
-            'status'            => 'processed', // <--- Baru pindah ke Tahap 2
+            'status'            => 'processed',
         ]);
 
         return back()->with('success', 'Winning vendor selected: ' . $vendor->vendor_name . '. PR is now in Tahap 2.');
@@ -517,8 +500,6 @@ class VendorComparisonController extends Controller
 
     private function autoPickWinner(ProcurementRequest $procurement): void
     {
-        // Saat menyimpan data, jangan ubah status PR (tetap 'approved').
-        // Hanya tandai vendor termurah sebagai 'is_winner'.
         $procurement->vendors()->update(['is_winner' => false]);
 
         $winner = $procurement->vendors()
