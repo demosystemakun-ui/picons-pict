@@ -7,10 +7,13 @@
     $hasVendors = $procurement->vendors->count() > 0;
     $isFinalApproved = in_array($procurement->status, ['final_approved', 'received', 'completed']);
     $isProcessed = $procurement->status === 'processed'; // PR Awal sudah divalidasi
+    
+    // PERBAIKAN: Izinkan input vendor jika status masih 'approved' ATAU 'processed'
+    $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 @endphp
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6 pb-12" x-data="{ open: false }">
+<div class="max-w-5xl mx-auto space-y-6 pb-12" x-data="{ open: {{ $hasVendors ? 'false' : 'true' }} }">
 
     {{-- ═══ HEADER ═══ --}}
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -55,9 +58,9 @@
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         AI SCAN SECTION (Hanya jika status approved)
+         AI SCAN SECTION
     ═══════════════════════════════════════════════════════════════ --}}
-    @if($procurement->status === 'approved')
+    @if($canInputVendor)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/10 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -113,9 +116,9 @@
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════════
-         MANUAL INPUT SECTION (Hanya jika status approved)
+         MANUAL INPUT SECTION
     ═══════════════════════════════════════════════════════════════ --}}
-    @if($procurement->status === 'approved')
+    @if($canInputVendor)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between cursor-pointer" @click="open = !open">
             <div class="flex items-center gap-3">
@@ -195,6 +198,13 @@
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Comparison Recap</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered</p>
             </div>
+            
+            {{-- Tombol Toggle Input Manual (Opsional, jika user menutup form) --}}
+            @if($canInputVendor)
+            <button @click="open = !open" class="text-xs font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400">
+                + Add Vendor
+            </button>
+            @endif
         </header>
 
         <div class="overflow-x-auto">
@@ -371,7 +381,6 @@
         const newRow = document.createElement('div');
         newRow.className = 'vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30 mt-3';
         
-        // PERBAIKAN: Menggunakan ${vendorIndex} dengan benar
         newRow.innerHTML = `
             <div class="md:col-span-3">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-red-500">*</span></label>
