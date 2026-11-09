@@ -70,6 +70,18 @@
 
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
+            
+            {{-- 1. TOMBOL PREVIEW DRAFT (Hanya muncul saat pending) --}}
+            @if($currStatus === 'pending')
+                <a href="{{ route('procurement.pdf', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Preview PDF (Draft)
+                </a>
+                <a href="{{ route('procurement.print', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print (Draft)
+                </a>
+            @endif
+
+            {{-- 2. TOMBOL STATUS PENDING --}}
             @if($currStatus === 'pending')
                 <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin memvalidasi format PR ini?')" class="inline">
                     @csrf
@@ -85,7 +97,10 @@
                 <button type="button" onclick="openActionModal('rejected')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition">
                     <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Reject
                 </button>
-            @elseif($currStatus === 'revision')
+            @endif
+
+            {{-- 3. TOMBOL STATUS REVISION --}}
+            @if($currStatus === 'revision')
                 <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
                     @csrf
                     @method('PATCH')
@@ -94,8 +109,10 @@
                         <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Resubmit
                     </button>
                 </form>
-            @elseif($currStatus === 'approved')
-                {{-- Tombol ini HANYA muncul jika semua TTD sudah di-approve --}}
+            @endif
+
+            {{-- 4. TOMBOL STATUS APPROVED --}}
+            @if($currStatus === 'approved')
                 @if($isAllSigned)
                     @if($procurementRequest->vendors->isEmpty())
                         <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
@@ -115,7 +132,10 @@
                         <i data-lucide="lock" class="w-3.5 h-3.5"></i> Waiting for Signatures
                     </button>
                 @endif
-            @elseif($currStatus === 'received')
+            @endif
+
+            {{-- 5. TOMBOL STATUS RECEIVED --}}
+            @if($currStatus === 'received')
                 <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
                     @csrf @method('PATCH')
                     <input type="hidden" name="status" value="completed">
@@ -125,7 +145,7 @@
                 </form>
             @endif
 
-            {{-- Cash Advance & Liquidation --}}
+            {{-- 6. Cash Advance & Liquidation --}}
             @if($canCreateCA && (in_array($currStatus, ['processed', 'received']) || ($currStatus === 'approved' && $isAllSigned)))
                 <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurementRequest->id]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i> Cash Advance
@@ -135,7 +155,7 @@
                 </a>
             @endif
 
-            {{-- Edit & Delete --}}
+            {{-- 7. Edit & Delete --}}
             @if(in_array($currStatus, ['pending', 'revision']))
                 <a href="{{ route('procurement.edit', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
@@ -148,7 +168,8 @@
                 </form>
             @endif
 
-                       @if($currStatus !== 'pending')
+            {{-- 8. Tombol Print & PDF Reguler (Jika tidak pending) --}}
+            @if($currStatus !== 'pending')
                 <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
 
                 <a href="{{ route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">

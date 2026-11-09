@@ -29,16 +29,13 @@ class ProcurementRequestController extends Controller
             $query->where('source', $request->source);
         }
 
-        // Filter Stage (Tab Tahap 1 & Tahap 2)
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tahap 1: Sudah di-approve formatnya, TAPI belum divalidasi TTD
                 $query->whereIn('status', ['approved', 'processed']); 
             } elseif ($request->stage === 'final') {
-                // Tahap 2: Sudah masuk proses PR Final (Menunggu Review, Menunggu TTD, dan Selesai)
                 $query->whereIn('status', [
-                    'pending_review_final', // <--- Tambahan baru
-                    'pending_final_sign',   // <--- Tambahan baru
+                    'pending_review_final',
+                    'pending_final_sign',
                     'final_approved', 
                     'received', 
                     'completed'
@@ -52,13 +49,12 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE (Menerima data prefill dari Consumable Request)
+       CREATE
     ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
         $suggestedNo = ProcurementRequest::generateNumber();
         $departments = Department::orderBy('name')->get(); 
-        
         $prefill = session('prefill_pr_data');
 
         return view('procurement.create', compact('suggestedNo', 'departments', 'prefill'));
@@ -325,7 +321,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       PRINT & PDF
+       PRINT & PDF (DIPERBARUI DENGAN WATERMARK DRAFT)
     ═══════════════════════════════════════════════════════════════ */
     public function print(ProcurementRequest $procurementRequest)
     {
@@ -336,7 +332,11 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        return view('procurement.print', compact('procurement'));
+        
+        // Cek apakah perlu watermark DRAFT
+        $isDraft = $procurementRequest->status === 'pending';
+
+        return view('procurement.print', compact('procurement', 'isDraft'));
     }
 
     public function printFinal(ProcurementRequest $procurementRequest)
@@ -366,8 +366,11 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
+        
+        // Cek apakah perlu watermark DRAFT
+        $isDraft = $procurementRequest->status === 'pending';
 
-        $pdf = Pdf::loadView('procurement.pdf', compact('procurement'))
+        $pdf = Pdf::loadView('procurement.pdf', compact('procurement', 'isDraft'))
             ->setPaper('a4', 'portrait');
 
         $cleanNo  = preg_replace('/[^A-Za-z0-9_\-]/', '-', $procurementRequest->no);
@@ -469,7 +472,7 @@ class ProcurementRequestController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       VALIDATE SIGNATURE (PR AWAL — Tahap 1)
+       SISA FUNGSI LAINNYA (VALIDATE SIGNATURE, UPDATE STATUS, DLL)
     ═══════════════════════════════════════════════════════════════ */
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
     {
@@ -481,7 +484,6 @@ class ProcurementRequestController extends Controller
             return back()->with('error', 'Invalid PR status for validation. Current status: ' . $procurementRequest->status);
         }
 
-        // Cukup ubah status, JANGAN isi review_notes agar tidak muncul alert merah
         $procurementRequest->update([
             'status' => 'processed',
         ]);
@@ -491,9 +493,6 @@ class ProcurementRequestController extends Controller
             ->with('success', 'PR Awal validation successful. You can now create PR Final.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       VALIDATE FINAL SIGNATURE (PR FINAL — Tahap 2)
-    ═══════════════════════════════════════════════════════════════ */
     public function validateFinalSignature(Request $request, ProcurementRequest $procurementRequest)
     {
         $validated = $request->validate([
@@ -522,9 +521,6 @@ class ProcurementRequestController extends Controller
             ->with('success', 'PR Final validated with number: ' . $validated['final_number']);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       UPDATE SIGNATURE STATUS (Validasi TTD per kolom)
-    ═══════════════════════════════════════════════════════════════ */
     public function updateSignatureStatus(Request $request, ProcurementRequest $procurementRequest)
     {
         $request->validate([
@@ -546,7 +542,6 @@ class ProcurementRequestController extends Controller
 
         $statusColumn = $columnMap[$field];
         
-        // Toggle status validasi
         $procurementRequest->update([
             $statusColumn => !$procurementRequest->$statusColumn
         ]);
@@ -557,9 +552,6 @@ class ProcurementRequestController extends Controller
         ]);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       APPROVE ALL SIGNATURES (Global)
-    ═══════════════════════════════════════════════════════════════ */
     public function approveAllSignatures(Request $request, ProcurementRequest $procurementRequest)
     {
         $procurementRequest->update([
@@ -567,15 +559,12 @@ class ProcurementRequestController extends Controller
             'is_ops_approved' => true,
             'is_fem_approved' => true,
             'is_coo_approved' => true,
-            'status'          => 'processed', // Pindah ke Tahap 2
+            'status'          => 'processed', 
         ]);
 
         return back()->with('success', 'All signatures validated. PR moved to Tahap 2.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       UPDATE STATUS
-    ═══════════════════════════════════════════════════════════════ */
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -622,9 +611,6 @@ class ProcurementRequestController extends Controller
         return back()->with('success', $messages[$validated['status']] ?? 'Status updated successfully.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       MAP TO PRINT DATA
-    ═══════════════════════════════════════════════════════════════ */
     private function mapToPrintData(ProcurementRequest $model): array
     {
         $model->loadMissing('items');
