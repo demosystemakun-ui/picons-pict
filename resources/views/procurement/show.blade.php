@@ -6,16 +6,22 @@
 @php
     /* ═══ STATUS CONFIG ═══ */
     $statusMeta = [
-        'pending'   => ['label' => 'Pending Review',          'color' => 'bg-amber-500'],
-        'approved'  => ['label' => 'Pending TTD',             'color' => 'bg-blue-500'],
-        'rejected'  => ['label' => 'Rejected',                'color' => 'bg-red-500'],
-        'revision'  => ['label' => 'Needs Revision',          'color' => 'bg-orange-500'],
-        'processed' => ['label' => 'Processed (Purchased)',   'color' => 'bg-indigo-500'],
-        'received'  => ['label' => 'Received',                'color' => 'bg-purple-500'],
-        'completed' => ['label' => 'Completed',               'color' => 'bg-slate-500'],
+        'pending'              => ['label' => 'Pending Review',        'color' => 'bg-amber-500'],
+        'approved'             => ['label' => 'Pending TTD',           'color' => 'bg-blue-500'],
+        'rejected'             => ['label' => 'Rejected',              'color' => 'bg-red-500'],
+        'revision'             => ['label' => 'Needs Revision',        'color' => 'bg-orange-500'],
+        'processed'            => ['label' => 'Processed (Purchased)', 'color' => 'bg-indigo-500'],
+        'pending_review_final' => ['label' => 'Pending Review Final',  'color' => 'bg-indigo-500'],
+        'pending_final_sign'   => ['label' => 'Pending Final Sign',    'color' => 'bg-indigo-500'],
+        'final_approved'       => ['label' => 'Final Approved',        'color' => 'bg-indigo-500'],
+        'received'             => ['label' => 'Received',              'color' => 'bg-purple-500'],
+        'completed'            => ['label' => 'Completed',             'color' => 'bg-slate-500'],
     ];
     $currStatus = $procurementRequest->status ?? 'pending';
-    $meta       = $statusMeta[$currStatus] ?? $statusMeta['pending'];
+    $meta       = $statusMeta[$currStatus] ?? [
+        'label' => ucwords(str_replace('_', ' ', $currStatus)),
+        'color' => 'bg-gray-500',
+    ];
 
     /* ═══ ORDER TYPES ═══ */
     $orderTypes = array_filter([
@@ -36,16 +42,18 @@
     $canCreateCA = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
 
     // Cek apakah semua TTD sudah di-approve
-    $isAllSigned = $procurementRequest->is_pic_approved 
-                && $procurementRequest->is_ops_approved 
-                && $procurementRequest->is_fem_approved 
+    $isAllSigned = $procurementRequest->is_pic_approved
+                && $procurementRequest->is_ops_approved
+                && $procurementRequest->is_fem_approved
                 && $procurementRequest->is_coo_approved;
 
-    // ═══ PERBAIKAN TAMPILAN HEADER ═══
     // Jika status masih 'approved' TAPI TTD sudah lengkap, ubah tampilannya
     if ($currStatus === 'approved' && $isAllSigned) {
         $meta = ['label' => 'Ready for Vendor Selection', 'color' => 'bg-indigo-500'];
     }
+
+    // Status yang sudah masuk tahap final (Print/PDF memakai versi final)
+    $isFinalStage = in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']);
 @endphp
 
 @section('content')
@@ -61,13 +69,18 @@
             <div class="min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-gray-900 dark:text-white font-mono">
-                        {{ $procurementRequest->no }}
+                        {{ $procurementRequest->final_number ?? $procurementRequest->no }}
                     </h1>
                     <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-700">
                         <span class="h-1.5 w-1.5 rounded-full {{ $meta['color'] }} {{ $currStatus === 'pending' ? 'animate-pulse' : '' }}"></span>
                         {{ $meta['label'] }}
                     </span>
                 </div>
+                @if($procurementRequest->final_number)
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        PR Awal: <span class="font-mono">{{ $procurementRequest->no }}</span>
+                    </p>
+                @endif
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Created on {{ $procurementRequest->created_at->format('d M Y, H:i') }} WIB
                 </p>
@@ -76,7 +89,7 @@
 
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
-            
+
             {{-- 1. TOMBOL PREVIEW DRAFT (Hanya muncul saat pending) --}}
             @if($currStatus === 'pending')
                 <a href="{{ route('procurement.pdf', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -147,7 +160,7 @@
             @endif
 
             {{-- 6. Cash Advance & Liquidation --}}
-            @if($canCreateCA && (in_array($currStatus, ['processed', 'received']) || ($currStatus === 'approved' && $isAllSigned)))
+            @if($canCreateCA && (in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received']) || ($currStatus === 'approved' && $isAllSigned)))
                 <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurementRequest->id]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i> Cash Advance
                 </a>
@@ -169,14 +182,14 @@
                 </form>
             @endif
 
-            {{-- 8. Tombol Print & PDF Reguler (Jika tidak pending) --}}
+            {{-- 8. Tombol Print & PDF (versi awal / final sesuai tahap) --}}
             @if($currStatus !== 'pending')
                 <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
 
-                <a href="{{ route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <a href="{{ $isFinalStage ? route('procurement.print.final', $procurementRequest) : route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print
                 </a>
-                <a href="{{ route('procurement.pdf', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <a href="{{ $isFinalStage ? route('procurement.pdf.final', $procurementRequest) : route('procurement.pdf', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
                 </a>
             @endif
@@ -210,7 +223,7 @@
         {{-- SECTION 1: GENERAL INFORMATION --}}
         <section class="p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">General Information</h2>
-            
+
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 text-sm">
                 <div class="sm:col-span-3">
                     <span class="text-xs text-gray-500 block mb-1">Request Date</span>
@@ -228,7 +241,7 @@
                     <span class="text-xs text-gray-500 block mb-1">Prepared By</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->prepared_by }}</span>
                 </div>
-                
+
                 <div class="sm:col-span-12">
                     <span class="text-xs text-gray-500 block mb-1">Procurement Description</span>
                     <p class="font-medium text-gray-900 dark:text-white">{{ $procurementRequest->description }}</p>
@@ -371,7 +384,7 @@
         <section class="p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Approval &amp; Signatures</h2>
-                
+
                 {{-- TOMBOL VALIDASI GLOBAL --}}
                 @if(!$isAllSigned && in_array($currStatus, ['approved', 'processed']))
                     <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan (PR Awal & PR Final)?')">
@@ -383,7 +396,7 @@
                     </form>
                 @endif
             </div>
-            
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 @php
                     $signatures = [
@@ -396,7 +409,7 @@
 
                 @foreach($signatures as $sig)
                     <div class="rounded-lg border {{ $sig['approved'] ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30' }} p-3 text-center flex flex-col justify-between transition-colors">
-                        
+
                         <div>
                             <span class="text-[10px] font-semibold uppercase tracking-wider {{ $sig['approved'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500' }} block mb-2">
                                 {{ $sig['label'] }}
@@ -412,7 +425,7 @@
                                     Approved
                                 </span>
                             @else
-                                <button type="button" 
+                                <button type="button"
                                         onclick="validateSignature('{{ $sig['field'] }}', this)"
                                         class="w-full inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                     Validate Signature
@@ -422,7 +435,7 @@
                     </div>
                 @endforeach
             </div>
-            
+
             <p class="text-[11px] text-gray-500 mt-4 text-center">
                 *Silakan validasi setiap kolom setelah tanda tangan basah dibubuhkan pada dokumen cetak.
             </p>
@@ -547,7 +560,7 @@
         })
         .then(data => {
             if(data.success) {
-                window.location.reload(); 
+                window.location.reload();
             } else {
                 alert('Gagal: ' + (data.error || 'Terjadi kesalahan.'));
                 btnElement.disabled = false;
