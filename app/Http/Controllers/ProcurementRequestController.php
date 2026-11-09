@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\Log;
 
 class ProcurementRequestController extends Controller
 {
-    /* ═══════════════════════════════════════════════════════════════
-       INDEX
-    ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
         $user  = auth()->user();
@@ -31,15 +28,20 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                $query->whereIn('status', ['approved', 'processed']); 
+                // Tahap 1: Sedang proses TTD Awal ATAU sudah TTD tapi belum pilih vendor
+                $query->where('status', 'approved')
+                      ->whereDoesntHave('winnerVendor'); // Asumsi menggunakan relasi winnerVendor
             } elseif ($request->stage === 'final') {
-                $query->whereIn('status', [
-                    'pending_review_final',
-                    'pending_final_sign',
-                    'final_approved', 
-                    'received', 
-                    'completed'
-                ]);
+                // Tahap 2: Sudah pilih vendor, dan masuk proses Final PR
+                $query->whereHas('winnerVendor')
+                      ->whereIn('status', [
+                          'processed', 
+                          'pending_review_final',
+                          'pending_final_sign',
+                          'final_approved', 
+                          'received', 
+                          'completed'
+                      ]);
             }
         }
 
@@ -48,9 +50,6 @@ class ProcurementRequestController extends Controller
         return view('procurement.index', compact('requests'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       CREATE
-    ═══════════════════════════════════════════════════════════════ */
     public function create()
     {
         $suggestedNo = ProcurementRequest::generateNumber();
@@ -60,9 +59,6 @@ class ProcurementRequestController extends Controller
         return view('procurement.create', compact('suggestedNo', 'departments', 'prefill'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       STORE
-    ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -161,9 +157,6 @@ class ProcurementRequestController extends Controller
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       SHOW
-    ═══════════════════════════════════════════════════════════════ */
     public function show(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -176,9 +169,6 @@ class ProcurementRequestController extends Controller
         return view('procurement.show', compact('procurementRequest'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       EDIT
-    ═══════════════════════════════════════════════════════════════ */
     public function edit(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -193,9 +183,6 @@ class ProcurementRequestController extends Controller
         return view('procurement.edit', compact('procurementRequest', 'departments'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       UPDATE
-    ═══════════════════════════════════════════════════════════════ */
     public function update(Request $request, ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -297,9 +284,6 @@ class ProcurementRequestController extends Controller
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       DESTROY
-    ═══════════════════════════════════════════════════════════════ */
     public function destroy(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -320,9 +304,6 @@ class ProcurementRequestController extends Controller
         return redirect()->route('procurement.index')->with('success', 'Data deleted successfully.');
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       PRINT & PDF (DIPERBARUI DENGAN WATERMARK DRAFT)
-    ═══════════════════════════════════════════════════════════════ */
     public function print(ProcurementRequest $procurementRequest)
     {
         $user = auth()->user();
@@ -332,8 +313,6 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        
-        // Cek apakah perlu watermark DRAFT
         $isDraft = $procurementRequest->status === 'pending';
 
         return view('procurement.print', compact('procurement', 'isDraft'));
@@ -366,8 +345,6 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        
-        // Cek apakah perlu watermark DRAFT
         $isDraft = $procurementRequest->status === 'pending';
 
         $pdf = Pdf::loadView('procurement.pdf', compact('procurement', 'isDraft'))
@@ -471,9 +448,6 @@ class ProcurementRequestController extends Controller
         return redirect()->away($pdfUrl);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       SISA FUNGSI LAINNYA (VALIDATE SIGNATURE, UPDATE STATUS, DLL)
-    ═══════════════════════════════════════════════════════════════ */
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
     {
         if (!$procurementRequest->winnerVendor) {
@@ -485,7 +459,7 @@ class ProcurementRequestController extends Controller
         }
 
         $procurementRequest->update([
-            'status' => 'processed',
+            'status' => 'processed', // Ini akan dipanggil saat memilih vendor, bukan dari tombol approve TTD
         ]);
 
         return redirect()
@@ -554,15 +528,15 @@ class ProcurementRequestController extends Controller
 
     public function approveAllSignatures(Request $request, ProcurementRequest $procurementRequest)
     {
+        // Cukup set TTD-nya jadi true, JANGAN ubah status ke processed.
         $procurementRequest->update([
             'is_pic_approved' => true,
             'is_ops_approved' => true,
             'is_fem_approved' => true,
             'is_coo_approved' => true,
-            'status'          => 'processed', 
         ]);
 
-        return back()->with('success', 'All signatures validated. PR moved to Tahap 2.');
+        return back()->with('success', 'Semua TTD berhasil divalidasi. Silakan lanjut ke Vendor Comparison untuk memilih pemenang.');
     }
 
     public function updateStatus(Request $request, ProcurementRequest $procurementRequest)

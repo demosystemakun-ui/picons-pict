@@ -182,6 +182,7 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
+                                        {{-- Tombol Approve TTD (Muncul jika status 'approved' tapi belum semua TTD dicentang) --}}
                                         @if($currStatus === 'approved' && !$isAllSigned)
                                             <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')" class="inline">
                                                 @csrf @method('PATCH')
@@ -192,9 +193,12 @@
                                             <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                                         @endif
 
-                                        <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
-                                            <i data-lucide="git-compare" class="w-4 h-4"></i>
-                                        </a>
+                                        {{-- Tombol Vendor Comparison (Disembunyikan jika masih 'approved', muncul jika sudah 'processed' ke atas) --}}
+                                        @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']))
+                                            <a href="{{ route('procurement.comparisons.index', $r) }}" class="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition" title="Vendor Comparison">
+                                                <i data-lucide="git-compare" class="w-4 h-4"></i>
+                                            </a>
+                                        @endif
 
                                         <a href="{{ route('procurement.show', $r) }}" class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition" title="View Details">
                                             <i data-lucide="eye" class="w-4 h-4"></i>

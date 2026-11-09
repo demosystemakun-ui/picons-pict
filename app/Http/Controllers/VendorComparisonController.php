@@ -483,6 +483,7 @@ class VendorComparisonController extends Controller
             abort(404);
         }
 
+        // Izinkan pemilihan vendor selama status masih 'approved' (belum masuk Tahap 2)
         if ($procurement->status !== 'approved') {
             return back()->with('error', 'Winner can only be changed while status is Approved.');
         }
@@ -490,11 +491,14 @@ class VendorComparisonController extends Controller
         $procurement->vendors()->update(['is_winner' => false]);
         $vendor->update(['is_winner' => true]);
 
+        // ═══ UBAH STATUS KE PROCESSED DI SINI ═══
+        // Karena vendor sudah dipilih, PR siap masuk ke Tahap 2 (Final PR)
         $procurement->update([
             'final_total_price' => $vendor->total_price,
+            'status'            => 'processed', // <--- Baru pindah ke Tahap 2
         ]);
 
-        return back()->with('success', 'Winning vendor updated to: ' . $vendor->vendor_name);
+        return back()->with('success', 'Winning vendor selected: ' . $vendor->vendor_name . '. PR is now in Tahap 2.');
     }
 
     public function destroy(ProcurementVendor $vendor)
@@ -509,6 +513,8 @@ class VendorComparisonController extends Controller
 
     private function autoPickWinner(ProcurementRequest $procurement): void
     {
+        // Saat menyimpan data, jangan ubah status PR (tetap 'approved').
+        // Hanya tandai vendor termurah sebagai 'is_winner'.
         $procurement->vendors()->update(['is_winner' => false]);
 
         $winner = $procurement->vendors()

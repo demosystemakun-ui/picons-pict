@@ -114,23 +114,18 @@
             {{-- 4. TOMBOL STATUS APPROVED --}}
             @if($currStatus === 'approved')
                 @if($isAllSigned)
-                    @if($procurementRequest->vendors->isEmpty())
-                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition">
-                            <i data-lucide="scale" class="w-3.5 h-3.5"></i> Price Comparison
-                        </a>
-                    @elseif(!$procurementRequest->winnerVendor)
-                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
-                            <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Select Winner
-                        </a>
-                    @else
-                        <a href="{{ route('procurement.purchases.create', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
-                            <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> Process PO
-                        </a>
-                    @endif
+                    {{-- Jika TTD sudah lengkap, arahkan ke Vendor Comparison --}}
+                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+                        <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Select Vendor & Comparison
+                    </a>
                 @else
-                    <button type="button" disabled class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-200 dark:border-gray-700" title="Selesaikan semua validasi TTD terlebih dahulu">
-                        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Waiting for Signatures
-                    </button>
+                    {{-- Jika BELUM, tampilkan tombol Validasi Global --}}
+                    <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua TTD Manajer?')">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+                            <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve All Signatures
+                        </button>
+                    </form>
                 @endif
             @endif
 
