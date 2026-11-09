@@ -64,12 +64,40 @@ class VendorComparisonController extends Controller
 
         $procurement->load('winnerVendor.items', 'department');
 
+        // ═══ PERBAIKAN: PANGGIL FUNGSI GENERATOR NOMOR BARU ═══
+        $suggestedFinalNumber = $this->generateFinalNumber($procurement);
+
+        return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
+    }
+
+    /**
+     * FUNGSI BARU: Generate nomor PR Final otomatis bertambah
+     */
+    private function generateFinalNumber(ProcurementRequest $procurement): string
+    {
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
         $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
-        $suggestedFinalNumber = '08/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
 
-        return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
+        // Cari nomor PR Final terakhir di database untuk kode PR yang sama
+        $lastPr = ProcurementRequest::whereNotNull('final_number')
+            ->where('final_number', 'like', "%/PR/{$prCode}-%")
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($lastPr && $lastPr->final_number) {
+            // Ambil 2 digit pertama sebagai nomor urut (misal dari "08/PR/...")
+            $lastNumber = (int) substr($lastPr->final_number, 0, 2);
+            $nextNumber = $lastNumber + 1;
+        } else {
+            // Jika belum ada, mulai dari 1
+            $nextNumber = 1;
+        }
+
+        // Format 2 digit (01, 02, dst.)
+        $formattedNumber = str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+
+        return $formattedNumber . '/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
     }
 
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
@@ -98,7 +126,7 @@ class VendorComparisonController extends Controller
             $procurement->update([
                 'budget_type'          => $validated['budget_type'],
                 'description'          => $validated['final_description'],
-                'final_number'         => $validated['final_number'],
+                'final_number'         => $validated['final_number'], // Menggunakan inputan dari form
                 'reason_choose_vendor' => $validated['reason_choose_vendor'],
                 'request_date'         => $validated['request_date'],   
                 'request_by'           => $validated['request_by'],     
