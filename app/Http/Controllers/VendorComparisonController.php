@@ -103,10 +103,10 @@ class VendorComparisonController extends Controller
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
             'reason_choose_vendor' => 'required|string|max:2000',
-            'request_date'         => 'required|date',           
-            'request_by'           => 'required|string|max:255', 
-            'division'             => 'required|string|max:255', 
-            'prepared_by'          => 'required|string|max:255', 
+            'request_date'         => 'required|date',
+            'request_by'           => 'required|string|max:255',
+            'division'             => 'required|string|max:255',
+            'prepared_by'          => 'required|string|max:255',
             'accounting_mgr_name'  => 'nullable|string|max:255',
             'cfo_name'             => 'nullable|string|max:255',
             'ceo_name'             => 'nullable|string|max:255',
@@ -119,10 +119,10 @@ class VendorComparisonController extends Controller
                 'description'          => $validated['final_description'],
                 'final_number'         => $validated['final_number'],
                 'reason_choose_vendor' => $validated['reason_choose_vendor'],
-                'request_date'         => $validated['request_date'],   
-                'request_by'           => $validated['request_by'],     
-                'division'             => $validated['division'],       
-                'prepared_by'          => $validated['prepared_by'],    
+                'request_date'         => $validated['request_date'],
+                'request_by'           => $validated['request_by'],
+                'division'             => $validated['division'],
+                'prepared_by'          => $validated['prepared_by'],
                 'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
                 'cfo_name'             => $validated['cfo_name'] ?? null,
                 'ceo_name'             => $validated['ceo_name'] ?? null,
@@ -132,7 +132,7 @@ class VendorComparisonController extends Controller
 
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
-                
+
                 if (!$existingCa) {
                     $ca = CashAdvance::create([
                         'procurement_request_id' => $procurement->id,
@@ -173,36 +173,43 @@ class VendorComparisonController extends Controller
     }
 
     /**
-     * FUNGSI APPROVE FORMAT (DIUBAH MENGGUNAKAN back())
+     * APPROVE FORMAT PR FINAL
+     *
+     * Nama parameter HARUS $procurementRequest karena route-nya:
+     * procurement/{procurementRequest}/approve-final-format
+     * Kalau namanya beda, Laravel tidak melakukan model binding
+     * dan update() jalan di model kosong (diam-diam tidak menyimpan apa pun).
      */
-    public function approveFinalFormat(ProcurementRequest $procurement)
+    public function approveFinalFormat(ProcurementRequest $procurementRequest)
     {
-        if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
-            $procurement->update([
+        if ($procurementRequest->status === 'pending_review_final') {
+            $procurementRequest->update([
                 'status' => 'pending_final_sign',
             ]);
-            
-            // GUNAKAN back() AGAR TIDAK MEMBACA CACHE ROUTE
+
             return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
-        return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurement->status . '".');
+        return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurementRequest->status . '".');
     }
 
     /**
-     * FUNGSI VALIDASI TTD FINAL (DIUBAH MENGGUNAKAN back())
+     * VALIDASI TTD FINAL
+     *
+     * Pastikan nama parameter sama dengan route-nya. Cek dengan:
+     * php artisan route:list --name=validate-final
+     * (kalau routenya {procurement}, ganti kembali jadi $procurement)
      */
-    public function validateFinalSignature(ProcurementRequest $procurement)
+    public function validateFinalSignature(ProcurementRequest $procurementRequest)
     {
-        if ($procurement->status !== 'pending_final_sign') {
+        if ($procurementRequest->status !== 'pending_final_sign') {
             return back()->with('error', 'Status tidak valid untuk validasi TTD Final.');
         }
 
-        $procurement->update([
+        $procurementRequest->update([
             'status' => 'final_approved',
         ]);
 
-        // GUNAKAN back()
         return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
 
@@ -424,7 +431,7 @@ class VendorComparisonController extends Controller
             $shipping    = $v['shipping_cost'] ?? 0;
             $discount    = $v['discount_voucher'] ?? 0;
             $tax         = $v['tax_ppn'] ?? 0;
-            
+
             $totalBeforeTax = $subtotal + $shipping - $discount;
             $totalPrice     = $totalBeforeTax + $tax;
 
@@ -518,7 +525,8 @@ class VendorComparisonController extends Controller
         ]);
     }
 
-    private function getRomawi($number) {
+    private function getRomawi($number)
+    {
         $map = [
             1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
             7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
