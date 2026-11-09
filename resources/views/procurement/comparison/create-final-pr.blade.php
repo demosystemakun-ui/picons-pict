@@ -319,12 +319,12 @@
                 Cancel
             </a>
             <button type="submit"
-                    onclick="return confirm('Save Final PR and generate PDF?')"
+                    onclick="return confirm('Simpan data Final PR ini? (PDF akan di-generate setelah di-approve)')"
                     class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-teal-700 hover:to-emerald-700 transition">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
-                Save &amp; Generate PDF
+                Save Data
             </button>
         </div>
     </form>
