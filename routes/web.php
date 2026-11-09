@@ -185,7 +185,6 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{procurementRequest}/signature', [ProcurementRequestController::class, 'updateSignatureStatus'])
             ->name('signature.update');
 
-        // ✅ ROUTE BARU UNTUK APPROVE ALL SIGNATURES
         Route::patch('/{procurementRequest}/approve-all-signatures', [ProcurementRequestController::class, 'approveAllSignatures'])
             ->name('approve-all-signatures');
 
@@ -193,7 +192,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('validate-signature')
             ->middleware('role:Super Admin');
 
-        Route::patch('/{procurementRequest}/validate-final-signature', [ProcurementRequestController::class, 'validateFinalSignature'])
+        // ✅ ROUTE BARU UNTUK VALIDASI TTD FINAL (TAHAP 3)
+        Route::patch('/{procurementRequest}/validate-final-signature', [VendorComparisonController::class, 'validateFinalSignature'])
             ->name('validate-final-signature')
             ->middleware('role:Super Admin');
 

@@ -19,14 +19,11 @@ class VendorComparisonController extends Controller
         $this->ai = $this->ai ?? new GeminiVisionService();
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       INDEX — Detail Comparison per PR
-    ═══════════════════════════════════════════════════════════════ */
     public function index(ProcurementRequest $procurement)
     {
         $user = auth()->user();
 
-        if (!in_array($procurement->status, ['approved', 'processed', 'final_approved'])) {
+        if (!in_array($procurement->status, ['approved', 'processed', 'pending_final_sign', 'final_approved'])) {
             return redirect()
                 ->route('procurement.show', $procurement)
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
@@ -41,9 +38,6 @@ class VendorComparisonController extends Controller
         return view('procurement.comparison.index', compact('procurement'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       GLOBAL INDEX
-    ═══════════════════════════════════════════════════════════════ */
     public function globalIndex()
     {
         $procurements = ProcurementRequest::whereHas('vendors')
@@ -54,9 +48,6 @@ class VendorComparisonController extends Controller
         return view('procurement.comparison.global-index', compact('procurements'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       CREATE FINAL PR
-    ═══════════════════════════════════════════════════════════════ */
     public function createFinalPr(ProcurementRequest $procurement)
     {
         if (!$procurement->winnerVendor) {
@@ -65,28 +56,22 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Please select a winning vendor first.');
         }
 
-        if ($procurement->status === 'final_approved' && $procurement->final_number) {
+        if (in_array($procurement->status, ['final_approved']) && $procurement->final_number) {
             return redirect()
                 ->route('procurement.pdf.final', $procurement)
-                ->with('info', 'Final PR already exists. Redirecting to PDF.');
+                ->with('info', 'Final PR already exists and validated.');
         }
 
         $procurement->load('winnerVendor.items', 'department');
 
-        // ═══ GENERATE FORMAT OTOMATIS ═══
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
-        
-        $prCode = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
-        
+        $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
         $suggestedFinalNumber = '08/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
 
         return view('procurement.comparison.create-final-pr', compact('procurement', 'suggestedFinalNumber'));
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       STORE FINAL PR (DENGAN AUTO-GENERATE CASH ADVANCE)
-    ═══════════════════════════════════════════════════════════════ */
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
     {
         if (!$procurement->winnerVendor) {
@@ -109,7 +94,7 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update PR Final
+            // 1. Update PR Final (Status: MENUNGGU TTD FINAL)
             $procurement->update([
                 'budget_type'          => $validated['budget_type'],
                 'description'          => $validated['final_description'],
@@ -123,10 +108,10 @@ class VendorComparisonController extends Controller
                 'cfo_name'             => $validated['cfo_name'] ?? null,
                 'ceo_name'             => $validated['ceo_name'] ?? null,
                 'final_total_price'    => $procurement->winnerVendor->total_price,
-                'status'               => 'final_approved',
+                'status'               => 'pending_final_sign', // <--- STATUS BARU: Menunggu Validasi TTD
             ]);
 
-            // 2. AUTO-GENERATE CASH ADVANCE JIKA METODE CASH ADVANCE
+            // 2. AUTO-GENERATE CASH ADVANCE DRAFT (Jika metode CA)
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
                 
@@ -160,7 +145,7 @@ class VendorComparisonController extends Controller
 
             return redirect()
                 ->route('procurement.pdf.final', $procurement)
-                ->with('success', 'Final PR saved. Draft Cash Advance (if applicable) has been generated.');
+                ->with('success', 'Final PR saved. Please print, get Manager signature, then validate TTD.');
 
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -169,9 +154,22 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       SCAN & PROCESS
-    ═══════════════════════════════════════════════════════════════ */
+    /**
+     * FUNGSI BARU: Validasi TTD Manajer untuk PR Final
+     */
+    public function validateFinalSignature(ProcurementRequest $procurement)
+    {
+        if ($procurement->status !== 'pending_final_sign') {
+            return back()->with('error', 'Status tidak valid untuk validasi TTD Final.');
+        }
+
+        $procurement->update([
+            'status' => 'final_approved', // <--- Baru ubah ke final_approved di sini
+        ]);
+
+        return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
+    }
+
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');
@@ -348,9 +346,6 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       STORE VENDOR MANUAL (MULTI-ROW)
-    ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
         $validated = $request->validate([
@@ -369,7 +364,6 @@ class VendorComparisonController extends Controller
             'vendors.*.discount_voucher'       => 'nullable|numeric|min:0',
             'vendors.*.tax_ppn'                => 'nullable|numeric|min:0',
             'vendors.*.total_before_tax'       => 'nullable|numeric|min:0',
-            // 'vendors.*.total_price'         => 'required|numeric|min:0', // <--- DIHAPUS KARENA DIHITUNG OTOMATIS
             'vendors.*.tax_note'               => 'nullable|string|max:50',
 
             'vendors.*.items'                       => 'nullable|array',
@@ -390,7 +384,6 @@ class VendorComparisonController extends Controller
         $procurement->vendors()->delete();
 
         foreach ($validated['vendors'] as $i => $v) {
-            // Hitung total otomatis
             $subtotal    = $v['subtotal'] ?? 0;
             $shipping    = $v['shipping_cost'] ?? 0;
             $discount    = $v['discount_voucher'] ?? 0;

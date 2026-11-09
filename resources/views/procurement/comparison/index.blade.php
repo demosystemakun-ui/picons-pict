@@ -5,10 +5,10 @@
 
 @php
     $hasVendors = $procurement->vendors->count() > 0;
+    $isPendingFinalSign = $procurement->status === 'pending_final_sign'; 
     $isFinalApproved = in_array($procurement->status, ['final_approved', 'received', 'completed']);
-    $isProcessed = $procurement->status === 'processed'; // PR Awal sudah divalidasi
+    $isProcessed = $procurement->status === 'processed'; 
     
-    // PERBAIKAN: Izinkan input vendor jika status masih 'approved' ATAU 'processed'
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 @endphp
 
@@ -36,7 +36,7 @@
         </a>
     </div>
 
-    {{-- ═══ SUCCESS / ERROR ALERTS ═══ --}}
+    {{-- ═══ ALERTS ═══ --}}
     @if(session('success'))
         <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 dark:bg-emerald-900/20 dark:border-emerald-800/60">
             <p class="text-sm font-medium text-emerald-800 dark:text-emerald-300">{{ session('success') }}</p>
@@ -57,9 +57,7 @@
         </div>
     @endif
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         AI SCAN SECTION
-    ═══════════════════════════════════════════════════════════════ --}}
+    {{-- ═══ AI SCAN SECTION ═══ --}}
     @if($canInputVendor)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/10 flex flex-wrap items-center justify-between gap-3">
@@ -115,9 +113,7 @@
     </section>
     @endif
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         MANUAL INPUT SECTION
-    ═══════════════════════════════════════════════════════════════ --}}
+    {{-- ═══ MANUAL INPUT SECTION ═══ --}}
     @if($canInputVendor)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between cursor-pointer" @click="open = !open">
@@ -189,9 +185,7 @@
     </section>
     @endif
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         VENDOR COMPARISON TABLE
-    ═══════════════════════════════════════════════════════════════ --}}
+    {{-- ═══ VENDOR COMPARISON TABLE ═══ --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between">
             <div>
@@ -199,7 +193,6 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered</p>
             </div>
             
-            {{-- Tombol Toggle Input Manual (Opsional, jika user menutup form) --}}
             @if($canInputVendor)
             <button @click="open = !open" class="text-xs font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400">
                 + Add Vendor
@@ -268,6 +261,8 @@
                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
                         @if($isFinalApproved)
                             Final PR Validated
+                        @elseif($isPendingFinalSign)
+                            Menunggu Validasi TTD Manajer
                         @elseif($isProcessed)
                             PR Awal Validated — Ready for Final PR
                         @else
@@ -277,6 +272,8 @@
                     <div class="text-xs text-gray-600 dark:text-gray-400">
                         @if($isFinalApproved)
                             You can now proceed to the PO/Cash Advance/Reimbursement process.
+                        @elseif($isPendingFinalSign)
+                            Silakan cetak PDF, minta TTD basah Manajer, lalu klik tombol Validate.
                         @elseif($isProcessed)
                             Fill in the Final PR form (Budget, Date, Request By, etc.) to generate the PDF.
                         @else
@@ -286,8 +283,22 @@
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-2">
-                    @if($isFinalApproved)
-                        {{-- Tombol Lanjutan berdasarkan procurement_method --}}
+                    
+                    {{-- 1. JIKA STATUSNYA MENUNGGU TTD FINAL (BARU DIBUAT) --}}
+                    @if($isPendingFinalSign)
+                        <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
+                            Print PR Final
+                        </a>
+
+                        <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm" onclick="return confirm('Apakah TTD Manajer sudah dibubuhkan dan Anda yakin ingin memvalidasi?')">
+                                Validate Final Signature
+                            </button>
+                        </form>
+
+                    {{-- 2. JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) --}}
+                    @elseif($isFinalApproved)
                         @if($procurement->procurement_method === 'po')
                             <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Create PO</a>
                         @elseif($procurement->procurement_method === 'cash_advance')
@@ -296,26 +307,20 @@
                             <a href="{{ route('reimbursement.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Create Reimbursement</a>
                         @endif
 
-                        {{-- Tombol View PDF --}}
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             View Final PR PDF
                         </a>
 
+                    {{-- 3. JIKA MASIH TAHAP PR AWAL --}}
                     @elseif($isProcessed)
-                        {{-- ═══ TOMBOL MASUK KE FORM FINAL PR ═══ --}}
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
                             Create Final PR
                         </a>
                     @else
-                        {{-- Print PR Awal & Tombol Validasi Pertama --}}
                         <a href="{{ route('procurement.pdf', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             Print PR Awal
                         </a>
-
                         <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST">
                             @csrf @method('PATCH')
                             <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Manager signature confirmed for PR Awal?')">
@@ -374,7 +379,6 @@
         return true;
     }
 
-    // Fungsi untuk menambah baris input manual
     let vendorIndex = 1;
     function addVendorRow() {
         const container = document.getElementById('vendorRowsContainer');
