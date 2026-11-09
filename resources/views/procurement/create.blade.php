@@ -280,40 +280,41 @@
                         @endforeach
                     </div>
                 @else
-                    {{-- CASE 2: MANUAL INPUT --}}
-                    <div class="grid grid-cols-12 gap-3">
-                        <div class="col-span-12 sm:col-span-5">
-                            <label for="item_name" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                                Requested Item <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="item_name" name="items[0][item_name]" value="{{ old('item_name') }}" required
-                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
+                    {{-- CASE 2: MANUAL INPUT (BISA TAMBAH BARIS) --}}
+                    <div id="manualItemContainer" class="space-y-3">
+                        {{-- Baris Pertama --}}
+                        <div class="item-row grid grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30">
+                            <div class="col-span-12 sm:col-span-5">
+                                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Requested Item <span class="text-red-500">*</span></label>
+                                <input type="text" name="items[0][item_name]" required class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            </div>
+                            <div class="col-span-12 sm:col-span-4">
+                                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Match Requirement?</label>
+                                <input type="text" name="items[0][item_requirement_note]" class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            </div>
+                            <div class="col-span-4 sm:col-span-1">
+                                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Qty <span class="text-red-500">*</span></label>
+                                <input type="number" min="1" name="items[0][quantity]" value="1" required class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            </div>
+                            <div class="col-span-4 sm:col-span-1">
+                                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Unit</label>
+                                <input type="text" name="items[0][unit]" value="Pcs" class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            </div>
+                            <div class="col-span-4 sm:col-span-1 flex justify-center">
+                                {{-- Placeholder untuk tombol hapus --}}
+                            </div>
                         </div>
-                        <div class="col-span-12 sm:col-span-4">
-                            <label for="item_requirement_note" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                                Match Requirement?
-                            </label>
-                            <input type="text" id="item_requirement_note" name="items[0][item_requirement_note]" value="{{ old('item_requirement_note') }}"
-                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
-                        </div>
-                        <div class="col-span-4 sm:col-span-1">
-                            <label for="quantity" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                                Qty <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" min="1" id="quantity" name="items[0][quantity]" value="{{ old('quantity', 1) }}" required
-                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
-                        </div>
-                        <div class="col-span-4 sm:col-span-2">
-                            <label for="unit" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                                Unit
-                            </label>
-                            <input type="text" id="unit" name="items[0][unit]" value="{{ old('unit', 'Pcs') }}"
-                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
-                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="button" onclick="addManualItem()" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            Add Another Item
+                        </button>
                     </div>
                 @endif
 
-                <div class="pt-1">
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
                     <label for="target_purchase" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                         Target to Purchase
                     </label>
@@ -378,3 +379,42 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    let manualItemIndex = 1;
+
+    function addManualItem() {
+        const container = document.getElementById('manualItemContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row grid grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30 mt-3';
+        
+        newRow.innerHTML = `
+            <div class="col-span-12 sm:col-span-5">
+                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Requested Item <span class="text-red-500">*</span></label>
+                <input type="text" name="items[\${manualItemIndex}][item_name]" required class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            </div>
+            <div class="col-span-12 sm:col-span-4">
+                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Match Requirement?</label>
+                <input type="text" name="items[\${manualItemIndex}][item_requirement_note]" class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-3 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            </div>
+            <div class="col-span-4 sm:col-span-1">
+                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Qty <span class="text-red-500">*</span></label>
+                <input type="number" min="1" name="items[\${manualItemIndex}][quantity]" value="1" required class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            </div>
+            <div class="col-span-4 sm:col-span-1">
+                <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Unit</label>
+                <input type="text" name="items[\${manualItemIndex}][unit]" value="Pcs" class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm px-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+            </div>
+            <div class="col-span-4 sm:col-span-1 flex justify-center pb-1">
+                <button type="button" onclick="this.closest('.item-row').remove()" class="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition" title="Hapus Baris">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(newRow);
+        manualItemIndex++;
+    }
+</script>
+@endpush
