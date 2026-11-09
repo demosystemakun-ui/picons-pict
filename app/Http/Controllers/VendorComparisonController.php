@@ -77,6 +77,8 @@ class VendorComparisonController extends Controller
     {
         $bulanRomawi = $this->getRomawi((int) date('n'));
         $tahun       = date('Y');
+        
+        // Ambil kode PR (misal OPS/PICT) dari nomor PR Awal (04/PR/OPS/PICT-XI-2026)
         $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
 
         // Cari nomor PR Final terakhir di database untuk kode PR yang sama
@@ -86,7 +88,7 @@ class VendorComparisonController extends Controller
             ->first();
 
         if ($lastPr && $lastPr->final_number) {
-            // Ambil 2 digit pertama sebagai nomor urut (misal dari "08/PR/...")
+            // Ambil 2 digit pertama sebagai nomor urut (misal dari "01/PR/...")
             $lastNumber = (int) substr($lastPr->final_number, 0, 2);
             $nextNumber = $lastNumber + 1;
         } else {
@@ -96,6 +98,7 @@ class VendorComparisonController extends Controller
         // Format 2 digit (01, 02, dst.)
         $formattedNumber = str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
 
+        // HASIL AKHIR: 01/PR/OPS/PICT-XI-2026
         return $formattedNumber . '/PR/' . $prCode . '-' . $bulanRomawi . '-' . $tahun;
     }
 
