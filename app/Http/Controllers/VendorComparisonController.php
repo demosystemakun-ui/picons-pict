@@ -522,3 +522,6 @@ class VendorComparisonController extends Controller
         return $map[$number] ?? '';
     }
 }
+
+
+//dfsfsefwefsfsfw
