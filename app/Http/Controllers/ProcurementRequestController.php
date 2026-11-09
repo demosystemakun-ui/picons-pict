@@ -33,10 +33,16 @@ class ProcurementRequestController extends Controller
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
                 // Tahap 1: Sudah di-approve formatnya, TAPI belum divalidasi TTD
-                $query->where('status', 'approved');
+                $query->whereIn('status', ['approved', 'processed']); 
             } elseif ($request->stage === 'final') {
-                // Tahap 2: Sudah divalidasi TTD dan masuk proses pembelian/final
-                $query->whereIn('status', ['processed', 'final_approved', 'received', 'completed']);
+                // Tahap 2: Sudah masuk proses PR Final (Menunggu Review, Menunggu TTD, dan Selesai)
+                $query->whereIn('status', [
+                    'pending_review_final', // <--- Tambahan baru
+                    'pending_final_sign',   // <--- Tambahan baru
+                    'final_approved', 
+                    'received', 
+                    'completed'
+                ]);
             }
         }
 
