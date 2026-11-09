@@ -12,6 +12,10 @@
     $isFinalApproved      = in_array($procurement->status, ['final_approved', 'received', 'completed']);
     $isProcessed          = $procurement->status === 'processed';            // PR Awal sudah validasi TTD & pilih vendor
     
+    // Form input (Scan & Manual) hanya muncul jika status 'approved' (belum pilih vendor)
+    $canShowInputForms = $procurement->status === 'approved';
+    
+    // Tabel dan detail vendor tetap bisa dilihat jika sudah ada datanya
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 @endphp
 
@@ -60,8 +64,8 @@
         </div>
     @endif
 
-    {{-- ═══ AI SCAN SECTION ═══ --}}
-    @if($canInputVendor)
+    {{-- ═══ AI SCAN SECTION (Hanya muncul jika status approved) ═══ --}}
+    @if($canShowInputForms)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/10 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -116,8 +120,8 @@
     </section>
     @endif
 
-    {{-- ═══ MANUAL INPUT SECTION ═══ --}}
-    @if($canInputVendor)
+    {{-- ═══ MANUAL INPUT SECTION (Hanya muncul jika status approved) ═══ --}}
+    @if($canShowInputForms)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between cursor-pointer" @click="open = !open">
             <div class="flex items-center gap-3">
@@ -196,7 +200,7 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered</p>
             </div>
             
-            @if($canInputVendor)
+            @if($canShowInputForms)
             <button @click="open = !open" class="text-xs font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400">
                 + Add Vendor
             </button>
