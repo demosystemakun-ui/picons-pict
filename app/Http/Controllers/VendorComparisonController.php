@@ -177,7 +177,7 @@ class VendorComparisonController extends Controller
      */
     public function approveFinalFormat(ProcurementRequest $procurement)
     {
-        // Jika status kosong ("") atau pending_review_final
+        // Pastikan status valid (pending_review_final atau kosong)
         if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
             $procurement->update([
                 'status' => 'pending_final_sign', // Lanjut ke tahap minta TTD
