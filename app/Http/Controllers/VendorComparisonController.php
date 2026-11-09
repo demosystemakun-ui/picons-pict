@@ -25,7 +25,7 @@ class VendorComparisonController extends Controller
 
         if (!in_array($procurement->status, ['approved', 'processed', 'pending_review_final', 'pending_final_sign', 'final_approved'])) {
             return redirect()
-                ->route('procurement.show', $procurement)
+                ->route('procurement.show', ['procurementRequest' => $procurement->id])
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
         }
 
@@ -52,13 +52,13 @@ class VendorComparisonController extends Controller
     {
         if (!$procurement->winnerVendor) {
             return redirect()
-                ->route('procurement.comparisons.index', $procurement)
+                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('error', 'Please select a winning vendor first.');
         }
 
         if (in_array($procurement->status, ['final_approved']) && $procurement->final_number) {
             return redirect()
-                ->route('procurement.pdf.final', $procurement)
+                ->route('procurement.pdf.final', ['procurementRequest' => $procurement->id])
                 ->with('info', 'Final PR already exists and validated.');
         }
 
@@ -162,7 +162,7 @@ class VendorComparisonController extends Controller
             DB::commit();
 
             return redirect()
-                ->route('procurement.comparisons.index', $procurement)
+                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('success', 'Final PR saved. Waiting for Admin format review.');
 
         } catch (\Throwable $e) {
@@ -172,29 +172,21 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /**
-     * FUNGSI BARU: Approve Format Final PR (Review Admin)
-     */
     public function approveFinalFormat(ProcurementRequest $procurement)
     {
-        // Pastikan status valid (pending_review_final atau kosong)
         if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
             $procurement->update([
                 'status' => 'pending_final_sign',
             ]);
             
-            // Paksa refresh halaman dengan redirect ke route yang sama
             return redirect()
-                ->route('procurement.comparisons.index', $procurement)
+                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurement->status . '".');
     }
 
-    /**
-     * FUNGSI BARU: Validasi TTD Manajer untuk PR Final
-     */
     public function validateFinalSignature(ProcurementRequest $procurement)
     {
         if ($procurement->status !== 'pending_final_sign') {
@@ -206,7 +198,7 @@ class VendorComparisonController extends Controller
         ]);
 
         return redirect()
-            ->route('procurement.comparisons.index', $procurement)
+            ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
             ->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
 
@@ -373,7 +365,7 @@ class VendorComparisonController extends Controller
             $message = count($groupedVendors) . ' marketplace(s) successfully scanned and merged into cart.';
 
             return redirect()
-                ->route('procurement.comparisons.index', $procurement)
+                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('success', $message);
 
         } catch (Throwable $e) {
@@ -469,7 +461,7 @@ class VendorComparisonController extends Controller
         $this->autoPickWinner($procurement);
 
         return redirect()
-            ->route('procurement.comparisons.index', $procurement)
+            ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
             ->with('success', 'Vendor data saved successfully.');
     }
 
