@@ -28,11 +28,9 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tahap 1: Sedang proses TTD Awal ATAU sudah TTD tapi belum pilih vendor
                 $query->where('status', 'approved')
-                      ->whereDoesntHave('winnerVendor'); // Asumsi menggunakan relasi winnerVendor
+                      ->whereDoesntHave('winnerVendor');
             } elseif ($request->stage === 'final') {
-                // Tahap 2: Sudah pilih vendor, dan masuk proses Final PR
                 $query->whereHas('winnerVendor')
                       ->whereIn('status', [
                           'processed', 
@@ -333,7 +331,11 @@ class ProcurementRequestController extends Controller
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
-        return view('procurement.print-final', compact('procurement'));
+        // ═══ TAMBAHKAN INI ═══
+        $isDraft = $procurementRequest->status === 'pending_review_final';
+        // ═════════════════════
+
+        return view('procurement.print-final', compact('procurement', 'isDraft'));
     }
 
     public function pdf(ProcurementRequest $procurementRequest)
@@ -430,7 +432,11 @@ class ProcurementRequestController extends Controller
         $procurement['ceo_name']             = $procurementRequest->ceo_name;
         $procurement['cfo_name']             = $procurementRequest->cfo_name;
 
-        $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement'))
+        // ═══ TAMBAHKAN INI ═══
+        $isDraft = $procurementRequest->status === 'pending_review_final';
+        // ═════════════════════
+
+        $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement', 'isDraft'))
             ->setPaper('a4', 'portrait');
 
         $cleanNo  = preg_replace('/[^A-Za-z0-9_\-]/', '-', $procurementRequest->no);
@@ -459,7 +465,7 @@ class ProcurementRequestController extends Controller
         }
 
         $procurementRequest->update([
-            'status' => 'processed', // Ini akan dipanggil saat memilih vendor, bukan dari tombol approve TTD
+            'status' => 'processed',
         ]);
 
         return redirect()
@@ -528,7 +534,6 @@ class ProcurementRequestController extends Controller
 
     public function approveAllSignatures(Request $request, ProcurementRequest $procurementRequest)
     {
-        // Cukup set TTD-nya jadi true, JANGAN ubah status ke processed.
         $procurementRequest->update([
             'is_pic_approved' => true,
             'is_ops_approved' => true,

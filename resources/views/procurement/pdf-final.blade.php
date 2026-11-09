@@ -27,6 +27,25 @@
         color: #000;
         margin: 25px 30px;
     }
+
+    /* ═══ CSS WATERMARK DRAFT ═══ */
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 140px;
+        font-weight: bold;
+        color: rgba(180, 180, 180, 0.4);
+        z-index: 9999;
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+        font-family: sans-serif;
+        letter-spacing: 10px;
+    }
+    /* ═════════════════════════════ */
+
     table { width: 100%; border-collapse: collapse; }
     .main-table { table-layout: fixed; border: 1.5px solid #000; }
     .main-table td, .main-table th {
@@ -97,6 +116,12 @@
 </style>
 </head>
 <body>
+
+{{-- ═══ WATERMARK DRAFT ═══ --}}
+@if(isset($isDraft) && $isDraft)
+    <div class="watermark">DRAFT</div>
+@endif
+{{-- ═══════════════════════ --}}
 
 <table class="main-table">
 
