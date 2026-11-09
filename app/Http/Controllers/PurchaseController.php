@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
+    /**
+     * Status PR yang boleh dibuatkan PO.
+     * PO hanya boleh dibuat setelah PR Final divalidasi (TTD Final).
+     */
+    private const PO_ALLOWED_STATUSES = ['final_approved'];
+
     /* ═══════════════════════════════════════════════════════════════
        INDEX — Daftar Purchase Order
     ═══════════════════════════════════════════════════════════════ */
@@ -19,9 +25,9 @@ class PurchaseController extends Controller
         $user = auth()->user();
         $query = Purchase::with(['vendor', 'procurementRequest.department'])->latest();
 
-        // 🌟 PEMBATASAN AKSES: Admin Departemen hanya lihat PO departemennya
+        // PEMBATASAN AKSES: Admin Departemen hanya lihat PO departemennya
         if ($user->hasRole('Admin Departemen')) {
-            $query->whereHas('procurementRequest', function($q) use ($user) {
+            $query->whereHas('procurementRequest', function ($q) use ($user) {
                 $q->where('department_id', $user->department_id);
             });
         }
@@ -34,9 +40,9 @@ class PurchaseController extends Controller
         // Fitur Pencarian
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('po_number', 'like', "%{$search}%")
-                  ->orWhereHas('vendor', fn($v) => $v->where('vendor_name', 'like', "%{$search}%"));
+                  ->orWhereHas('vendor', fn ($v) => $v->where('vendor_name', 'like', "%{$search}%"));
             });
         }
 
@@ -51,15 +57,23 @@ class PurchaseController extends Controller
     public function create(ProcurementRequest $procurement)
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
             abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
         }
 
-        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+        if (!in_array($procurement->status, self::PO_ALLOWED_STATUSES, true)) {
             return redirect()
                 ->route('procurement.show', $procurement)
-                ->with('error', 'Purchase Order hanya dapat dibuat dari pengajuan yang sudah disetujui/divalidasi.');
+                ->with('error', 'Purchase Order hanya dapat dibuat dari PR Final yang sudah divalidasi (Final Approved). Status saat ini: ' . $procurement->status . '.');
+        }
+
+        // Cegah PO ganda untuk PR yang sama
+        $existingPo = Purchase::where('procurement_request_id', $procurement->id)->first();
+        if ($existingPo) {
+            return redirect()
+                ->route('procurement.purchases.show', $existingPo->id)
+                ->with('error', 'PO untuk PR ini sudah dibuat (' . $existingPo->po_number . ').');
         }
 
         $procurement->load('vendors.items');
@@ -72,13 +86,21 @@ class PurchaseController extends Controller
     public function store(Request $request, ProcurementRequest $procurement)
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
             abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
         }
 
-        if (!in_array($procurement->status, [ProcurementRequest::STATUS_APPROVED, ProcurementRequest::STATUS_PROCESSED])) {
+        if (!in_array($procurement->status, self::PO_ALLOWED_STATUSES, true)) {
             return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
+        }
+
+        // Cegah PO ganda untuk PR yang sama
+        $existingPo = Purchase::where('procurement_request_id', $procurement->id)->first();
+        if ($existingPo) {
+            return redirect()
+                ->route('procurement.purchases.show', $existingPo->id)
+                ->with('error', 'PO untuk PR ini sudah dibuat (' . $existingPo->po_number . ').');
         }
 
         $validated = $request->validate([
@@ -99,7 +121,7 @@ class PurchaseController extends Controller
                 'vendor_id'              => $vendor->id,
                 'po_number'              => $validated['po_number'],
                 'order_date'             => $validated['order_date'],
-                'estimated_arrival'      => $validated['estimated_arrival'],
+                'estimated_arrival'      => $validated['estimated_arrival'] ?? null,
                 'status'                 => 'ordered',
                 'notes'                  => $validated['notes'] ?? null,
             ]);
@@ -114,17 +136,15 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            // Update status PR menjadi Processed jika masih Approved
-            if ($procurement->status === ProcurementRequest::STATUS_APPROVED) {
-                $procurement->update(['status' => ProcurementRequest::STATUS_PROCESSED]);
-            }
+            // Status PR tetap 'final_approved' sampai barang diterima (receive()).
+            // Tidak ada perubahan status PR di sini.
 
             DB::commit();
-            
+
             return redirect()
                 ->route('procurement.purchases.show', $purchase->id)
                 ->with('success', 'Purchase Order berhasil dibuat. Menunggu barang datang.');
-                
+
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal membuat PO: ' . $e->getMessage());
@@ -137,7 +157,7 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase)
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('Admin Departemen')) {
             $procurement = $purchase->procurementRequest;
             if ($procurement->department_id !== $user->department_id) {
@@ -155,7 +175,7 @@ class PurchaseController extends Controller
     public function receive(Request $request, Purchase $purchase)
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('Admin Departemen')) {
             $procurement = $purchase->procurementRequest;
             if ($procurement->department_id !== $user->department_id) {
@@ -179,22 +199,22 @@ class PurchaseController extends Controller
 
             foreach ($validated['items'] as $data) {
                 $item = PurchaseItem::findOrFail($data['id']);
-                
+
                 $qtyReceived = (int) $data['qty_received'];
-                $qtyDamaged = (int) $data['qty_damaged'];
+                $qtyDamaged  = (int) $data['qty_damaged'];
 
                 // Update qty penerimaan
                 $item->qty_received += $qtyReceived;
-                $item->qty_damaged += $qtyDamaged;
+                $item->qty_damaged  += $qtyDamaged;
                 $item->save();
 
                 if ($item->qty_received < $item->qty_ordered) {
                     $allReceived = false;
                 }
 
-                // 🌟 DISTRIBUSI STOK KE DEPARTEMEN
+                // DISTRIBUSI STOK KE DEPARTEMEN
                 if (!empty($data['breakdowns'])) {
-                    $totalAlokasi = collect($data['breakdowns'])->sum('qty_received');
+                    $totalAlokasi = (int) collect($data['breakdowns'])->sum('qty_received');
 
                     if ($totalAlokasi !== $qtyReceived) {
                         throw new \Exception("Total alokasi departemen ({$totalAlokasi}) tidak sama dengan Qty Datang ({$qtyReceived}) untuk item {$item->product_name}.");
@@ -220,9 +240,9 @@ class PurchaseController extends Controller
                 'status' => $allReceived ? 'completed' : 'partially_received'
             ]);
 
-            // Update Status PR
+            // Update Status PR: final_approved -> received (alur baru)
             $procurementRequest = $purchase->procurementRequest;
-            if ($allReceived && $procurementRequest->status === ProcurementRequest::STATUS_PROCESSED) {
+            if ($allReceived && $procurementRequest->status === 'final_approved') {
                 $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
             }
 
