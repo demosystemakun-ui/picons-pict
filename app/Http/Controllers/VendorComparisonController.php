@@ -172,6 +172,9 @@ class VendorComparisonController extends Controller
         }
     }
 
+    /**
+     * FUNGSI APPROVE FORMAT (DIUBAH MENGGUNAKAN back())
+     */
     public function approveFinalFormat(ProcurementRequest $procurement)
     {
         if (empty($procurement->status) || in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
@@ -179,14 +182,16 @@ class VendorComparisonController extends Controller
                 'status' => 'pending_final_sign',
             ]);
             
-            return redirect()
-                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
-                ->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
+            // GUNAKAN back() AGAR TIDAK MEMBACA CACHE ROUTE
+            return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurement->status . '".');
     }
 
+    /**
+     * FUNGSI VALIDASI TTD FINAL (DIUBAH MENGGUNAKAN back())
+     */
     public function validateFinalSignature(ProcurementRequest $procurement)
     {
         if ($procurement->status !== 'pending_final_sign') {
@@ -197,9 +202,8 @@ class VendorComparisonController extends Controller
             'status' => 'final_approved',
         ]);
 
-        return redirect()
-            ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
-            ->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
+        // GUNAKAN back()
+        return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
 
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
