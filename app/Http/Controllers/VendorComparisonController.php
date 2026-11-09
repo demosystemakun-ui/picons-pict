@@ -190,8 +190,9 @@ class VendorComparisonController extends Controller
      */
     public function approveFinalFormat(ProcurementRequest $procurement)
     {
-        if ($procurement->status !== 'pending_review_final') {
-            return back()->with('error', 'Status tidak valid untuk menyetujui format.');
+        // Toleransi jika ada typo di database
+        if (!in_array($procurement->status, ['pending_review_final', 'pending_review'])) {
+            return back()->with('error', 'Gagal Approve. Status saat ini di database: "' . $procurement->status . '". Seharusnya: "pending_review_final".');
         }
 
         $procurement->update([
