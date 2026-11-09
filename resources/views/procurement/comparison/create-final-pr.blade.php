@@ -199,12 +199,25 @@
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                         Final PR Number <span class="text-rose-500">*</span>
                     </label>
-                    <input type="text" name="final_number"
-                           value="{{ old('final_number', $procurement->final_number) }}"
-                           placeholder="e.g. 01/PR/OPS/PICT-XI-2026"
-                           class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 font-mono focus:border-teal-500 focus:ring-teal-500 @error('final_number') border-rose-400 @enderror"
-                           required>
-                    <p class="mt-1.5 text-xs text-gray-500">Silakan isi nomor PR Final secara manual. Pastikan nomor belum pernah digunakan.</p>
+                    
+                    <div class="flex items-center w-full rounded-lg border border-gray-300 bg-white focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 overflow-hidden @error('final_number') border-rose-400 @enderror">
+                        {{-- Input Nomor Urut (Manual) --}}
+                        <input type="text" id="final_number_prefix" 
+                               value="{{ old('final_number') ? substr(old('final_number'), 0, 2) : '01' }}"
+                               maxlength="2"
+                               class="w-16 text-center border-none text-sm px-2 py-2 font-mono focus:ring-0 focus:outline-none"
+                               oninput="updateFinalNumber()">
+                        
+                        {{-- Tampilan Sisa Teks (Otomatis) --}}
+                        <span class="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-2 border-l border-gray-200 w-full" id="final_number_suffix">
+                            /PR/{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}
+                        </span>
+                    </div>
+
+                    {{-- Input Hidden untuk dikirim ke Controller --}}
+                    <input type="hidden" name="final_number" id="final_number_full" value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}">
+
+                    <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
                     @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
@@ -330,3 +343,26 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function updateFinalNumber() {
+        const prefixInput = document.getElementById('final_number_prefix');
+        const hiddenInput = document.getElementById('final_number_full');
+        const suffixText  = document.getElementById('final_number_suffix').innerText;
+        
+        // Pastikan hanya angka dan 2 digit
+        let prefix = prefixInput.value.replace(/\D/g, '');
+        if (prefix.length > 2) prefix = prefix.slice(0, 2);
+        prefixInput.value = prefix;
+
+        // Gabungkan angka depan dengan sisa teks otomatis
+        hiddenInput.value = prefix + suffixText;
+    }
+
+    // Jalankan saat halaman dimuat untuk memastikan format awal benar
+    document.addEventListener('DOMContentLoaded', () => {
+        updateFinalNumber();
+    });
+</script>
+@endpush
