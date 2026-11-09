@@ -10,7 +10,7 @@
     $isPendingFinalReview = $procurement->status === 'pending_review_final'; // Menunggu review admin
     $isPendingFinalSign   = $procurement->status === 'pending_final_sign';   // Menunggu TTD Manajer
     $isFinalApproved      = in_array($procurement->status, ['final_approved', 'received', 'completed']);
-    $isProcessed          = $procurement->status === 'processed';            // PR Awal sudah validasi TTD
+    $isProcessed          = $procurement->status === 'processed';            // PR Awal sudah validasi TTD & pilih vendor
     
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 @endphp
@@ -269,7 +269,7 @@
                         @elseif($isPendingFinalReview)
                             Menunggu Review Format PR Final
                         @elseif($isProcessed)
-                            PR Awal Validated — Ready for Final PR
+                            Vendor Selected — Ready for Final PR
                         @else
                             Vendor Selected — Waiting for PR Awal Validation
                         @endif
@@ -282,7 +282,7 @@
                         @elseif($isPendingFinalReview)
                             Silakan periksa kembali data format PR Final, lalu klik Approve Format.
                         @elseif($isProcessed)
-                            Fill in the Final PR form (Budget, Date, Request By, etc.) to generate the PDF.
+                            Silakan lanjut ke pembuatan Form Final PR.
                         @else
                             Print the PR Awal, get Manager signature, then validate.
                         @endif
@@ -328,22 +328,12 @@
                             View Final PR PDF
                         </a>
 
-                    {{-- 4. JIKA MASIH TAHAP PR AWAL --}}
+                    {{-- 4. JIKA SUDAH PILIH VENDOR (PROCESSED) --}}
                     @elseif($isProcessed)
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
                             Create Final PR
                         </a>
-                    @else
-                        <a href="{{ route('procurement.pdf', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
-                            Print PR Awal
-                        </a>
-                        <form action="{{ route('procurement.validate-signature', $procurement) }}" method="POST">
-                            @csrf @method('PATCH')
-                            <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Manager signature confirmed for PR Awal?')">
-                                Validate PR Awal
-                            </button>
-                        </form>
                     @endif
                 </div>
             </footer>
