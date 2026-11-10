@@ -392,25 +392,39 @@ window.addEventListener('scroll', function() {
     });
 }, true);
 
-// --- FUNGSI PRINT ---
+// --- FUNGSI PRINT (PERBAIKAN: Hapus Iframe Setelah Dipakai) ---
 function printDirect(url) {
     let iframe = document.getElementById('printFrame');
-    if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'printFrame';
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
+    
+    // Jika iframe sudah ada, hapus dulu
+    if (iframe) {
+        iframe.remove();
     }
+
+    // Buat iframe baru
+    iframe = document.createElement('iframe');
+    iframe.id = 'printFrame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
     iframe.src = url;
     iframe.onload = function() {
         setTimeout(function() {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
+            
+            // Hapus iframe setelah 1 detik (beri waktu dialog print muncul)
+            setTimeout(() => {
+                if (document.getElementById('printFrame')) {
+                    document.getElementById('printFrame').remove();
+                }
+            }, 1000);
+            
         }, 300);
     };
 }
