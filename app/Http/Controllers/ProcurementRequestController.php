@@ -193,31 +193,39 @@ class ProcurementRequestController extends Controller
         }
     }
 
-    public function updateNumber(Request $request, ProcurementRequest $procurementRequest)
+       public function updateNumber(Request $request, ProcurementRequest $procurementRequest)
     {
         if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
             abort(403, 'Only Admin can edit PR number.');
         }
 
+        // Gabungkan prefix dan suffix menjadi nomor lengkap
+        $fullNumber = $request->input('no_prefix') . '/PR/' . $request->input('no_suffix');
+
+        // Validasi menggunakan variabel $fullNumber, bukan input 'no'
         $request->validate([
-            'no' => [
+            'no_prefix' => [
                 'required',
                 'string',
-                function ($attribute, $value, $fail) use ($procurementRequest) {
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)
+                function ($attribute, $value, $fail) use ($fullNumber, $procurementRequest) {
+                    // Cek apakah nomor lengkap sudah dipakai di tempat lain
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)
                         ->where('id', '!=', $procurementRequest->id)
                         ->exists();
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $fullNumber)->exists();
+                    
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
                 },
             ],
+        ], [
+            'no_prefix.required' => 'Nomor urut PR wajib diisi.'
         ]);
 
-        $procurementRequest->update(['no' => $request->no]);
+        $procurementRequest->update(['no' => $fullNumber]);
 
-        return back()->with('success', 'Nomor PR berhasil diperbarui.');
+        return back()->with('success', 'Nomor PR berhasil diperbarui menjadi ' . $fullNumber);
     }
 
     public function show(ProcurementRequest $procurementRequest)
