@@ -300,7 +300,7 @@
                         
                         {{-- KONDISI A: JIKA NOMOR BELUM DIISI (Hanya untuk Admin) --}}
                         @if($isAdmin && empty($procurement->final_number))
-                            <form action="{{ route('procurement.update-number', $procurement) }}" method="POST" class="flex items-center gap-2">
+                            <form action="{{ route('procurement.comparisons.update-final-number', $procurement) }}" method="POST" class="flex items-center gap-2">
                                 @csrf
                                 @method('PATCH')
                                 <div class="flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">

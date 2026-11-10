@@ -255,6 +255,43 @@ class VendorComparisonController extends Controller
         }
     }
 
+    public function updateFinalNumber(Request $request, ProcurementRequest $procurement)
+    {
+        // Pastikan hanya Admin yang bisa mengubah
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+            abort(403, 'Only Admin can edit the Final PR Number.');
+        }
+
+        // Gabungkan prefix dan suffix
+        $fullNumber = $request->input('no_prefix') . '/PR/' . $request->input('no_suffix');
+
+        $request->validate([
+            'no_prefix' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) use ($fullNumber, $procurement) {
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)
+                        ->where('id', '!=', $procurement->id)
+                        ->exists();
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $fullNumber)
+                        ->where('id', '!=', $procurement->id)
+                        ->exists();
+                    
+                    if ($existsInNo || $existsInFinal) {
+                        $fail('Nomor PR ini sudah digunakan.');
+                    }
+                },
+            ],
+        ], [
+            'no_prefix.required' => 'Nomor urut PR wajib diisi.'
+        ]);
+
+        // HANYA update kolom final_number
+        $procurement->update(['final_number' => $fullNumber]);
+
+        return back()->with('success', 'Nomor Final PR berhasil diperbarui menjadi ' . $fullNumber);
+    }
+
     public function approveFinalFormat(ProcurementRequest $procurementRequest)
     {
         // Pastikan nomor sudah diisi sebelum approve
