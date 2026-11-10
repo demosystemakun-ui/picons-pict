@@ -151,6 +151,12 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
+        // ═══ PENGAMANAN BACKEND: HANYA ADMIN YANG BOLEH INPUT NOMOR FINAL ═══
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+            abort(403, 'Only Admin can input the Final PR Number.');
+        }
+        // ═══════════════════════════════════════════════════════════════════
+
         $validated = $request->validate([
             'final_number' => [
                 'required',

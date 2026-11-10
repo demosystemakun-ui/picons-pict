@@ -197,25 +197,40 @@
                 {{-- BARIS 4: FINAL PR NUMBER --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
-                        Final PR Number <span class="text-rose-500">*</span>
+                        Final PR Number
+                        @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
+                            <span class="text-rose-500">*</span>
+                        @endif
                     </label>
                     
-                    <div class="flex items-center w-full rounded-lg border border-gray-300 bg-white focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 overflow-hidden @error('final_number') border-rose-400 @enderror">
-                        <input type="text" id="final_number_prefix" 
-                               value="{{ old('final_number') ? substr(old('final_number'), 0, 2) : '01' }}"
-                               maxlength="2"
-                               class="w-16 text-center border-none text-sm px-2 py-2 font-mono focus:ring-0 focus:outline-none"
-                               oninput="updateFinalNumber()">
-                        
-                        <span class="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-2 border-l border-gray-200 w-full" id="final_number_suffix">
-                            /PR/{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}
-                        </span>
-                    </div>
-
-                    <input type="hidden" name="final_number" id="final_number_full" value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}">
-
-                    <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
-                    @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
+                        {{-- Form Input Khusus Admin --}}
+                        <div class="flex items-center w-full rounded-lg border border-gray-300 bg-white focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 overflow-hidden @error('final_number') border-rose-400 @enderror">
+                            <input type="text" id="final_number_prefix" 
+                                   value="{{ old('final_number') ? substr(old('final_number'), 0, 2) : '01' }}"
+                                   maxlength="2"
+                                   class="w-16 text-center border-none text-sm px-2 py-2 font-mono focus:ring-0 focus:outline-none"
+                                   oninput="updateFinalNumber()">
+                            
+                            <span class="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-2 border-l border-gray-200 w-full" id="final_number_suffix">
+                                /PR/{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}
+                            </span>
+                        </div>
+        
+                        <input type="hidden" name="final_number" id="final_number_full" value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}">
+        
+                        <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
+                        @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
+                    @else
+                        {{-- Tampilan Readonly untuk User Biasa --}}
+                        <div class="flex items-center w-full rounded-lg border border-gray-200 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                            <input type="text" 
+                                   value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}"
+                                   disabled
+                                   class="w-full text-sm px-3 py-2 font-mono text-gray-500 dark:text-gray-400 cursor-not-allowed bg-transparent">
+                        </div>
+                        <p class="mt-1.5 text-xs text-gray-500">Nomor Final PR akan diinput oleh Admin saat proses review.</p>
+                    @endif
                 </div>
 
                 <div>
@@ -348,6 +363,9 @@
         const hiddenInput = document.getElementById('final_number_full');
         const suffixText  = document.getElementById('final_number_suffix').innerText;
         
+        // Pastikan elemen ada (hanya ada untuk Admin)
+        if (!prefixInput || !hiddenInput || !suffixText) return;
+
         let prefix = prefixInput.value.replace(/\D/g, '');
         if (prefix.length > 2) prefix = prefix.slice(0, 2);
         prefixInput.value = prefix;
