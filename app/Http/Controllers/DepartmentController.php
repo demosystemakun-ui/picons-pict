@@ -37,6 +37,7 @@ class DepartmentController extends Controller
      */
     public function store(Request $request)
     {
+        // 1. Validasi
         $validated = $request->validate([
             'code'        => ['required', 'string', 'max:20', 'unique:departments,code'],
             'name'        => ['required', 'string', 'max:255'],
@@ -44,9 +45,12 @@ class DepartmentController extends Controller
             'is_active'   => ['nullable', 'boolean'],
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active', true);
+        // 2. Normalisasi & Default Value
+        // Menggunakan has() agar jika field tidak dikirim, tidak dipaksa true
+        $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
         $validated['code']      = strtoupper(trim($validated['code']));
 
+        // 3. Simpan
         Department::create($validated);
 
         return back()->with('success', 'Department created successfully.');
@@ -57,17 +61,24 @@ class DepartmentController extends Controller
      */
     public function update(Request $request, Department $department)
     {
+        // 1. Validasi (Ignore ID saat ini untuk unique code)
         $validated = $request->validate([
-            'code'        => ['required', 'string', 'max:20',
-                              Rule::unique('departments', 'code')->ignore($department->id)],
+            'code'        => [
+                'required', 
+                'string', 
+                'max:20',
+                Rule::unique('departments', 'code')->ignore($department->id)
+            ],
             'name'        => ['required', 'string', 'max:255'],
             'cost_center' => ['nullable', 'string', 'max:50'],
             'is_active'   => ['nullable', 'boolean'],
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active', true);
+        // 2. Normalisasi
+        $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : $department->is_active;
         $validated['code']      = strtoupper(trim($validated['code']));
 
+        // 3. Update
         $department->update($validated);
 
         return back()->with('success', 'Department updated successfully.');

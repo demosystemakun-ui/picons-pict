@@ -11,6 +11,10 @@
     $items       = $purchase->items;
     $departments = \App\Models\Department::orderBy('name')->get(['id', 'name']);
     $stockItems  = \App\Models\Item::orderBy('item_name')->get(['id', 'item_code', 'item_name']);
+    
+    // Ambil data kategori & unit untuk form tambah barang baru
+    $categories  = \App\Models\Category::orderBy('name')->get(['id', 'name']);
+    $units       = \App\Models\Unit::orderBy('name')->get(['id', 'name']);
 
     /* ═══ STATUS PO ═══ */
     $statusMeta = [
@@ -215,19 +219,29 @@
                             $guess         = $stockItems->first(fn ($s) => mb_strtolower(trim($s->item_name)) === mb_strtolower(trim($item->product_name)));
                             $selectedStock = old("items.$i.stock_item_id", $guess?->id);
                         @endphp
-                        <div class="max-w-md">
+                        <div class="max-w-xl">
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Barang di Stok Departemen <span class="text-gray-400 font-normal">(wajib jika ada alokasi)</span>
                             </label>
-                            <select name="items[{{ $i }}][stock_item_id]"
-                                    class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
-                                <option value="">— Pilih barang stok —</option>
-                                @foreach($stockItems as $s)
-                                    <option value="{{ $s->id }}" @selected((string) $selectedStock === (string) $s->id)>
-                                        {{ $s->item_code }} — {{ $s->item_name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="flex gap-2">
+                                <select name="items[{{ $i }}][stock_item_id]"
+                                        id="stock-select-{{ $i }}"
+                                        class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                                    <option value="">— Pilih barang stok —</option>
+                                    @foreach($stockItems as $s)
+                                        <option value="{{ $s->id }}" @selected((string) $selectedStock === (string) $s->id)>
+                                            {{ $s->item_code }} — {{ $s->item_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                
+                                {{-- TOMBOL TAMBAH BARANG BARU --}}
+                                <button type="button" 
+                                        onclick="openAddItemModal({{ $i }})"
+                                        class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition whitespace-nowrap shadow-sm">
+                                    <i data-lucide="plus" class="w-4 h-4"></i> Barang Baru
+                                </button>
+                            </div>
                         </div>
 
                         {{-- Alokasi per departemen (opsional) --}}
@@ -260,6 +274,102 @@
     </form>
 </div>
 
+{{-- MODAL TAMBAH BARANG BARU --}}
+<div id="addItemModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeAddItemModal()"></div>
+        
+        <div class="relative inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
+            <form id="addItemForm" action="{{ route('department-items.store') }}" method="POST" class="p-6">
+                @csrf
+                <!-- Hidden input untuk menyimpan index baris penerimaan -->
+                <input type="hidden" name="row_index" id="modalRowIndex" value="">
+
+                <div class="flex items-start gap-4 mb-5 border-b border-gray-100 dark:border-gray-700 pb-4">
+                    <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                        <i data-lucide="package-plus" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 mt-1">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white leading-6">Tambah Barang Stok Baru</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Barang ini akan ditambahkan ke master stok departemen dan otomatis terpilih pada form penerimaan.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Item Code</label>
+                            <input type="text" name="item_code" required placeholder="Cth: ITM-003"
+                                   class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Status</label>
+                            <select name="status" class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Item Name</label>
+                        <input type="text" name="item_name" required placeholder="Nama lengkap barang"
+                               class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Category</label>
+                            <select name="category_id" required class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="">-- Pilih Kategori --</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Unit</label>
+                            <select name="unit_id" required class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="">-- Pilih Satuan --</option>
+                                @foreach ($units as $unit)
+                                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Minimum Stock</label>
+                            <input type="number" min="0" name="minimum_stock" value="0" required 
+                                   class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Current Stock</label>
+                            <input type="number" min="0" name="current_stock" value="0" required 
+                                   class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Description</label>
+                        <textarea name="description" rows="2" class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <button type="button" onclick="closeAddItemModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition">
+                        Simpan & Pilih
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 (function () {
@@ -268,6 +378,35 @@
     const DEPARTMENTS = @json($departments);
     const counters = {};
 
+    // --- LOGIKA MODAL TAMBAH BARANG BARU ---
+    window.openAddItemModal = function(rowIndex) {
+        document.getElementById('modalRowIndex').value = rowIndex;
+        document.getElementById('addItemModal').classList.remove('hidden');
+    };
+
+    window.closeAddItemModal = function() {
+        document.getElementById('addItemModal').classList.add('hidden');
+        document.getElementById('addItemForm').reset();
+    };
+
+    // Auto-select item baru setelah redirect (menggunakan session flash)
+    @if(session('new_item_id') && session('new_item_row') !== null)
+        document.addEventListener('DOMContentLoaded', function() {
+            const rowIndex = "{{ session('new_item_row') }}";
+            const newItemId = "{{ session('new_item_id') }}";
+            const selectElement = document.getElementById('stock-select-' + rowIndex);
+            
+            if (selectElement) {
+                // Cek apakah opsi baru sudah ada di select (jika halaman direload tanpa ajax)
+                // Jika tidak ada, kita perlu menambahkannya secara manual atau biarkan server yang render ulang.
+                // Asumsi: controller me-redirect back() dan view me-render ulang data $stockItems terbaru.
+                selectElement.value = newItemId;
+                selectElement.dispatchEvent(new Event('change'));
+            }
+        });
+    @endif
+
+    // --- LOGIKA ALOKASI DEPARTEMEN (BAWAAN) ---
     function deptOptions() {
         return '<option value="">Pilih departemen</option>' +
             DEPARTMENTS.map(d => `<option value="${d.id}">${String(d.name).replace(/</g, '&lt;')}</option>`).join('');
