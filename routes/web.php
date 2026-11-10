@@ -153,7 +153,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
 
-        // ═══ UPDATE NOMOR PR (KHUSUS ADMIN) ═══
+        // ═══ UPDATE NOMOR PR AWAL (KHUSUS ADMIN) ═══
         Route::patch('/{procurementRequest}/update-number', [ProcurementRequestController::class, 'updateNumber'])
             ->name('update-number')
             ->middleware('role:Super Admin|Admin');
@@ -175,6 +175,11 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('/final-pr/create', [VendorComparisonController::class, 'createFinalPr'])->name('final-pr.create');
             Route::post('/final-pr/store', [VendorComparisonController::class, 'storeFinalPr'])->name('final-pr.store');
+
+            // ═══ UPDATE NOMOR FINAL PR (KHUSUS ADMIN) ═══
+            Route::patch('/update-final-number', [VendorComparisonController::class, 'updateFinalNumber'])
+                ->name('update-final-number')
+                ->middleware('role:Super Admin|Admin');
         });
 
         // ═══════════════════════════════════════════════════════════
