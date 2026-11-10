@@ -11,8 +11,25 @@ class ItemController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:master.items.view')->only(['index', 'show']);
-        $this->middleware('permission:master.items.manage')->except(['index', 'show']);
+        // BYPASS: Jika user adalah Super Admin, izinkan akses penuh tanpa cek permission
+        $this->middleware(function ($request, $next) {
+            if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
+                return $next($request);
+            }
+
+            // Untuk role lain, terapkan permission seperti biasa
+            if ($request->routeIs('items.index') || $request->routeIs('items.show')) {
+                if (!auth()->user()->can('master.items.view')) {
+                    abort(403);
+                }
+            } else {
+                if (!auth()->user()->can('master.items.manage')) {
+                    abort(403);
+                }
+            }
+
+            return $next($request);
+        });
     }
 
     public function index(Request $request)
