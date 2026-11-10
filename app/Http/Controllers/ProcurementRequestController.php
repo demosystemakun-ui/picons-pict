@@ -73,20 +73,10 @@ class ProcurementRequestController extends Controller
 
     public function store(Request $request)
     {
-        // --- PERBAIKAN: VALIDASI NOMOR PR (NO) ---
-        $validated = $request->validate([
-            'no' => [
-                'required',
-                'string',
-                function ($attribute, $value, $fail) {
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+        $user = auth()->user();
+        $isAdmin = $user->hasAnyRole(['Super Admin', 'Admin']);
 
-                    if ($existsInNo || $existsInFinal) {
-                        $fail('Nomor PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
-                    }
-                },
-            ],
+        $rules = [
             'date'                  => 'required|date',
             'department_id'         => 'required|exists:departments,id',
             'request_by'            => 'required|string|max:255',
@@ -110,7 +100,23 @@ class ProcurementRequestController extends Controller
 
             'consumable_request_ids'      => 'nullable|array',
             'consumable_request_ids.*'    => 'exists:consumable_requests,id'
-        ]);
+        ];
+
+        if ($isAdmin) {
+            $rules['no'] = [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+                    if ($existsInNo || $existsInFinal) {
+                        $fail('Nomor PR ini sudah digunakan.');
+                    }
+                },
+            ];
+        }
+
+        $validated = $request->validate($rules);
 
         DB::beginTransaction();
         try {
@@ -125,6 +131,12 @@ class ProcurementRequestController extends Controller
             $validated['is_services']     = ($orderType === 'services');
             $validated['status']          = 'pending';
             $validated['source']          = $request->has('consumable_request_ids') ? 'consumable' : 'manual';
+
+            // ═══ LOGIKA NOMOR OTOMATIS ═══
+            if (!$isAdmin || empty($validated['no'])) {
+                $validated['no'] = 'DRAFT-' . date('Ymd') . '-' . str_pad(ProcurementRequest::whereDate('created_at', today())->count() + 1, 3, '0', STR_PAD_LEFT);
+            }
+            // ══════════════════════════════
 
             $itemsData = $validated['items'] ?? [];
             
@@ -179,6 +191,33 @@ class ProcurementRequestController extends Controller
             Log::error('Store PR Error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Failed to create PR: ' . $e->getMessage());
         }
+    }
+
+    public function updateNumber(Request $request, ProcurementRequest $procurementRequest)
+    {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+            abort(403, 'Only Admin can edit PR number.');
+        }
+
+        $request->validate([
+            'no' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) use ($procurementRequest) {
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)
+                        ->where('id', '!=', $procurementRequest->id)
+                        ->exists();
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+                    if ($existsInNo || $existsInFinal) {
+                        $fail('Nomor PR ini sudah digunakan.');
+                    }
+                },
+            ],
+        ]);
+
+        $procurementRequest->update(['no' => $request->no]);
+
+        return back()->with('success', 'Nomor PR berhasil diperbarui.');
     }
 
     public function show(ProcurementRequest $procurementRequest)

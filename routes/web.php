@@ -146,14 +146,17 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
         // ═══ LIST & GLOBAL ═══
-        // Menu ini sekarang bisa diakses oleh SEMUA user yang login.
-        // Pembatasan data per departemen dilakukan di dalam Controller.
         Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
         Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
 
         // ═══ CREATE & STORE PR AWAL ═══
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
+
+        // ═══ UPDATE NOMOR PR (KHUSUS ADMIN) ═══
+        Route::patch('/{procurementRequest}/update-number', [ProcurementRequestController::class, 'updateNumber'])
+            ->name('update-number')
+            ->middleware('role:Super Admin|Admin');
 
         // ═══════════════════════════════════════════════════════════
         // VENDOR COMPARISON (per PR)

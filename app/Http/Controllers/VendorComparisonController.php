@@ -151,7 +151,6 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
-        // --- PERBAIKAN: VALIDASI FINAL NUMBER ---
         $validated = $request->validate([
             'final_number' => [
                 'required',
@@ -180,7 +179,6 @@ class VendorComparisonController extends Controller
             'cfo_name'             => 'nullable|string|max:255',
             'ceo_name'             => 'nullable|string|max:255',
         ]);
-        // ----------------------------------------
 
         DB::beginTransaction();
         try {

@@ -81,11 +81,21 @@
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
                     <div class="sm:col-span-7">
                         <label for="no" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                            Reference No. <span class="text-red-500">*</span>
+                            Reference No.
+                            @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
+                                <span class="text-red-500">*</span>
+                            @endif
                         </label>
-                        <input type="text" id="no" name="no"
-                               value="{{ old('no', $prefill['no'] ?? $suggestedNo) }}" required
-                               class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
+                        
+                        @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
+                            <input type="text" id="no" name="no"
+                                   value="{{ old('no', $prefill['no'] ?? $suggestedNo) }}" required
+                                   class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">
+                        @else
+                            <input type="text" value="AUTO-GENERATED" disabled
+                                   class="w-full h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm px-3 cursor-not-allowed">
+                            <p class="mt-1 text-[11px] text-gray-500">Nomor PR akan diisi oleh Admin saat proses review.</p>
+                        @endif
                     </div>
                     <div class="sm:col-span-5">
                         <label for="date" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
