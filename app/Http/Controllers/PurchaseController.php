@@ -12,25 +12,35 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
-    /**
-     * Status PR yang boleh dibuatkan PO.
-     * PO hanya boleh dibuat setelah PR Final divalidasi (TTD Final).
-     */
     private const PO_ALLOWED_STATUSES = ['final_approved'];
+    
+    // Helper untuk cek role yang boleh membuat/manage PO
+    private function isAdminOrDeptAdmin(): bool
+    {
+        return auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
+    }
 
     /* ═══════════════════════════════════════════════════════════════
-       INDEX — Daftar Purchase Order
+       INDEX — Daftar Purchase Order (Semua role bisa melihat)
     ═══════════════════════════════════════════════════════════════ */
     public function index(Request $request)
     {
         $user = auth()->user();
         $query = Purchase::with(['vendor', 'procurementRequest.department'])->latest();
 
-        // PEMBATASAN AKSES: Admin Departemen hanya lihat PO departemennya
-        if ($user->hasRole('Admin Departemen')) {
-            $query->whereHas('procurementRequest', function ($q) use ($user) {
-                $q->where('department_id', $user->department_id);
-            });
+        // PEMBATASAN AKSES: 
+        // 1. Admin Departemen -> Hanya PO departemennya
+        // 2. User Biasa -> Hanya PO yang terkait dengan PR miliknya
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                $query->whereHas('procurementRequest', function ($q) use ($user) {
+                    $q->where('department_id', $user->department_id);
+                });
+            } else {
+                $query->whereHas('procurementRequest', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
         }
 
         // Fitur Filter Status
@@ -53,10 +63,15 @@ class PurchaseController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       CREATE — Form Checkout (Pembuatan PO)
+       CREATE — Form Checkout (HANYA ADMIN/ADMIN DEPT)
     ═══════════════════════════════════════════════════════════════ */
     public function create(ProcurementRequest $procurement)
     {
+        // ═══ PENGAMANAN ROLE ═══
+        if (!$this->isAdminOrDeptAdmin()) {
+            abort(403, 'Only Admin can create a Purchase Order.');
+        }
+
         $user = auth()->user();
 
         if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
@@ -69,7 +84,7 @@ class PurchaseController extends Controller
                 ->with('error', 'Purchase Order hanya dapat dibuat dari PR Final yang sudah divalidasi (Final Approved). Status saat ini: ' . $procurement->status . '.');
         }
 
-        // Cegah PO ganda untuk PR yang sama
+        // Cegah PO ganda
         $existingPo = Purchase::where('procurement_request_id', $procurement->id)->first();
         if ($existingPo) {
             return redirect()
@@ -82,10 +97,15 @@ class PurchaseController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       STORE — Proses Simpan PO
+       STORE — Proses Simpan PO (HANYA ADMIN/ADMIN DEPT)
     ═══════════════════════════════════════════════════════════════ */
     public function store(Request $request, ProcurementRequest $procurement)
     {
+        // ═══ PENGAMANAN ROLE ═══
+        if (!$this->isAdminOrDeptAdmin()) {
+            abort(403, 'Only Admin can create a Purchase Order.');
+        }
+
         $user = auth()->user();
 
         if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
@@ -96,7 +116,6 @@ class PurchaseController extends Controller
             return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
         }
 
-        // Cegah PO ganda untuk PR yang sama
         $existingPo = Purchase::where('procurement_request_id', $procurement->id)->first();
         if ($existingPo) {
             return redirect()
@@ -116,7 +135,6 @@ class PurchaseController extends Controller
         try {
             $vendor = $procurement->vendors()->findOrFail($validated['vendor_id']);
 
-            // Buat Purchase Record
             $purchase = Purchase::create([
                 'procurement_request_id' => $procurement->id,
                 'vendor_id'              => $vendor->id,
@@ -127,7 +145,6 @@ class PurchaseController extends Controller
                 'notes'                  => $validated['notes'] ?? null,
             ]);
 
-            // Copy item dari Vendor Comparison ke Purchase Items
             foreach ($vendor->items as $item) {
                 PurchaseItem::create([
                     'purchase_id'  => $purchase->id,
@@ -136,9 +153,6 @@ class PurchaseController extends Controller
                     'unit_price'   => $item->unit_price,
                 ]);
             }
-
-            // Status PR tetap 'final_approved' sampai barang diterima (receive()).
-            // Tidak ada perubahan status PR di sini.
 
             DB::commit();
 
@@ -159,10 +173,18 @@ class PurchaseController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasRole('Admin Departemen')) {
-            $procurement = $purchase->procurementRequest;
-            if ($procurement->department_id !== $user->department_id) {
-                abort(403, 'Anda tidak memiliki akses ke PO departemen lain.');
+        // Filter data sesuai role
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                $procurement = $purchase->procurementRequest;
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'Anda tidak memiliki akses ke PO departemen lain.');
+                }
+            } else {
+                $procurement = $purchase->procurementRequest;
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'Anda tidak memiliki akses ke PO ini.');
+                }
             }
         }
 
@@ -171,10 +193,15 @@ class PurchaseController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       RECEIVE — Proses Penerimaan Barang & Distribusi Stok
+       RECEIVE — Proses Penerimaan Barang (HANYA ADMIN/ADMIN DEPT)
     ═══════════════════════════════════════════════════════════════ */
     public function receive(Request $request, Purchase $purchase)
     {
+        // ═══ PENGAMANAN ROLE ═══
+        if (!$this->isAdminOrDeptAdmin()) {
+            abort(403, 'Only Admin can process goods receipt.');
+        }
+
         $user = auth()->user();
 
         if ($user->hasRole('Admin Departemen')) {
@@ -205,7 +232,6 @@ class PurchaseController extends Controller
                 $qtyReceived = (int) $data['qty_received'];
                 $qtyDamaged  = (int) $data['qty_damaged'];
 
-                // Update qty penerimaan
                 $item->qty_received += $qtyReceived;
                 $item->qty_damaged  += $qtyDamaged;
                 $item->save();
@@ -214,7 +240,6 @@ class PurchaseController extends Controller
                     $allReceived = false;
                 }
 
-                // DISTRIBUSI STOK KE DEPARTEMEN
                 if (!empty($data['breakdowns'])) {
                     $totalAlokasi = (int) collect($data['breakdowns'])->sum('qty_received');
 
@@ -222,7 +247,6 @@ class PurchaseController extends Controller
                         throw new \Exception("Total alokasi departemen ({$totalAlokasi}) tidak sama dengan Qty Datang ({$qtyReceived}) untuk item {$item->product_name}.");
                     }
 
-                    // Barang stok (master Item) yang dituju harus dipilih
                     $stockItemId = $data['stock_item_id'] ?? null;
                     if (!$stockItemId) {
                         throw new \Exception("Pilih barang stok untuk item {$item->product_name} sebelum mengalokasikan ke departemen.");
@@ -230,12 +254,8 @@ class PurchaseController extends Controller
 
                     foreach ($data['breakdowns'] as $bd) {
                         $qty = (int) $bd['qty_received'];
-                        if ($qty <= 0) {
-                            continue;
-                        }
+                        if ($qty <= 0) continue;
 
-                        // Sama seperti InventoryStockController@store:
-                        // tambah stok departemen + catat riwayat StockIn
                         $departmentStock = DepartmentStock::firstOrCreate(
                             [
                                 'department_id' => $bd['department_id'],
@@ -257,12 +277,10 @@ class PurchaseController extends Controller
                 }
             }
 
-            // Update Status PO
             $purchase->update([
                 'status' => $allReceived ? 'completed' : 'partially_received'
             ]);
 
-            // Update Status PR: final_approved -> received (alur baru)
             $procurementRequest = $purchase->procurementRequest;
             if ($allReceived && $procurementRequest->status === 'final_approved') {
                 $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
