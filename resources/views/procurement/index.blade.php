@@ -26,7 +26,7 @@
         </a>
     </div>
 
-    {{-- TAB FILTER (Hanya menyisakan 3 Tab Utama) --}}
+    {{-- TAB FILTER --}}
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
             {{-- Tab All PRs --}}
@@ -122,6 +122,9 @@
                                 'reimbursement'  => 'Reimbursement',
                             ];
                             $currMethod = $r->procurement_method ?? 'po';
+
+                            // Cek apakah PR ini sudah masuk tahap final
+                            $isFinalPR = $r->final_number && in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-4 py-3">
@@ -257,10 +260,11 @@
                                                     </a>
                                                 @endif
 
-                                                <button type="button" onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                {{-- PRINT & PDF: Menggunakan $isFinalPR --}}
+                                                <button type="button" onclick="printDirect('{{ $isFinalPR ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                     <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
                                                 </button>
-                                                <a href="{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                <a href="{{ $isFinalPR ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                     <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
                                                 </a>
 
