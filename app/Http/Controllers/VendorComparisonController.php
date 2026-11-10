@@ -132,9 +132,10 @@ class VendorComparisonController extends Controller
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
     {
         $user = auth()->user();
+        $isAdmin = $user->hasAnyRole(['Super Admin', 'Admin']);
 
         // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
-        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+        if (!$isAdmin) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
                     abort(403, 'You do not have access to this PR.');
@@ -151,14 +152,23 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
-        // ═══ PENGAMANAN BACKEND: HANYA ADMIN YANG BOLEH INPUT NOMOR FINAL ═══
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
-            abort(403, 'Only Admin can input the Final PR Number.');
-        }
-        // ═══════════════════════════════════════════════════════════════════
+        // ═══ ATURAN VALIDASI ═══
+        $rules = [
+            'budget_type'          => 'required|in:Budgeted,Non Budgeted',
+            'final_description'    => 'required|string|max:255',
+            'reason_choose_vendor' => 'required|string|max:2000',
+            'request_date'         => 'required|date',
+            'request_by'           => 'required|string|max:255',
+            'division'             => 'required|string|max:255',
+            'prepared_by'          => 'required|string|max:255',
+            'accounting_mgr_name'  => 'nullable|string|max:255',
+            'cfo_name'             => 'nullable|string|max:255',
+            'ceo_name'             => 'nullable|string|max:255',
+        ];
 
-        $validated = $request->validate([
-            'final_number' => [
+        // Hanya Admin yang wajib mengisi final_number
+        if ($isAdmin) {
+            $rules['final_number'] = [
                 'required',
                 'string',
                 'max:100',
@@ -173,25 +183,17 @@ class VendorComparisonController extends Controller
                         $fail('Nomor Final PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
                     }
                 },
-            ],
-            'budget_type'          => 'required|in:Budgeted,Non Budgeted',
-            'final_description'    => 'required|string|max:255',
-            'reason_choose_vendor' => 'required|string|max:2000',
-            'request_date'         => 'required|date',
-            'request_by'           => 'required|string|max:255',
-            'division'             => 'required|string|max:255',
-            'prepared_by'          => 'required|string|max:255',
-            'accounting_mgr_name'  => 'nullable|string|max:255',
-            'cfo_name'             => 'nullable|string|max:255',
-            'ceo_name'             => 'nullable|string|max:255',
-        ]);
+            ];
+        }
+        // ══════════════════════════
+
+        $validated = $request->validate($rules);
 
         DB::beginTransaction();
         try {
-            $procurement->update([
+            $updateData = [
                 'budget_type'          => $validated['budget_type'],
                 'description'          => $validated['final_description'],
-                'final_number'         => $validated['final_number'],
                 'reason_choose_vendor' => $validated['reason_choose_vendor'],
                 'request_date'         => $validated['request_date'],
                 'request_by'           => $validated['request_by'],
@@ -202,7 +204,14 @@ class VendorComparisonController extends Controller
                 'ceo_name'             => $validated['ceo_name'] ?? null,
                 'final_total_price'    => $procurement->winnerVendor->total_price,
                 'status'               => 'pending_review_final',
-            ]);
+            ];
+
+            // Simpan nomor hanya jika diinput oleh Admin
+            if ($isAdmin && !empty($validated['final_number'])) {
+                $updateData['final_number'] = $validated['final_number'];
+            }
+
+            $procurement->update($updateData);
 
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
@@ -216,7 +225,7 @@ class VendorComparisonController extends Controller
                         'department'             => $procurement->department->name ?? '-',
                         'cost_department'        => $procurement->department->name ?? '-',
                         'status'                 => 'pending',
-                        'notes'                  => 'Otomatis dibuat dari PR: ' . $procurement->final_number,
+                        'notes'                  => 'Otomatis dibuat dari PR: ' . ($procurement->final_number ?? 'DRAFT'),
                     ]);
 
                     if ($procurement->winnerVendor) {
@@ -248,6 +257,11 @@ class VendorComparisonController extends Controller
 
     public function approveFinalFormat(ProcurementRequest $procurementRequest)
     {
+        // Pastikan nomor sudah diisi sebelum approve
+        if (!$procurementRequest->final_number) {
+            return back()->with('error', 'Nomor Final PR belum diisi. Silakan input nomor terlebih dahulu.');
+        }
+
         if ($procurementRequest->status === 'pending_review_final') {
             $procurementRequest->update([
                 'status' => 'pending_final_sign',

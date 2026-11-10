@@ -222,14 +222,11 @@
                         <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
                         @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                     @else
-                        {{-- Tampilan Readonly untuk User Biasa --}}
-                        <div class="flex items-center w-full rounded-lg border border-gray-200 bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                            <input type="text" 
-                                   value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}"
-                                   disabled
-                                   class="w-full text-sm px-3 py-2 font-mono text-gray-500 dark:text-gray-400 cursor-not-allowed bg-transparent">
+                        {{-- Tampilan Informasi untuk User Biasa --}}
+                        <div class="flex items-center w-full rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+                            <svg class="w-4 h-4 text-amber-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-sm text-amber-700 dark:text-amber-300">Nomor Final PR akan diisi oleh Admin saat proses review.</span>
                         </div>
-                        <p class="mt-1.5 text-xs text-gray-500">Nomor Final PR akan diinput oleh Admin saat proses review.</p>
                     @endif
                 </div>
 
