@@ -26,31 +26,24 @@
         </a>
     </div>
 
-    {{-- TAB FILTER --}}
+    {{-- TAB FILTER (Hanya menyisakan 3 Tab Utama) --}}
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+            {{-- Tab All PRs --}}
             <a href="{{ route('procurement.index') }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
-                      {{ !request('source') && !request('stage') ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                      {{ !request('stage') ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
                 All PRs
             </a>
-            <a href="{{ route('procurement.index', ['source' => 'manual']) }}" 
-               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
-                      {{ request('source') == 'manual' ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
-                Direct PR (Manual)
-            </a>
-            <a href="{{ route('procurement.index', ['source' => 'consumable']) }}" 
-               class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors
-                      {{ request('source') == 'consumable' ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
-                PR from Consumable
-            </a>
             
+            {{-- Tab Tahap 1 --}}
             <a href="{{ route('procurement.index', ['stage' => 'tahap1']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
                       {{ request('stage') == 'tahap1' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
                 PR Tahap 1
             </a>
 
+            {{-- Tab Tahap 2 (Final) --}}
             <a href="{{ route('procurement.index', ['stage' => 'final']) }}" 
                class="whitespace-nowrap pb-3 px-1 border-b-2 text-sm font-medium transition-colors flex items-center gap-2
                       {{ request('stage') == 'final' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' }}">
@@ -181,19 +174,17 @@
                                 </span>
                             </td>
 
-                            {{-- KOLOM ACTIONS YANG SUDAH DIRAPIKAN --}}
+                            {{-- KOLOM ACTIONS --}}
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1">
                                     
                                     {{-- ═══ JIKA DI TAB VENDOR COMPARISON (TAHAP 2) ═══ --}}
                                     @if(request('stage') == 'final')
                                         
-                                        {{-- 1. Tombol View Draft PDF --}}
                                         <a href="{{ route('procurement.pdf.final', $r) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-teal-600 bg-white text-teal-700 hover:bg-teal-50 transition" title="Lihat Draft PDF">
                                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Draft
                                         </a>
 
-                                        {{-- 2. Tombol Approve Format --}}
                                         @if($currStatus === 'pending_review_final')
                                             <form action="{{ route('procurement.approve-final-format', $r) }}" method="POST" class="inline">
                                                 @csrf @method('PATCH')
@@ -202,7 +193,6 @@
                                                 </button>
                                             </form>
                                         
-                                        {{-- 3. Tombol Validate TTD --}}
                                         @elseif($currStatus === 'pending_final_sign')
                                             <form action="{{ route('procurement.validate-final-signature', $r) }}" method="POST" class="inline">
                                                 @csrf @method('PATCH')
@@ -212,38 +202,35 @@
                                                 </button>
                                             </form>
 
-                                        {{-- 4. Tombol Detail Final (Jika sudah selesai) --}}
                                         @elseif(in_array($currStatus, ['final_approved', 'received', 'completed']))
                                             <a href="{{ route('procurement.comparisons.index', $r) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-600 hover:bg-slate-700 text-white shadow-sm transition">
                                                 <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Detail
                                             </a>
                                         @endif
 
-                                    {{-- ═══ TOMBOL AKSI STANDAR (TAB LAIN) ═══ --}}
+                                    {{-- ═══ TOMBOL AKSI STANDAR (TAB ALL PR & TAHAP 1) ═══ --}}
                                     @else
                                         
-                                        {{-- Aksi Utama: View Details (Selalu Tampil) --}}
+                                        {{-- Aksi Utama: View Details --}}
                                         <a href="{{ route('procurement.show', $r) }}" class="p-1.5 text-gray-400 hover:text-slate-900 dark:hover:text-white rounded transition" title="View Details">
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
 
-                                        {{-- Aksi Cepat: Approve (Hanya jika pending) --}}
+                                        {{-- Aksi Cepat: Approve --}}
                                         @if($currStatus === 'pending')
                                             <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="px-2 py-1 text-[11px] font-semibold rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50 transition" title="Approve Request">
                                                 Approve
                                             </button>
                                         @endif
 
-                                        {{-- Dropdown Menu untuk Aksi Sekunder (Fixed Position) --}}
+                                        {{-- Dropdown Menu --}}
                                         <div class="inline-block">
                                             <button type="button" onclick="toggleDropdown('dropdown-{{ $r->id }}', this)" class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition" title="More Actions">
                                                 <i data-lucide="more-vertical" class="w-4 h-4"></i>
                                             </button>
 
-                                            {{-- Isi Dropdown (Class fixed, z-[100]) --}}
                                             <div id="dropdown-{{ $r->id }}" class="hidden fixed w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] py-1 text-left">
                                                 
-                                                {{-- Aksi Revisi / Reject --}}
                                                 @if($currStatus === 'pending')
                                                     <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
                                                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Request Revision
@@ -254,7 +241,6 @@
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
 
-                                                {{-- Approve TTD (Tahap 1) --}}
                                                 @if($currStatus === 'approved' && !$isAllSigned)
                                                     <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')">
                                                         @csrf @method('PATCH')
@@ -265,14 +251,12 @@
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
 
-                                                {{-- Vendor Comparison --}}
                                                 @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']) || ($currStatus === 'approved' && $isAllSigned))
                                                     <a href="{{ route('procurement.comparisons.index', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                         <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Vendor Comparison
                                                     </a>
                                                 @endif
 
-                                                {{-- Print & PDF --}}
                                                 <button type="button" onclick="printDirect('{{ in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']) ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                     <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
                                                 </button>
@@ -280,7 +264,6 @@
                                                     <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
                                                 </a>
 
-                                                {{-- Edit Data --}}
                                                 @if(in_array($currStatus, ['pending', 'revision']))
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                     <a href="{{ route('procurement.edit', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
@@ -360,7 +343,6 @@
 <script>
 // --- FUNGSI DROPDOWN (FIXED POSITION) ---
 function toggleDropdown(id, btnElement) {
-    // Tutup semua dropdown lain yang terbuka
     document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
         if (el.id !== id) el.classList.add('hidden');
     });
@@ -368,39 +350,30 @@ function toggleDropdown(id, btnElement) {
     const dropdown = document.getElementById(id);
     if (!dropdown) return;
 
-    // Jika sedang terbuka, tutup dan return
     if (!dropdown.classList.contains('hidden')) {
         dropdown.classList.add('hidden');
         return;
     }
 
-    // Hitung posisi tombol yang diklik
     const rect = btnElement.getBoundingClientRect();
-    
-    // Tampilkan dropdown secara hidden dulu untuk mendapatkan ukurannya
     dropdown.classList.remove('hidden');
     const dropdownRect = dropdown.getBoundingClientRect();
 
-    // Posisi default: di bawah tombol, rata kanan
     let top = rect.bottom + 4;
     let left = rect.right - dropdownRect.width;
 
-    // Cek jika dropdown keluar dari layar bagian bawah
     if (top + dropdownRect.height > window.innerHeight) {
-        top = rect.top - dropdownRect.height - 4; // Muncul ke atas tombol
+        top = rect.top - dropdownRect.height - 4;
     }
 
-    // Cek jika dropdown keluar dari layar bagian kiri
     if (left < 10) {
         left = rect.left;
     }
 
-    // Terapkan posisi fixed
     dropdown.style.top = `${top}px`;
     dropdown.style.left = `${left}px`;
 }
 
-// Tutup dropdown jika user klik di luar area dropdown atau tombol
 document.addEventListener('click', function(event) {
     if (!event.target.closest('.inline-block') && !event.target.closest('[id^="dropdown-"]')) {
         document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
@@ -409,12 +382,11 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Tutup dropdown jika user melakukan scroll (agar tidak melayang aneh)
 window.addEventListener('scroll', function() {
     document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
         el.classList.add('hidden');
     });
-}, true); // Capture phase true agar menangkap scroll dari dalam tabel juga
+}, true);
 
 // --- FUNGSI PRINT ---
 function printDirect(url) {

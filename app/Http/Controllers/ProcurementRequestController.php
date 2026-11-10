@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProcurementRequestController extends Controller
 {
-           public function index(Request $request)
+    public function index(Request $request)
     {
         $user  = auth()->user();
         $query = ProcurementRequest::latest();
@@ -22,9 +22,8 @@ class ProcurementRequestController extends Controller
             $query->where('department_id', $user->department_id);
         }
 
-        if ($request->filled('source')) {
-            $query->where('source', $request->source);
-        }
+        // Filter 'source' (manual/consumable) dihapus karena sudah digabung ke All PRs
+        // Informasi source tetap tampil via badge di tabel
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
