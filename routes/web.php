@@ -146,10 +146,10 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
         // ═══ LIST & GLOBAL ═══
-        Route::middleware('role:Super Admin|Admin')->group(function () {
-            Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
-            Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
-        });
+        // Menu ini sekarang bisa diakses oleh SEMUA user yang login.
+        // Pembatasan data per departemen dilakukan di dalam Controller.
+        Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
+        Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
 
         // ═══ CREATE & STORE PR AWAL ═══
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
@@ -192,12 +192,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('validate-signature')
             ->middleware('role:Super Admin');
 
-        // ✅ ROUTE BARU UNTUK APPROVE FORMAT FINAL PR (TAHAP 2)
         Route::patch('/{procurementRequest}/approve-final-format', [VendorComparisonController::class, 'approveFinalFormat'])
             ->name('approve-final-format')
             ->middleware('role:Super Admin');
 
-        // ✅ ROUTE BARU UNTUK VALIDASI TTD FINAL (TAHAP 3)
         Route::patch('/{procurementRequest}/validate-final-signature', [VendorComparisonController::class, 'validateFinalSignature'])
             ->name('validate-final-signature')
             ->middleware('role:Super Admin');

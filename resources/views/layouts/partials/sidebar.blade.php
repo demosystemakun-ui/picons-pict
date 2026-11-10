@@ -16,7 +16,6 @@
              alt="PICONS Logo"
              class="w-36 h-16 object-contain rounded-lg shrink-0">
 
-        {{-- Tombol close — HANYA muncul di mobile --}}
         <button type="button"
                 @click="sidebarOpen = false"
                 class="lg:hidden absolute right-5 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition"
@@ -57,7 +56,6 @@
             </button>
         </div>
 
-        {{-- Pesan jika tidak ada hasil --}}
         <p id="sidebarNoResult" class="hidden text-xs text-white-500 px-2 py-4 text-center">
             Menu tidak ditemukan.
         </p>
@@ -121,30 +119,32 @@
         @php
             $procurementLinks = [];
             
-            // Menu untuk Admin & Super Admin
-            if (auth()->check() && auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+            // Semua user yang login bisa mengakses menu Procurement
+            if (auth()->check()) {
                 // 1. Procurement Request
                 $procurementLinks[] = ['route' => 'procurement.index', 'label' => 'Procurement Request'];
                 
-                // 2. Vendor Comparison (BARU)
+                // 2. Vendor Comparison
                 $procurementLinks[] = ['route' => 'procurement.comparisons.global', 'label' => 'Vendor Comparison'];
                 
                 // 3. Purchase Orders (PO)
                 $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];
+                
+                // Menu Keuangan
+                $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
+                $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
+                $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
             }
-
-            // Menu Keuangan (Bisa diakses Admin & Departemen)
-            $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
-            $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
-            $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
         @endphp
 
-        @include('layouts.partials.sidebar-group', [
-            'label'  => 'Procurement',
-            'icon'   => 'envelope',
-            'active' => request()->routeIs(['procurement.*', 'reimbursement.*', 'cash-advances.*', 'liquidations.*']),
-            'links'  => $procurementLinks,
-        ])
+        @if(count($procurementLinks) > 0)
+            @include('layouts.partials.sidebar-group', [
+                'label'  => 'Procurement',
+                'icon'   => 'envelope',
+                'active' => request()->routeIs(['procurement.*', 'reimbursement.*', 'cash-advances.*', 'liquidations.*']),
+                'links'  => $procurementLinks,
+            ])
+        @endif
 
         {{-- ─── Reports ─── --}}
         @include('layouts.partials.sidebar-group', [
@@ -185,7 +185,6 @@
 
         clearBtn.classList.toggle('hidden', query === '');
 
-        // Ambil semua <a> menu di dalam nav
         const links = nav.querySelectorAll('a[href]');
         let anyVisible = false;
 
