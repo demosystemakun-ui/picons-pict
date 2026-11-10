@@ -29,9 +29,19 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
         }
 
-        if ($user->hasRole('Admin Departemen') && $procurement->department_id !== $user->department_id) {
-            abort(403, 'You do not have access to vendor comparisons from other departments.');
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to vendor comparisons from other departments.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this vendor comparison.');
+                }
+            }
         }
+        // ═════════════════════════════════════════
 
         $procurement->load('vendors.items', 'winnerVendor');
 
@@ -40,8 +50,19 @@ class VendorComparisonController extends Controller
 
     public function globalIndex()
     {
+        $user = auth()->user();
+
         $procurements = ProcurementRequest::whereHas('vendors')
             ->with(['vendors', 'winnerVendor', 'department'])
+            // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+            ->when(!$user->hasAnyRole(['Super Admin', 'Admin']), function ($q) use ($user) {
+                if ($user->hasRole('Admin Departemen')) {
+                    $q->where('department_id', $user->department_id);
+                } else {
+                    $q->where('user_id', $user->id);
+                }
+            })
+            // ═════════════════════════════════════════
             ->latest()
             ->paginate(15);
 
@@ -50,6 +71,22 @@ class VendorComparisonController extends Controller
 
     public function createFinalPr(ProcurementRequest $procurement)
     {
+        $user = auth()->user();
+
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            }
+        }
+        // ═════════════════════════════════════════
+
         if (!$procurement->winnerVendor) {
             return redirect()
                 ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
@@ -94,6 +131,22 @@ class VendorComparisonController extends Controller
 
     public function storeFinalPr(Request $request, ProcurementRequest $procurement)
     {
+        $user = auth()->user();
+
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            }
+        }
+        // ═════════════════════════════════════════
+
         if (!$procurement->winnerVendor) {
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
@@ -105,12 +158,10 @@ class VendorComparisonController extends Controller
                 'string',
                 'max:100',
                 function ($attribute, $value, $fail) use ($procurement) {
-                    // Cek apakah nomor sudah ada di kolom 'final_number' (kecuali ID saat ini)
                     $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)
                         ->where('id', '!=', $procurement->id)
                         ->exists();
                     
-                    // Cek apakah nomor sudah ada di kolom 'no' (PR Awal)
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
 
                     if ($existsInFinal || $existsInNo) {
@@ -482,6 +533,22 @@ class VendorComparisonController extends Controller
 
     public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
     {
+        $user = auth()->user();
+
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            }
+        }
+        // ═════════════════════════════════════════
+
         if ($vendor->procurement_request_id !== $procurement->id) {
             abort(404);
         }
@@ -503,7 +570,23 @@ class VendorComparisonController extends Controller
 
     public function destroy(ProcurementVendor $vendor)
     {
+        $user = auth()->user();
         $procurement = $vendor->procurementRequest;
+
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            }
+        }
+        // ═════════════════════════════════════════
+
         $vendor->delete();
 
         $this->autoPickWinner($procurement);

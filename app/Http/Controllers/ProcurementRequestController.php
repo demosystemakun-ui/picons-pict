@@ -18,9 +18,19 @@ class ProcurementRequestController extends Controller
         $user  = auth()->user();
         $query = ProcurementRequest::latest();
 
-        if ($user->hasRole('Admin Departemen')) {
+        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+        if ($user->hasAnyRole(['Super Admin', 'Admin'])) {
+            // 1. Super Admin & Admin: Lihat semua data
+        } 
+        elseif ($user->hasRole('Admin Departemen')) {
+            // 2. Admin Departemen: Hanya lihat PR dari departemennya sendiri
             $query->where('department_id', $user->department_id);
+        } 
+        else {
+            // 3. User Biasa: Hanya lihat PR yang dia ajukan sendiri
+            $query->where('user_id', $user->id);
         }
+        // ═════════════════════════════════════════
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
@@ -69,10 +79,7 @@ class ProcurementRequestController extends Controller
                 'required',
                 'string',
                 function ($attribute, $value, $fail) {
-                    // Cek apakah nomor sudah ada di kolom 'no'
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
-                    
-                    // Cek apakah nomor sudah ada di kolom 'final_number'
                     $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
 
                     if ($existsInNo || $existsInFinal) {
@@ -80,7 +87,6 @@ class ProcurementRequestController extends Controller
                     }
                 },
             ],
-            // ------------------------------------------
             'date'                  => 'required|date',
             'department_id'         => 'required|exists:departments,id',
             'request_by'            => 'required|string|max:255',
@@ -179,8 +185,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'You do not have access to PRs from other departments.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to PRs from other departments.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this PR.');
+                }
+            }
         }
 
         $procurementRequest->load('items', 'vendors', 'winnerVendor');
@@ -191,8 +205,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'You do not have access to edit PRs from other departments.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to edit PRs from other departments.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'You do not have access to edit this PR.');
+                }
+            }
         }
 
         $procurementRequest->load('items');
@@ -205,8 +227,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'You do not have access to update PRs from other departments.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to update PRs from other departments.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'You do not have access to update this PR.');
+                }
+            }
         }
 
         $validated = $request->validate([
@@ -306,8 +336,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'You do not have access to delete PRs from other departments.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to delete PRs from other departments.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'You do not have access to delete this PR.');
+                }
+            }
         }
 
         foreach ($procurementRequest->items as $item) {
@@ -326,8 +364,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Unauthorized action.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            }
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
@@ -340,8 +386,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Unauthorized action.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            }
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
@@ -360,8 +414,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Unauthorized action.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            }
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
@@ -389,8 +451,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'Unauthorized action.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'Unauthorized action.');
+                }
+            }
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
@@ -491,18 +561,15 @@ class ProcurementRequestController extends Controller
 
     public function validateFinalSignature(Request $request, ProcurementRequest $procurementRequest)
     {
-        // --- PERBAIKAN: VALIDASI FINAL NUMBER ---
         $request->validate([
             'final_number' => [
                 'required',
                 'string',
                 function ($attribute, $value, $fail) use ($procurementRequest) {
-                    // Cek apakah nomor sudah ada di kolom 'final_number' (kecuali ID saat ini)
                     $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)
                         ->where('id', '!=', $procurementRequest->id)
                         ->exists();
                     
-                    // Cek apakah nomor sudah ada di kolom 'no' (PR Awal)
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
 
                     if ($existsInFinal || $existsInNo) {
@@ -511,7 +578,6 @@ class ProcurementRequestController extends Controller
                 },
             ],
         ]);
-        // --------------------------------------
 
         if ($procurementRequest->status !== 'pending_final_sign') {
             return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
@@ -579,8 +645,16 @@ class ProcurementRequestController extends Controller
     {
         $user = auth()->user();
         
-        if ($user->hasRole('Admin Departemen') && $procurementRequest->department_id !== $user->department_id) {
-            abort(403, 'You cannot process PRs from other departments.');
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurementRequest->department_id !== $user->department_id) {
+                    abort(403, 'You cannot process PRs from other departments.');
+                }
+            } else {
+                if ($procurementRequest->user_id !== $user->id) {
+                    abort(403, 'You cannot process this PR.');
+                }
+            }
         }
 
         $validated = $request->validate([
