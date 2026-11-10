@@ -75,6 +75,7 @@
                         @php
                             $currStatus = $r->status ?? 'pending';
                             $isAllSigned = $r->is_pic_approved && $r->is_ops_approved && $r->is_fem_approved && $r->is_coo_approved;
+                            $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 
                             $displayStatus = $currStatus;
                             if ($currStatus === 'approved' && $isAllSigned) {
@@ -123,7 +124,6 @@
                             ];
                             $currMethod = $r->procurement_method ?? 'po';
 
-                            // Cek apakah PR ini sudah masuk tahap final
                             $isFinalPR = $r->final_number && in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -188,24 +188,28 @@
                                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Draft
                                         </a>
 
-                                        @if($currStatus === 'pending_review_final')
-                                            <form action="{{ route('procurement.approve-final-format', $r) }}" method="POST" class="inline">
-                                                @csrf @method('PATCH')
-                                                <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
-                                                    <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve
-                                                </button>
-                                            </form>
-                                        
-                                        @elseif($currStatus === 'pending_final_sign')
-                                            <form action="{{ route('procurement.validate-final-signature', $r) }}" method="POST" class="inline">
-                                                @csrf @method('PATCH')
-                                                <input type="hidden" name="final_number" value="{{ $r->final_number }}"> 
-                                                <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition" onclick="return confirm('Apakah Manajer sudah menandatangani dokumen ini?')">
-                                                    <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Validate
-                                                </button>
-                                            </form>
+                                        {{-- Tombol Approve & Validate TTD hanya untuk Admin --}}
+                                        @if($isAdmin)
+                                            @if($currStatus === 'pending_review_final')
+                                                <form action="{{ route('procurement.approve-final-format', $r) }}" method="POST" class="inline">
+                                                    @csrf @method('PATCH')
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
+                                                        <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve
+                                                    </button>
+                                                </form>
+                                            
+                                            @elseif($currStatus === 'pending_final_sign')
+                                                <form action="{{ route('procurement.validate-final-signature', $r) }}" method="POST" class="inline">
+                                                    @csrf @method('PATCH')
+                                                    <input type="hidden" name="final_number" value="{{ $r->final_number }}"> 
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition" onclick="return confirm('Apakah Manajer sudah menandatangani dokumen ini?')">
+                                                        <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Validate
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        @endif
 
-                                        @elseif(in_array($currStatus, ['final_approved', 'received', 'completed']))
+                                        @if(in_array($currStatus, ['final_approved', 'received', 'completed']))
                                             <a href="{{ route('procurement.comparisons.index', $r) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-600 hover:bg-slate-700 text-white shadow-sm transition">
                                                 <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Detail
                                             </a>
@@ -219,8 +223,8 @@
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </a>
 
-                                        {{-- Aksi Cepat: Approve --}}
-                                        @if($currStatus === 'pending')
+                                        {{-- Aksi Cepat: Approve (Hanya Admin) --}}
+                                        @if($currStatus === 'pending' && $isAdmin)
                                             <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'approved', '{{ $r->no }}')" class="px-2 py-1 text-[11px] font-semibold rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50 transition" title="Approve Request">
                                                 Approve
                                             </button>
@@ -234,7 +238,8 @@
 
                                             <div id="dropdown-{{ $r->id }}" class="hidden fixed w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] py-1 text-left">
                                                 
-                                                @if($currStatus === 'pending')
+                                                {{-- Revisi & Reject (Hanya Admin) --}}
+                                                @if($currStatus === 'pending' && $isAdmin)
                                                     <button type="button" onclick="openActionModal('{{ route('procurement.status', $r) }}', 'revision', '{{ $r->no }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
                                                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Request Revision
                                                     </button>
@@ -244,7 +249,8 @@
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
 
-                                                @if($currStatus === 'approved' && !$isAllSigned)
+                                                {{-- Approve TTD (Hanya Admin) ═══ PERBAIKAN DI SINI ═══ --}}
+                                                @if($currStatus === 'approved' && !$isAllSigned && $isAdmin)
                                                     <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')">
                                                         @csrf @method('PATCH')
                                                         <button type="submit" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition">
@@ -253,14 +259,16 @@
                                                     </form>
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
+                                                {{-- ═══════════════════════════════════════════════════ --}}
 
+                                                {{-- Vendor Comparison (Bisa dilihat semua) --}}
                                                 @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']) || ($currStatus === 'approved' && $isAllSigned))
                                                     <a href="{{ route('procurement.comparisons.index', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                         <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Vendor Comparison
                                                     </a>
                                                 @endif
 
-                                                {{-- PRINT & PDF: Menggunakan $isFinalPR --}}
+                                                {{-- Print & PDF (Bisa dilihat semua) --}}
                                                 <button type="button" onclick="printDirect('{{ $isFinalPR ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                     <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
                                                 </button>
@@ -268,7 +276,8 @@
                                                     <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
                                                 </a>
 
-                                                @if(in_array($currStatus, ['pending', 'revision']))
+                                                {{-- Edit Data (Hanya Admin & Status Pending/Revision) --}}
+                                                @if(in_array($currStatus, ['pending', 'revision']) && $isAdmin)
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                     <a href="{{ route('procurement.edit', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
                                                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit Data
@@ -396,12 +405,10 @@ window.addEventListener('scroll', function() {
 function printDirect(url) {
     let iframe = document.getElementById('printFrame');
     
-    // Jika iframe sudah ada, hapus dulu
     if (iframe) {
         iframe.remove();
     }
 
-    // Buat iframe baru
     iframe = document.createElement('iframe');
     iframe.id = 'printFrame';
     iframe.style.position = 'fixed';
@@ -418,7 +425,6 @@ function printDirect(url) {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
             
-            // Hapus iframe setelah 1 detik (beri waktu dialog print muncul)
             setTimeout(() => {
                 if (document.getElementById('printFrame')) {
                     document.getElementById('printFrame').remove();
