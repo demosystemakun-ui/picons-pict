@@ -6,30 +6,38 @@ use App\Models\Category;
 use App\Models\Item;
 use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ItemController extends Controller
+class ItemController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    /**
+     * Middleware untuk Laravel 11+ / 13.
+     * Menggantikan $this->middleware() yang sudah dihapus.
+     */
+    public static function middleware(): array
     {
-        // BYPASS: Jika user adalah Super Admin, izinkan akses penuh tanpa cek permission
-        $this->middleware(function ($request, $next) {
-            if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
+        return [
+            // Bypass total untuk Super Admin
+            new Middleware(function ($request, $next) {
+                if (auth()->check() && auth()->user()->hasRole('Super Admin')) {
+                    return $next($request);
+                }
+
+                // Untuk role lain, cek permission
+                if ($request->routeIs('items.index') || $request->routeIs('items.show')) {
+                    if (!auth()->user()->can('master.items.view')) {
+                        abort(403);
+                    }
+                } else {
+                    if (!auth()->user()->can('master.items.manage')) {
+                        abort(403);
+                    }
+                }
+
                 return $next($request);
-            }
-
-            // Untuk role lain, terapkan permission seperti biasa
-            if ($request->routeIs('items.index') || $request->routeIs('items.show')) {
-                if (!auth()->user()->can('master.items.view')) {
-                    abort(403);
-                }
-            } else {
-                if (!auth()->user()->can('master.items.manage')) {
-                    abort(403);
-                }
-            }
-
-            return $next($request);
-        });
+            }),
+        ];
     }
 
     public function index(Request $request)
