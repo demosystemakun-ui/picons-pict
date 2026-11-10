@@ -17,6 +17,8 @@
     
     // Tabel dan detail vendor tetap bisa dilihat jika sudah ada datanya
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
+
+    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 @endphp
 
 @section('content')
@@ -293,30 +295,61 @@
                 
                 <div class="flex flex-wrap items-center gap-2">
                     
-                    {{-- 1. JIKA STATUS BARU SIMPAN (MENUNGGU REVIEW ADMIN) --}}
+                    {{-- ═══ JIKA STATUS MENUNGGU REVIEW FINAL (PENDING_REVIEW_FINAL) ═══ --}}
                     @if($isPendingFinalReview)
-                        <form action="{{ route('procurement.approve-final-format', $procurement) }}" method="POST">
-                            @csrf @method('PATCH')
-                            <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
-                                <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                Approve Format
-                            </button>
-                        </form>
+                        
+                        {{-- KONDISI A: JIKA NOMOR BELUM DIISI (Hanya untuk Admin) --}}
+                        @if($isAdmin && empty($procurement->final_number))
+                            <form action="{{ route('procurement.update-number', $procurement) }}" method="POST" class="flex items-center gap-2">
+                                @csrf
+                                @method('PATCH')
+                                <div class="flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+                                    <input type="text" name="no_prefix" required placeholder="15"
+                                           class="w-16 text-center border-none text-sm px-2 py-2 font-mono focus:ring-0 focus:outline-none">
+                                    <span class="text-sm font-mono text-gray-500 bg-gray-50 dark:bg-gray-800 px-3 py-2 border-l border-gray-200 dark:border-gray-700">
+                                        /PR/{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}
+                                    </span>
+                                </div>
+                                <input type="hidden" name="no_suffix" value="{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}">
+                                <button type="submit" class="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 shadow-sm whitespace-nowrap">
+                                    Simpan Nomor
+                                </button>
+                            </form>
 
-                    {{-- 2. JIKA FORMAT SUDAH DI-APPROVE (MUNCUL PRINT PDF & VALIDASI TTD) --}}
+                        {{-- KONDISI B: JIKA NOMOR SUDAH DIISI (Tampilkan Tombol Approve) --}}
+                        @elseif($isAdmin && !empty($procurement->final_number))
+                            <form action="{{ route('procurement.approve-final-format', $procurement) }}" method="POST">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
+                                    <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    Approve Format
+                                </button>
+                            </form>
+
+                        {{-- KONDISI C: TAMPILAN UNTUK USER BIASA --}}
+                        @elseif(!$isAdmin)
+                            <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-amber-200 dark:border-amber-800/50">
+                                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Menunggu Admin menginput nomor & me-review format.
+                            </div>
+                        @endif
+
+                    {{-- ═══ JIKA FORMAT SUDAH DI-APPROVE (MUNCUL PRINT PDF & VALIDASI TTD) ═══ --}}
                     @elseif($isPendingFinalSign)
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             Print PR Final
                         </a>
 
-                        <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST">
-                            @csrf @method('PATCH')
-                            <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm" onclick="return confirm('Apakah TTD Manajer sudah dibubuhkan dan Anda yakin ingin memvalidasi?')">
-                                Validate Final Signature
-                            </button>
-                        </form>
+                        @if($isAdmin)
+                            <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm" onclick="return confirm('Apakah TTD Manajer sudah dibubuhkan dan Anda yakin ingin memvalidasi?')">
+                                    Validate Final Signature
+                                </button>
+                            </form>
+                        @endif
 
-                    {{-- 3. JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) --}}
+                    {{-- ═══ JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) ═══ --}}
                     @elseif($isFinalApproved)
                         @if($procurement->procurement_method === 'po')
                             <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Create PO</a>
@@ -330,7 +363,7 @@
                             View Final PR PDF
                         </a>
 
-                    {{-- 4. JIKA SUDAH PILIH VENDOR (PROCESSED / APPROVED) --}}
+                    {{-- ═══ JIKA SUDAH PILIH VENDOR (PROCESSED / APPROVED) ═══ --}}
                     @elseif($isProcessed || $procurement->status === 'approved')
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
