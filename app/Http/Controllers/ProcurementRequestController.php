@@ -22,13 +22,8 @@ class ProcurementRequestController extends Controller
             $query->where('department_id', $user->department_id);
         }
 
-        // Filter 'source' (manual/consumable) dihapus karena sudah digabung ke All PRs
-        // Informasi source tetap tampil via badge di tabel
-
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tampilkan HANYA PR Awal (yang belum punya final_number)
-                // dan tampilkan semua status historinya
                 $query->whereNull('final_number') 
                       ->whereIn('status', [
                           'pending', 
@@ -40,7 +35,6 @@ class ProcurementRequestController extends Controller
                       ]);
                       
             } elseif ($request->stage === 'final') {
-                // Tampilkan PR yang sudah masuk tahap final (Tahap 2)
                 $query->whereHas('winnerVendor')
                       ->whereIn('status', [
                           'processed', 
@@ -69,8 +63,24 @@ class ProcurementRequestController extends Controller
 
     public function store(Request $request)
     {
+        // --- PERBAIKAN: VALIDASI NOMOR PR (NO) ---
         $validated = $request->validate([
-            'no'                    => 'required|string|unique:procurement_requests,no',
+            'no' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    // Cek apakah nomor sudah ada di kolom 'no'
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+                    
+                    // Cek apakah nomor sudah ada di kolom 'final_number'
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+
+                    if ($existsInNo || $existsInFinal) {
+                        $fail('Nomor PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
+                    }
+                },
+            ],
+            // ------------------------------------------
             'date'                  => 'required|date',
             'department_id'         => 'required|exists:departments,id',
             'request_by'            => 'required|string|max:255',
@@ -481,12 +491,27 @@ class ProcurementRequestController extends Controller
 
     public function validateFinalSignature(Request $request, ProcurementRequest $procurementRequest)
     {
-        $validated = $request->validate([
-            'final_number' => 'required|string|unique:procurement_requests,final_number,' . $procurementRequest->id,
-        ], [
-            'final_number.required' => 'Final PR number is required.',
-            'final_number.unique'   => 'This final number is already used.',
+        // --- PERBAIKAN: VALIDASI FINAL NUMBER ---
+        $request->validate([
+            'final_number' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) use ($procurementRequest) {
+                    // Cek apakah nomor sudah ada di kolom 'final_number' (kecuali ID saat ini)
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)
+                        ->where('id', '!=', $procurementRequest->id)
+                        ->exists();
+                    
+                    // Cek apakah nomor sudah ada di kolom 'no' (PR Awal)
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+
+                    if ($existsInFinal || $existsInNo) {
+                        $fail('Nomor Final PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
+                    }
+                },
+            ],
         ]);
+        // --------------------------------------
 
         if ($procurementRequest->status !== 'pending_final_sign') {
             return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
@@ -498,13 +523,13 @@ class ProcurementRequestController extends Controller
 
         $procurementRequest->update([
             'status'       => 'final_approved',
-            'final_number' => $validated['final_number'],
-            'review_notes' => 'PR Final signed by Manager. Final Number: ' . $validated['final_number'],
+            'final_number' => $request->input('final_number'),
+            'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
         ]);
 
         return redirect()
             ->route('procurement.pdf.final', $procurementRequest)
-            ->with('success', 'PR Final validated with number: ' . $validated['final_number']);
+            ->with('success', 'PR Final validated with number: ' . $request->input('final_number'));
     }
 
     public function updateSignatureStatus(Request $request, ProcurementRequest $procurementRequest)

@@ -98,8 +98,26 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
+        // --- PERBAIKAN: VALIDASI FINAL NUMBER ---
         $validated = $request->validate([
-            'final_number'         => 'required|string|max:100|unique:procurement_requests,final_number,' . $procurement->id,
+            'final_number' => [
+                'required',
+                'string',
+                'max:100',
+                function ($attribute, $value, $fail) use ($procurement) {
+                    // Cek apakah nomor sudah ada di kolom 'final_number' (kecuali ID saat ini)
+                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)
+                        ->where('id', '!=', $procurement->id)
+                        ->exists();
+                    
+                    // Cek apakah nomor sudah ada di kolom 'no' (PR Awal)
+                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+
+                    if ($existsInFinal || $existsInNo) {
+                        $fail('Nomor Final PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
+                    }
+                },
+            ],
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
             'reason_choose_vendor' => 'required|string|max:2000',
@@ -111,6 +129,7 @@ class VendorComparisonController extends Controller
             'cfo_name'             => 'nullable|string|max:255',
             'ceo_name'             => 'nullable|string|max:255',
         ]);
+        // ----------------------------------------
 
         DB::beginTransaction();
         try {
@@ -172,14 +191,6 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /**
-     * APPROVE FORMAT PR FINAL
-     *
-     * Nama parameter HARUS $procurementRequest karena route-nya:
-     * procurement/{procurementRequest}/approve-final-format
-     * Kalau namanya beda, Laravel tidak melakukan model binding
-     * dan update() jalan di model kosong (diam-diam tidak menyimpan apa pun).
-     */
     public function approveFinalFormat(ProcurementRequest $procurementRequest)
     {
         if ($procurementRequest->status === 'pending_review_final') {
@@ -193,13 +204,6 @@ class VendorComparisonController extends Controller
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurementRequest->status . '".');
     }
 
-    /**
-     * VALIDASI TTD FINAL
-     *
-     * Pastikan nama parameter sama dengan route-nya. Cek dengan:
-     * php artisan route:list --name=validate-final
-     * (kalau routenya {procurement}, ganti kembali jadi $procurement)
-     */
     public function validateFinalSignature(ProcurementRequest $procurementRequest)
     {
         if ($procurementRequest->status !== 'pending_final_sign') {
