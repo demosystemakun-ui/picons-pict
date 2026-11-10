@@ -18,7 +18,8 @@
     // Tabel dan detail vendor tetap bisa dilihat jika sudah ada datanya
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 
-    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
+    // Cek role admin untuk tombol-tombol khusus
+    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
 @endphp
 
 @section('content')
@@ -363,12 +364,30 @@
 
                     {{-- ═══ JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) ═══ --}}
                     @elseif($isFinalApproved)
-                        @if($procurement->procurement_method === 'po')
-                            <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Create PO</a>
-                        @elseif($procurement->procurement_method === 'cash_advance')
-                            <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">Create Cash Advance</a>
-                        @elseif($procurement->procurement_method === 'reimbursement')
-                            <a href="{{ route('reimbursement.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Create Reimbursement</a>
+                        
+                        {{-- Tombol Create PO/Cash Advance/Reimbursement HANYA untuk Admin, Super Admin, Admin Departemen --}}
+                        @if($isAdmin)
+                            @if($procurement->procurement_method === 'po')
+                                <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm">
+                                    Create PO
+                                </a>
+                            @elseif($procurement->procurement_method === 'cash_advance')
+                                <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 shadow-sm">
+                                    Create Cash Advance
+                                </a>
+                            @elseif($procurement->procurement_method === 'reimbursement')
+                                <a href="{{ route('reimbursement.create', ['procurement_request_id' => $procurement->id]) }}" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm">
+                                    Create Reimbursement
+                                </a>
+                            @endif
+                        @else
+                            {{-- Tampilan untuk user biasa (hanya bisa lihat) --}}
+                            <div class="flex items-center gap-2 text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-teal-200 dark:border-teal-800/50">
+                                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Final PR telah divalidasi. Menunggu pembuatan PO oleh Admin.
+                            </div>
                         @endif
 
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
