@@ -207,17 +207,47 @@
     @if($isAdmin && $currStatus === 'pending')
         <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 rounded-lg">
             <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Input Nomor PR Resmi</h3>
+            
+            @php
+                // Ambil suffix (bagian setelah nomor urut)
+                // Jika masih DRAFT, buat suffix standar berdasarkan tanggal hari ini
+                if (str_starts_with($procurementRequest->no, 'DRAFT-')) {
+                    $bulanRomawi = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+                    $suffix = 'OPS/PICT-' . $bulanRomawi[(int)date('n') - 1] . '-' . date('Y');
+                    $prefix = '';
+                } else {
+                    // Jika sudah pernah edit, ambil prefix dan suffix-nya
+                    $parts  = explode('/PR/', $procurementRequest->no);
+                    $prefix = $parts[0] ?? '';
+                    $suffix = $parts[1] ?? 'OPS/PICT-' . date('m') . '-' . date('Y');
+                }
+            @endphp
+
             <form action="{{ route('procurement.update-number', $procurementRequest) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 @csrf
                 @method('PATCH')
-                <input type="text" name="no" value="{{ $procurementRequest->no }}" required
-                       class="w-full sm:max-w-md text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                       placeholder="Contoh: 15/PR/OPS/PICT-XI-2026">
-                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition shadow-sm">
+                
+                <div class="flex items-center w-full sm:max-w-md rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                    {{-- Input Nomor Urut --}}
+                    <input type="text" name="no_prefix" 
+                           value="{{ old('no_prefix', $prefix) }}"
+                           required
+                           placeholder="Contoh: 15"
+                           class="w-20 text-center border-none text-sm px-3 py-2 font-mono focus:ring-0 focus:outline-none">
+                    
+                    {{-- Suffix Otomatis --}}
+                    <span class="text-sm font-mono text-gray-500 bg-gray-50 dark:bg-gray-800 px-3 py-2 border-l border-gray-200 dark:border-gray-700 w-full">
+                        /PR/{{ $suffix }}
+                    </span>
+                </div>
+
+                <input type="hidden" name="no_suffix" value="{{ $suffix }}">
+
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition shadow-sm whitespace-nowrap">
                     Simpan Nomor
                 </button>
             </form>
-            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">Nomor saat ini masih berstatus DRAFT. Ganti dengan nomor resmi sebelum melakukan Approve.</p>
+            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">Cukup isi nomor urut di depan (misal: 15). Sisa format otomatis mengikuti sistem.</p>
         </div>
     @endif
 
