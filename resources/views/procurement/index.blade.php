@@ -234,14 +234,14 @@
                                             </button>
                                         @endif
 
-                                        {{-- Dropdown Menu untuk Aksi Sekunder --}}
-                                        <div class="relative inline-block text-left">
-                                            <button type="button" onclick="toggleDropdown('dropdown-{{ $r->id }}')" class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition" title="More Actions">
+                                        {{-- Dropdown Menu untuk Aksi Sekunder (Fixed Position) --}}
+                                        <div class="inline-block">
+                                            <button type="button" onclick="toggleDropdown('dropdown-{{ $r->id }}', this)" class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition" title="More Actions">
                                                 <i data-lucide="more-vertical" class="w-4 h-4"></i>
                                             </button>
 
-                                            {{-- Isi Dropdown --}}
-                                            <div id="dropdown-{{ $r->id }}" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-1 text-left">
+                                            {{-- Isi Dropdown (Class fixed, z-[100]) --}}
+                                            <div id="dropdown-{{ $r->id }}" class="hidden fixed w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] py-1 text-left">
                                                 
                                                 {{-- Aksi Revisi / Reject --}}
                                                 @if($currStatus === 'pending')
@@ -358,25 +358,63 @@
 
 @push('scripts')
 <script>
-// --- FUNGSI DROPDOWN ---
-function toggleDropdown(id) {
+// --- FUNGSI DROPDOWN (FIXED POSITION) ---
+function toggleDropdown(id, btnElement) {
     // Tutup semua dropdown lain yang terbuka
     document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
         if (el.id !== id) el.classList.add('hidden');
     });
-    // Toggle dropdown yang diklik
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden');
+
+    const dropdown = document.getElementById(id);
+    if (!dropdown) return;
+
+    // Jika sedang terbuka, tutup dan return
+    if (!dropdown.classList.contains('hidden')) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    // Hitung posisi tombol yang diklik
+    const rect = btnElement.getBoundingClientRect();
+    
+    // Tampilkan dropdown secara hidden dulu untuk mendapatkan ukurannya
+    dropdown.classList.remove('hidden');
+    const dropdownRect = dropdown.getBoundingClientRect();
+
+    // Posisi default: di bawah tombol, rata kanan
+    let top = rect.bottom + 4;
+    let left = rect.right - dropdownRect.width;
+
+    // Cek jika dropdown keluar dari layar bagian bawah
+    if (top + dropdownRect.height > window.innerHeight) {
+        top = rect.top - dropdownRect.height - 4; // Muncul ke atas tombol
+    }
+
+    // Cek jika dropdown keluar dari layar bagian kiri
+    if (left < 10) {
+        left = rect.left;
+    }
+
+    // Terapkan posisi fixed
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
 }
 
-// Tutup dropdown jika klik di luar area
+// Tutup dropdown jika user klik di luar area dropdown atau tombol
 document.addEventListener('click', function(event) {
-    if (!event.target.closest('.relative')) {
+    if (!event.target.closest('.inline-block') && !event.target.closest('[id^="dropdown-"]')) {
         document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
             el.classList.add('hidden');
         });
     }
 });
+
+// Tutup dropdown jika user melakukan scroll (agar tidak melayang aneh)
+window.addEventListener('scroll', function() {
+    document.querySelectorAll('[id^="dropdown-"]').forEach(el => {
+        el.classList.add('hidden');
+    });
+}, true); // Capture phase true agar menangkap scroll dari dalam tabel juga
 
 // --- FUNGSI PRINT ---
 function printDirect(url) {
