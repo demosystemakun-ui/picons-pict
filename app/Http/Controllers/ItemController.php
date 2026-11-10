@@ -42,18 +42,29 @@ class ItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'item_code' => 'required|string|max:50|unique:items,item_code',
-            'item_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'unit_id' => 'required|exists:units,id',
+            'item_code'     => 'required|string|max:50|unique:items,item_code',
+            'item_name'     => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'unit_id'       => 'required|exists:units,id',
             'minimum_stock' => 'required|integer|min:0',
             'current_stock' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'description'   => 'nullable|string',
+            'status'        => 'required|in:active,inactive',
         ]);
 
-        Item::create($validated);
+        $item = Item::create($validated);
 
+        // ═══ LOGIKA UNTUK REDIRECT DARI MODAL PENERIMAAN PO ═══
+        // Jika request berasal dari form inline di halaman penerimaan PO
+        if ($request->filled('row_index')) {
+            return redirect()->back()
+                ->with('success', 'Barang baru berhasil ditambahkan.')
+                ->with('new_item_id', $item->id)
+                ->with('new_item_row', $request->row_index);
+        }
+        // ═══════════════════════════════════════════════════════
+
+        // Default redirect untuk halaman Master Item
         return redirect()->route('items.index')->with('success', 'Item berhasil ditambahkan.');
     }
 
@@ -68,14 +79,14 @@ class ItemController extends Controller
     public function update(Request $request, Item $item)
     {
         $validated = $request->validate([
-            'item_code' => 'required|string|max:50|unique:items,item_code,'.$item->id,
-            'item_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'unit_id' => 'required|exists:units,id',
+            'item_code'     => 'required|string|max:50|unique:items,item_code,'.$item->id,
+            'item_name'     => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'unit_id'       => 'required|exists:units,id',
             'minimum_stock' => 'required|integer|min:0',
             'current_stock' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'description'   => 'nullable|string',
+            'status'        => 'required|in:active,inactive',
         ]);
 
         $item->update($validated);

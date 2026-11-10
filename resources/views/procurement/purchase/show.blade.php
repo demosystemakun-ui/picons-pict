@@ -280,8 +280,7 @@
         <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeAddItemModal()"></div>
         
         <div class="relative inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
-            <form id="addItemForm" action="{{ route('department-items.store') }}" method="POST" class="p-6">
-                @csrf
+<form id="addItemForm" action="{{ route('items.store') }}" method="POST" class="p-6">                @csrf
                 <!-- Hidden input untuk menyimpan index baris penerimaan -->
                 <input type="hidden" name="row_index" id="modalRowIndex" value="">
 
