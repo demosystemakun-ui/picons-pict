@@ -40,6 +40,7 @@
     ];
 
     $canCreateCA = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
+    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 
     // Cek apakah semua TTD sudah di-approve
     $isAllSigned = $procurementRequest->is_pic_approved
@@ -90,7 +91,7 @@
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
 
-            {{-- 1. TOMBOL PREVIEW DRAFT (Hanya muncul saat pending) --}}
+            {{-- 1. TOMBOL PREVIEW DRAFT (Bisa dilihat semua user) --}}
             @if($currStatus === 'pending')
                 <a href="{{ route('procurement.pdf', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Preview PDF (Draft)
@@ -100,66 +101,85 @@
                 </a>
             @endif
 
-            {{-- 2. TOMBOL STATUS PENDING --}}
-            @if($currStatus === 'pending')
-                <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin memvalidasi format PR ini?')" class="inline">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="approved">
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve Format
-                    </button>
-                </form>
-                <button type="button" onclick="openActionModal('revision')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Revision
-                </button>
-                <button type="button" onclick="openActionModal('rejected')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition">
-                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Reject
-                </button>
-            @endif
-
-            {{-- 3. TOMBOL STATUS REVISION --}}
-            @if($currStatus === 'revision')
-                <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="pending">
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
-                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Resubmit
-                    </button>
-                </form>
-            @endif
-
-            {{-- 4. TOMBOL STATUS APPROVED --}}
-            @if($currStatus === 'approved')
-                @if($isAllSigned)
-                    {{-- Jika TTD sudah lengkap, arahkan ke Vendor Comparison --}}
-                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
-                        <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Select Vendor & Comparison
-                    </a>
-                @else
-                    {{-- Jika BELUM, tampilkan tombol Validasi Global --}}
-                    <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua TTD Manajer?')">
-                        @csrf @method('PATCH')
+            {{-- ═══ TOMBOL KHUSUS ADMIN (Approve, Revision, Reject, Edit, Delete) ═══ --}}
+            @if($isAdmin)
+                
+                {{-- 2. TOMBOL STATUS PENDING --}}
+                @if($currStatus === 'pending')
+                    <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin memvalidasi format PR ini?')" class="inline">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="approved">
                         <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                            <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve All Signatures
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve Format
+                        </button>
+                    </form>
+                    <button type="button" onclick="openActionModal('revision')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Revision
+                    </button>
+                    <button type="button" onclick="openActionModal('rejected')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition">
+                        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Reject
+                    </button>
+                @endif
+
+                {{-- 3. TOMBOL STATUS REVISION --}}
+                @if($currStatus === 'revision')
+                    <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="pending">
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Resubmit
                         </button>
                     </form>
                 @endif
-            @endif
 
-            {{-- 5. TOMBOL STATUS RECEIVED --}}
-            @if($currStatus === 'received')
-                <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
-                    @csrf @method('PATCH')
-                    <input type="hidden" name="status" value="completed">
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-slate-700 hover:bg-slate-800 text-white shadow-sm transition">
-                        <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Complete
-                    </button>
-                </form>
-            @endif
+                {{-- 4. TOMBOL STATUS APPROVED --}}
+                @if($currStatus === 'approved')
+                    @if($isAllSigned)
+                        {{-- Jika TTD sudah lengkap, arahkan ke Vendor Comparison --}}
+                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+                            <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Select Vendor & Comparison
+                        </a>
+                    @else
+                        {{-- Jika BELUM, tampilkan tombol Validasi Global --}}
+                        <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua TTD Manajer?')">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+                                <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve All Signatures
+                            </button>
+                        </form>
+                    @endif
+                @endif
 
-            {{-- 6. Cash Advance & Liquidation --}}
+                {{-- 5. TOMBOL STATUS RECEIVED --}}
+                @if($currStatus === 'received')
+                    <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" class="inline">
+                        @csrf @method('PATCH')
+                        <input type="hidden" name="status" value="completed">
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-slate-700 hover:bg-slate-800 text-white shadow-sm transition">
+                            <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Complete
+                        </button>
+                    </form>
+                @endif
+
+                {{-- 7. Edit & Delete --}}
+                @if(in_array($currStatus, ['pending', 'revision']))
+                    <a href="{{ route('procurement.edit', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
+                    </a>
+                    <form action="{{ route('procurement.destroy', $procurementRequest) }}" method="POST" onsubmit="return confirm('Delete this request?')" class="inline">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-red-200 dark:border-red-800/60 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                    </form>
+                @endif
+
+            @endif
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+
+            {{-- 6. Cash Advance & Liquidation (Bisa diakses Admin/Admin Dept) --}}
             @if($canCreateCA && (in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received']) || ($currStatus === 'approved' && $isAllSigned)))
                 <a href="{{ route('cash-advances.create', ['procurement_request_id' => $procurementRequest->id]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i> Cash Advance
@@ -167,19 +187,6 @@
                 <a href="{{ route('liquidations.create', ['procurement_request_id' => $procurementRequest->id]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition">
                     <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Liquidation
                 </a>
-            @endif
-
-            {{-- 7. Edit & Delete --}}
-            @if(in_array($currStatus, ['pending', 'revision']))
-                <a href="{{ route('procurement.edit', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
-                </a>
-                <form action="{{ route('procurement.destroy', $procurementRequest) }}" method="POST" onsubmit="return confirm('Delete this request?')" class="inline">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-red-200 dark:border-red-800/60 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
-                    </button>
-                </form>
             @endif
 
             {{-- 8. Tombol Print & PDF (versi awal / final sesuai tahap) --}}
@@ -195,6 +202,24 @@
             @endif
         </div>
     </div>
+
+    {{-- FORM EDIT NOMOR PR (HANYA ADMIN & STATUS PENDING) --}}
+    @if($isAdmin && $currStatus === 'pending')
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 rounded-lg">
+            <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Input Nomor PR Resmi</h3>
+            <form action="{{ route('procurement.update-number', $procurementRequest) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                @csrf
+                @method('PATCH')
+                <input type="text" name="no" value="{{ $procurementRequest->no }}" required
+                       class="w-full sm:max-w-md text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                       placeholder="Contoh: 15/PR/OPS/PICT-XI-2026">
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition shadow-sm">
+                    Simpan Nomor
+                </button>
+            </form>
+            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">Nomor saat ini masih berstatus DRAFT. Ganti dengan nomor resmi sebelum melakukan Approve.</p>
+        </div>
+    @endif
 
     {{-- REVIEW NOTES ALERT --}}
     @if(!empty($procurementRequest->review_notes))
@@ -386,7 +411,7 @@
                 <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Approval &amp; Signatures</h2>
 
                 {{-- TOMBOL VALIDASI GLOBAL --}}
-                @if(!$isAllSigned && in_array($currStatus, ['approved', 'processed']))
+                @if($isAdmin && !$isAllSigned && in_array($currStatus, ['approved', 'processed']))
                     <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan (PR Awal & PR Final)?')">
                         @csrf @method('PATCH')
                         <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
@@ -425,11 +450,15 @@
                                     Approved
                                 </span>
                             @else
-                                <button type="button"
-                                        onclick="validateSignature('{{ $sig['field'] }}', this)"
-                                        class="w-full inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                    Validate Signature
-                                </button>
+                                @if($isAdmin)
+                                    <button type="button"
+                                            onclick="validateSignature('{{ $sig['field'] }}', this)"
+                                            class="w-full inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                        Validate Signature
+                                    </button>
+                                @else
+                                    <span class="text-[10px] text-gray-400 italic">Waiting for Admin</span>
+                                @endif
                             @endif
                         </div>
                     </div>
