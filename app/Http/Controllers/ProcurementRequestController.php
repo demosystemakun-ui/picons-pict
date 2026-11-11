@@ -1,6 +1,4 @@
-Berikut adalah kode final untuk `app/Http/Controllers/ProcurementRequestController.php`. Saya sudah memperbaiki logika `$isDraft` di method `pdfFinal` dan `printFinal` agar watermark **DRAFT** selalu muncul untuk user biasa, meskipun statusnya sudah `final_approved`.
 
-```php
 <?php
 
 namespace App\Http\Controllers;
@@ -842,4 +840,3 @@ class ProcurementRequestController extends Controller
         ];
     }
 }
-```
