@@ -34,6 +34,7 @@
                     </div>
                 </div>
 
+                {{-- ALERT ERROR --}}
                 @if(session('error'))
                     <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-xs border border-red-200">
                         {{ session('error') }}
@@ -69,6 +70,7 @@
                         Konfirmasi Ambil
                     </button>
 
+                    {{-- Tombol Batal --}}
                     <a href="{{ url()->previous() }}" class="block w-full text-center py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition text-sm">
                         Batal
                     </a>
@@ -82,5 +84,3 @@
     </script>
 </body>
 </html>
-
-<!-- jaajajdjadjaj -->

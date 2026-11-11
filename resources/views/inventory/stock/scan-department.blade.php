@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Mencegah user melakukan zoom yang tidak diinginkan di HP */
         * { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
@@ -120,7 +119,7 @@
         </div>
     </div>
 
-    @push('scripts')
+    {{-- SCRIPT LANGSUNG DI SINI (TANPA @push) --}}
     <script>
         // Inisialisasi Lucide Icon
         lucide.createIcons();
@@ -129,6 +128,7 @@
             const modal = document.getElementById('takeModal');
             const form = document.getElementById('takeForm');
             
+            // Set action URL secara dinamis berdasarkan ID barang
             form.action = `/inventory/scan-item/${id}`; 
             
             document.getElementById('modalItemName').textContent = name;
@@ -148,6 +148,5 @@
             document.body.style.overflow = '';
         }
     </script>
-    @endpush
 </body>
 </html>
