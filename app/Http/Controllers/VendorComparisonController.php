@@ -383,10 +383,15 @@ class VendorComparisonController extends Controller
 
             $wa = new WhatsAppService();
             $prNo = $procurement->final_number ?? $procurement->no;
+            $winnerVendor = $procurement->winnerVendor;
 
             $pesan = "Halo *{$user->name}*,\n\n";
             $pesan .= "Kabar baik! Format *PR Final* Anda telah disetujui.\n\n";
             $pesan .= "No PR Final: `{$prNo}`\n";
+            if ($winnerVendor) {
+                $pesan .= "Vendor terpilih: *{$winnerVendor->vendor_name}*\n";
+                $pesan .= "Harga: *Rp " . number_format((float) $winnerVendor->total_price, 0, ',', '.') . "*\n";
+            }
             $pesan .= "Status: *Menunggu TTD Manajer*\n\n";
             $pesan .= "Silakan ambil dokumen fisiknya di Admin untuk ditandatangani Manajer.";
 
