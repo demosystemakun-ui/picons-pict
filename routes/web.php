@@ -94,11 +94,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
     Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
 
-        /* ─────────────────────────────────────────────
-       INVENTORY STOCK (TAMBAHAN SCAN QR)
+    /* ─────────────────────────────────────────────
+       INVENTORY SCAN QR (PER BARANG & PER DEPARTEMEN)
     ───────────────────────────────────────────── */
-    Route::get('/inventory/scan/{id}', [InventoryStockController::class, 'scanForm'])->name('inventory.stock.scan');
-    Route::post('/inventory/scan/{id}', [InventoryStockController::class, 'processScan'])->name('inventory.stock.process-scan');
+    Route::get('/inventory/scan/{id}', [InventoryStockController::class, 'scanForm'])->name('inventory.scan.form');
+    Route::post('/inventory/scan/{id}', [InventoryStockController::class, 'processScan'])->name('inventory.scan.submit');
+
+    Route::get('/inventory/scan-dept/{department_id}', [InventoryStockController::class, 'scanDepartment'])->name('inventory.scan.dept');
+    Route::post('/inventory/scan-item/{stock_id}', [InventoryStockController::class, 'processScanDepartment'])->name('inventory.scan.item');
+
+
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
     ───────────────────────────────────────────── */

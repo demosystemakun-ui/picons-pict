@@ -14,7 +14,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -289,7 +288,7 @@ class InventoryStockController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 1 — Analyze file
+       IMPORT STEP 1 & 2
     ═══════════════════════════════════════════════════════════════ */
     public function importAnalyze(Request $request)
     {
@@ -354,9 +353,6 @@ class InventoryStockController extends Controller
         ]);
     }
 
-    /* ═══════════════════════════════════════════════════════════════
-       IMPORT STEP 2 — Process import
-    ═══════════════════════════════════════════════════════════════ */
     public function importProcess(Request $request)
     {
         $request->validate([
@@ -402,7 +398,6 @@ class InventoryStockController extends Controller
         $defaultCategoryId = $request->input('default_category_id');
         $defaultUnitId     = $request->input('default_unit_id');
         
-        // WORKAROUND FOR generation_expression ERROR ON OLDER MYSQL
         $needCategory = true;
         $needUnit     = true;
 
@@ -773,9 +768,7 @@ class InventoryStockController extends Controller
     public function useItemForm($id)
     {
         $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
-
         $this->authorizeDepartment($stock);
-
         return view('inventory.stock.use', compact('stock'));
     }
 
@@ -789,7 +782,6 @@ class InventoryStockController extends Controller
 
         DB::transaction(function () use ($id, $validated, &$error) {
             $stock = DepartmentStock::lockForUpdate()->findOrFail($id);
-
             $this->authorizeDepartment($stock);
 
             if ($stock->stock < $validated['used_stock']) {
@@ -854,7 +846,7 @@ class InventoryStockController extends Controller
         );
     }
 
-        /* ═══════════════════════════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════════════
        SCAN QR CODE (PENGGUNAAN BARANG VIA MOBILE)
     ═══════════════════════════════════════════════════════════════ */
 
@@ -901,6 +893,63 @@ class InventoryStockController extends Controller
             // Redirect ke halaman sukses / detail
             return redirect()->route('inventory.stock.index')
                 ->with('success', "Berhasil! {$validated['used_stock']} {$stock->item->item_name} telah diambil dan dicatat atas nama Anda.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memproses: ' . $e->getMessage());
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCAN PER DEPARTEMEN (KATALOG REALTIME)
+    ═══════════════════════════════════════════════════════════════ */
+
+    public function scanDepartment($department_id)
+    {
+        $department = Department::findOrFail($department_id);
+        $user = auth()->user();
+        $isPrivileged = $this->isPrivileged();
+        $isOffice = strtolower($department->name) === 'office';
+
+        if (!$isPrivileged && $user->department_id !== $department->id && !$isOffice) {
+            abort(403, 'Anda tidak memiliki akses ke lemari departemen ini.');
+        }
+
+        $stocks = DepartmentStock::with('item')
+            ->where('department_id', $department->id)
+            ->where('stock', '>', 0)
+            ->get();
+
+        return view('inventory.stock.scan-department', compact('department', 'stocks'));
+    }
+
+    public function processScanDepartment(Request $request, $stock_id)
+    {
+        $validated = $request->validate([
+            'used_stock' => 'required|integer|min:1',
+            'purpose'    => 'required|string|max:255',
+        ]);
+
+        $stock = DepartmentStock::with('item')->findOrFail($stock_id);
+
+        if ($stock->stock < $validated['used_stock']) {
+            return back()->with('error', 'Stok tidak mencukupi! Sisa saat ini: ' . $stock->stock);
+        }
+
+        DB::beginTransaction();
+        try {
+            $stock->decrement('stock', $validated['used_stock']);
+
+            StockUsage::create([
+                'department_stock_id' => $stock->id,
+                'user_id'             => auth()->id(),
+                'quantity_used'       => $validated['used_stock'],
+                'notes'               => $validated['purpose'], 
+            ]);
+
+            DB::commit();
+            return redirect()->route('inventory.scan.dept', $stock->department_id)
+                ->with('success', "Berhasil! {$validated['used_stock']} {$stock->item->item_name} telah diambil.");
 
         } catch (\Throwable $e) {
             DB::rollBack();
