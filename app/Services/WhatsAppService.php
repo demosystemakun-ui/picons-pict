@@ -12,13 +12,13 @@ class WhatsAppService
 
     public function __construct()
     {
-        // Simpan token di .env (FONNTE_TOKEN)
+        // Pastikan FONNTE_TOKEN diisi di file .env
         $this->token  = env('FONNTE_TOKEN', '');
         $this->apiUrl = 'https://api.fonnte.com/send';
     }
 
     /**
-     * Kirim pesan WhatsApp.
+     * Kirim pesan WhatsApp menggunakan Fonnte.
      *
      * @param string $phone Nomor HP (format 08xxx atau 628xxx)
      * @param string $message Isi pesan
@@ -27,12 +27,13 @@ class WhatsAppService
     public function send(string $phone, string $message): bool
     {
         if (empty($this->token)) {
-            Log::warning('WhatsApp token is not set.');
+            Log::warning('WhatsApp token is not set in .env.');
             return false;
         }
 
         // Bersihkan nomor (ubah 08 menjadi 628)
         $phone = preg_replace('/^0/', '62', $phone);
+        $phone = preg_replace('/[^0-9]/', '', $phone); // Hapus spasi/tanda hubung
 
         try {
             $response = Http::withHeaders([
@@ -42,11 +43,17 @@ class WhatsAppService
                 'message' => $message,
             ]);
 
-            if ($response->successful()) {
+            $json = $response->json();
+
+            // ═══ CEK RESPONS ASLI DARI FONNTE ═══
+            // Fonnte mengembalikan {"status": true/false, ...}
+            if ($response->successful() && isset($json['status']) && $json['status'] === true) {
+                Log::info("WA terkirim ke {$phone}: " . $response->body());
                 return true;
             }
 
-            Log::error('WA Send Failed: ' . $response->body());
+            // Jika Fonnte menolak (status false atau error)
+            Log::error("WA Send Gagal ke {$phone}. Respons Fonnte: " . $response->body());
             return false;
 
         } catch (\Throwable $e) {

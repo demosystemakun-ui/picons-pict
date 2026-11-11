@@ -245,7 +245,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   RUTE SEMENTARA — HANYA UNTUK LOCAL / STAGING
+   RUTE SEMENTARA — HANYA UNTUK LOCAL / STAGING / DEBUG
 ═══════════════════════════════════════════════════════════════════ */
 if (app()->environment('local', 'staging')) {
 
@@ -272,5 +272,25 @@ if (app()->environment('local', 'staging')) {
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('view:clear');
         return 'Cache (Route, Config, View) berhasil dibersihkan!';
+    });
+
+    // ═══ TES WHATSAPP (KHUSUS DEBUG) ═══
+    Route::get('/tes-wa', function () {
+        try {
+            $wa = new \App\Services\WhatsAppService();
+            // GANTI DENGAN NOMOR ANDA (contoh: 081234567890)
+            $nomorSaya = '081234567890';
+            $pesan = 'Halo! Ini pesan tes dari sistem PAMASESA pada ' . now()->format('d-m-Y H:i:s');
+            
+            $sukses = $wa->send($nomorSaya, $pesan);
+            
+            if ($sukses) {
+                return 'Pesan berhasil dikirim ke Fonnte. Cek HP Anda!';
+            } else {
+                return 'Pesan GAGAL dikirim ke Fonnte. Cek file <b>storage/logs/laravel.log</b> untuk melihat respons aslinya.';
+            }
+        } catch (\Throwable $e) {
+            return 'Terjadi Error: ' . $e->getMessage();
+        }
     });
 }
