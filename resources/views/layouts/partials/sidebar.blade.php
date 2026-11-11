@@ -100,7 +100,7 @@
         @php
             $consumableLinks = [];
             if (auth()->check()) {
-                $consumableLinks[] = auth()->user()->hasRole('Super Admin')
+                $consumableLinks[] = auth()->user()->hasRole('Super Admin, Admin')
                     ? ['route' => 'consumable-requests.index',    'label' => 'Request List']
                     : ['route' => 'consumable-requests.my-index', 'label' => 'My Requests'];
             }
