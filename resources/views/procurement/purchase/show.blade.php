@@ -33,6 +33,7 @@
 
     $grandTotal = $items->sum(fn ($it) => (float) $it->qty_ordered * (float) $it->unit_price);
     $canReceive = $currStatus !== 'completed';
+    $isAdmin    = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 @endphp
 
 @section('content')
@@ -176,111 +177,126 @@
             </div>
         </div>
 
-        {{-- RECEIVE SECTION --}}
-        @if($canReceive && $items->isNotEmpty())
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5">
-                <div>
-                    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Penerimaan Barang</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Isi jumlah barang yang datang pada penerimaan ini. Jika alokasi per departemen diisi, totalnya harus sama dengan Qty Datang.
-                    </p>
-                </div>
-
-                @foreach($items as $i => $item)
-                    @php $remaining = max(0, (int) $item->qty_ordered - (int) $item->qty_received); @endphp
-                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3" data-item="{{ $i }}">
-                        <input type="hidden" name="items[{{ $i }}][id]" value="{{ $item->id }}">
-
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->product_name }}</p>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">Sisa belum datang: <strong>{{ $remaining }}</strong></span>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 max-w-md">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Qty Datang</label>
-                                <input type="number" min="0" step="1"
-                                       name="items[{{ $i }}][qty_received]"
-                                       value="{{ old("items.$i.qty_received", $remaining) }}"
-                                       data-role="qty-received"
-                                       class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Qty Rusak</label>
-                                <input type="number" min="0" step="1"
-                                       name="items[{{ $i }}][qty_damaged]"
-                                       value="{{ old("items.$i.qty_damaged", 0) }}"
-                                       class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
-                            </div>
-                        </div>
-
-                        {{-- Barang stok tujuan (master Item di Department Stock) --}}
-                        @php
-                            $guess         = $stockItems->first(fn ($s) => mb_strtolower(trim($s->item_name)) === mb_strtolower(trim($item->product_name)));
-                            $selectedStock = old("items.$i.stock_item_id", $guess?->id);
-                        @endphp
-                        <div class="max-w-xl">
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Barang di Stok Departemen <span class="text-gray-400 font-normal">(wajib jika ada alokasi)</span>
-                            </label>
-                            <div class="flex gap-2">
-                                <select name="items[{{ $i }}][stock_item_id]"
-                                        id="stock-select-{{ $i }}"
-                                        class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
-                                    <option value="">— Pilih barang stok —</option>
-                                    @foreach($stockItems as $s)
-                                        <option value="{{ $s->id }}" @selected((string) $selectedStock === (string) $s->id)>
-                                            {{ $s->item_code }} — {{ $s->item_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                
-                                {{-- TOMBOL TAMBAH BARANG BARU --}}
-                                <button type="button" 
-                                        onclick="openAddItemModal({{ $i }})"
-                                        class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition whitespace-nowrap shadow-sm">
-                                    <i data-lucide="plus" class="w-4 h-4"></i> Barang Baru
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Alokasi per departemen (opsional) --}}
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Alokasi per Departemen <span class="text-gray-400 font-normal">(opsional)</span></span>
-                                <button type="button" onclick="addBreakdown({{ $i }})"
-                                        class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                    <i data-lucide="plus" class="w-3 h-3"></i> Tambah Alokasi
-                                </button>
-                            </div>
-                            <div id="breakdowns-{{ $i }}" class="space-y-2"></div>
-                            <p id="breakdown-sum-{{ $i }}" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 hidden"></p>
-                        </div>
+        {{-- RECEIVE SECTION (HANYA ADMIN) --}}
+        @if($isAdmin)
+            @if($canReceive && $items->isNotEmpty())
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+                    <div>
+                        <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Penerimaan Barang</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Isi jumlah barang yang datang pada penerimaan ini. Jika alokasi per departemen diisi, totalnya harus sama dengan Qty Datang.
+                        </p>
                     </div>
-                @endforeach
 
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                        <i data-lucide="package-check" class="w-4 h-4"></i> Simpan Penerimaan
-                    </button>
+                    @foreach($items as $i => $item)
+                        @php $remaining = max(0, (int) $item->qty_ordered - (int) $item->qty_received); @endphp
+                        <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3" data-item="{{ $i }}">
+                            <input type="hidden" name="items[{{ $i }}][id]" value="{{ $item->id }}">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item->product_name }}</p>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">Sisa belum datang: <strong>{{ $remaining }}</strong></span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 max-w-md">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Qty Datang</label>
+                                    <input type="number" min="0" step="1"
+                                           name="items[{{ $i }}][qty_received]"
+                                           value="{{ old("items.$i.qty_received", $remaining) }}"
+                                           data-role="qty-received"
+                                           class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Qty Rusak</label>
+                                    <input type="number" min="0" step="1"
+                                           name="items[{{ $i }}][qty_damaged]"
+                                           value="{{ old("items.$i.qty_damaged", 0) }}"
+                                           class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            {{-- Barang stok tujuan (master Item di Department Stock) --}}
+                            @php
+                                $guess         = $stockItems->first(fn ($s) => mb_strtolower(trim($s->item_name)) === mb_strtolower(trim($item->product_name)));
+                                $selectedStock = old("items.$i.stock_item_id", $guess?->id);
+                            @endphp
+                            <div class="max-w-xl">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Barang di Stok Departemen <span class="text-gray-400 font-normal">(wajib jika ada alokasi)</span>
+                                </label>
+                                <div class="flex gap-2">
+                                    <select name="items[{{ $i }}][stock_item_id]"
+                                            id="stock-select-{{ $i }}"
+                                            class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-2 focus:ring-2 focus:ring-slate-500 focus:outline-none">
+                                        <option value="">— Pilih barang stok —</option>
+                                        @foreach($stockItems as $s)
+                                            <option value="{{ $s->id }}" @selected((string) $selectedStock === (string) $s->id)>
+                                                {{ $s->item_code }} — {{ $s->item_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    
+                                    {{-- TOMBOL TAMBAH BARANG BARU --}}
+                                    <button type="button" 
+                                            onclick="openAddItemModal({{ $i }})"
+                                            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition whitespace-nowrap shadow-sm">
+                                        <i data-lucide="plus" class="w-4 h-4"></i> Barang Baru
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Alokasi per departemen (opsional) --}}
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Alokasi per Departemen <span class="text-gray-400 font-normal">(opsional)</span></span>
+                                    <button type="button" onclick="addBreakdown({{ $i }})"
+                                            class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                        <i data-lucide="plus" class="w-3 h-3"></i> Tambah Alokasi
+                                    </button>
+                                </div>
+                                <div id="breakdowns-{{ $i }}" class="space-y-2"></div>
+                                <p id="breakdown-sum-{{ $i }}" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 hidden"></p>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div class="flex justify-end">
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+                            <i data-lucide="package-check" class="w-4 h-4"></i> Simpan Penerimaan
+                        </button>
+                    </div>
                 </div>
-            </div>
-        @elseif(!$canReceive)
-            <div class="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300">
-                Semua barang pada PO ini sudah diterima.
+            @elseif(!$canReceive)
+                <div class="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300">
+                    Semua barang pada PO ini sudah diterima.
+                </div>
+            @endif
+        @else
+            {{-- TAMPILAN UNTUK USER BIASA (READ-ONLY) --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+                <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-amber-200 dark:border-amber-800/50">
+                    <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+                    Hanya Admin yang dapat memproses penerimaan barang.
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    Anda hanya dapat memantau status penerimaan. Silakan hubungi Admin untuk melakukan proses penerimaan.
+                </div>
             </div>
         @endif
     </form>
 </div>
 
-{{-- MODAL TAMBAH BARANG BARU --}}
+{{-- MODAL TAMBAH BARANG BARU (HANYA MUNCUL UNTUK ADMIN) --}}
+@if($isAdmin)
 <div id="addItemModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
         <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeAddItemModal()"></div>
         
         <div class="relative inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
-<form id="addItemForm" action="{{ route('items.store') }}" method="POST" class="p-6">                @csrf
+            <form id="addItemForm" action="{{ route('items.store') }}" method="POST" class="p-6">
+                @csrf
                 <!-- Hidden input untuk menyimpan index baris penerimaan -->
                 <input type="hidden" name="row_index" id="modalRowIndex" value="">
 
@@ -368,6 +384,7 @@
         </div>
     </div>
 </div>
+@endif
 
 @push('scripts')
 <script>
@@ -378,6 +395,7 @@
     const counters = {};
 
     // --- LOGIKA MODAL TAMBAH BARANG BARU ---
+    @if($isAdmin)
     window.openAddItemModal = function(rowIndex) {
         document.getElementById('modalRowIndex').value = rowIndex;
         document.getElementById('addItemModal').classList.remove('hidden');
@@ -396,13 +414,11 @@
             const selectElement = document.getElementById('stock-select-' + rowIndex);
             
             if (selectElement) {
-                // Cek apakah opsi baru sudah ada di select (jika halaman direload tanpa ajax)
-                // Jika tidak ada, kita perlu menambahkannya secara manual atau biarkan server yang render ulang.
-                // Asumsi: controller me-redirect back() dan view me-render ulang data $stockItems terbaru.
                 selectElement.value = newItemId;
                 selectElement.dispatchEvent(new Event('change'));
             }
         });
+    @endif
     @endif
 
     // --- LOGIKA ALOKASI DEPARTEMEN (BAWAAN) ---
