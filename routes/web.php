@@ -285,7 +285,7 @@ if (app()->environment('local', 'staging')) {
             $sukses = $wa->send($nomorSaya, $pesan);
             
             if ($sukses) {
-                return 'Pesan berhasil dikirim ke Fonnte. Cek HP Anda!';
+                return 'Pesan sudah dikirim ke Fonnte. Cek HP Anda!';
             } else {
                 return 'Pesan GAGAL dikirim ke Fonnte. Cek file <b>storage/logs/laravel.log</b> untuk melihat respons aslinya.';
             }
