@@ -388,7 +388,7 @@ class VendorComparisonController extends Controller
             $pesan .= "Kabar baik! Format *PR Final* Anda telah disetujui.\n\n";
             $pesan .= "No PR Final: `{$prNo}`\n";
             $pesan .= "Status: *Menunggu TTD Manajer*\n\n";
-            $pesan .= "Dokumen fisik sedang dalam proses tanda tangan. Kami akan mengabari lagi jika sudah selesai.";
+            $pesan .= "Silakan ambil dokumen fisiknya di Admin untuk ditandatangani Manajer.";
 
             $wa->send($user->phone_number, $pesan);
         } catch (\Throwable $e) {
