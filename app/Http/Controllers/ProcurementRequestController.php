@@ -143,6 +143,10 @@ class ProcurementRequestController extends Controller
                     ->update(['status' => 'converted', 'pr_generated_at' => now()]);
             }
 
+            // ═══ TRIGGER WA KE ADMIN ═══
+            $this->notifyAdminsNewPr($procurementRequest);
+            // ═══════════════════════════
+
             DB::commit();
             return redirect()->route('procurement.show', $procurementRequest)->with('success', 'Procurement Request created successfully.');
 
@@ -643,6 +647,37 @@ class ProcurementRequestController extends Controller
             }
         } catch (\Throwable $e) {
             Log::warning('WhatsApp notification failed for PR #' . $pr->id . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ═══ TRIGGER WA: Notifikasi ke Admin saat ada PR Baru ═══
+     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
+     */
+    private function notifyAdminsNewPr(ProcurementRequest $pr): void
+    {
+        try {
+            $wa = new WhatsAppService();
+            $prNo = $pr->no;
+            $pemohon = auth()->user()->name ?? 'Staff';
+            
+            // Ambil semua user dengan role Super Admin atau Admin
+            $admins = \App\Models\User::role(['Super Admin', 'Admin'])->get();
+
+            foreach ($admins as $admin) {
+                if (!empty($admin->phone_number)) {
+                    $pesan = "Halo *{$admin->name}*,\n\nAda pengajuan *PR Baru* yang perlu direview:\n\n";
+                    $pesan .= "No: `{$prNo}`\n";
+                    $pesan .= "Pemohon: {$pemohon}\n";
+                    $pesan .= "Divisi: " . ($pr->division ?? '-') . "\n";
+                    $pesan .= "Deskripsi: " . ($pr->description ?? '-') . "\n\n";
+                    $pesan .= "Silakan cek sistem untuk melakukan persetujuan.";
+
+                    $wa->send($admin->phone_number, $pesan);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notify admins (New PR) failed for PR #' . $pr->id . ': ' . $e->getMessage());
         }
     }
 
