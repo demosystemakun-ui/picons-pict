@@ -386,7 +386,7 @@ class VendorComparisonController extends Controller
             $winnerVendor = $procurement->winnerVendor;
 
             $pesan = "Halo *{$user->name}*,\n\n";
-            $pesan .= "Kabar baik! Format *PR Final* Anda telah disetujui.\n\n";
+            $pesan .= "Format *PR Final* Anda telah disetujui.\n\n";
             $pesan .= "No PR Final: `{$prNo}`\n";
             if ($winnerVendor) {
                 $pesan .= "Vendor terpilih: *{$winnerVendor->vendor_name}*\n";
@@ -437,8 +437,8 @@ class VendorComparisonController extends Controller
             $pesan .= "PR Final Anda telah *SELESAI divalidasi* (TTD lengkap).\n\n";
             $pesan .= "No PR Final: `{$prNo}`\n";
             $pesan .= "Total Nilai: *Rp {$total}*\n";
-            $pesan .= "Vendor Pemenang: " . ($procurement->winnerVendor->vendor_name ?? '-') . "\n\n";
-            $pesan .= "Silakan ambil dokumen fisiknya di Admin untuk diproses ke tahap PO.";
+            $pesan .= "Vendor Terpilih: " . ($procurement->winnerVendor->vendor_name ?? '-') . "\n\n";
+            $pesan .= "Admin akan segera memproses ke tahap PO. Tunggu informasi lebih lanjut.";
 
             $wa->send($user->phone_number, $pesan);
         } catch (\Throwable $e) {

@@ -239,6 +239,18 @@
                               placeholder="Detailed specification and the reason behind it"
                               class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('required_spec', $prefill['required_spec'] ?? '') }}</textarea>
                 </div>
+
+                {{-- ═══ FIELD BARU: Usulan Vendor ═══ --}}
+                <div>
+                    <label for="vendor_suggestion" class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                        Usulan Vendor / Link Referensi (Opsional)
+                    </label>
+                    <textarea id="vendor_suggestion" name="vendor_suggestion" rows="3"
+                              placeholder="Contoh: Tokopedia (https://tokopedia.com/...), atau Monotaro"
+                              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 resize-y focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none">{{ old('vendor_suggestion') }}</textarea>
+                    <p class="mt-1 text-[11px] text-gray-500">Anda bisa mengusulkan nama toko atau menempelkan link produk yang Anda temukan sebagai referensi untuk Admin.</p>
+                </div>
+                {{-- ══════════════════════════════════ --}}
             </div>
         </section>
 

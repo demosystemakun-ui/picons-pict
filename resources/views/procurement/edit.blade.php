@@ -158,6 +158,16 @@
                     <textarea name="required_spec" rows="3"
                               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors">{{ old('required_spec', $procurementRequest->required_spec) }}</textarea>
                 </div>
+
+                {{-- ═══ FIELD BARU: Usulan Vendor ═══ --}}
+                <div>
+                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Usulan Vendor / Link Referensi (Opsional)</label>
+                    <textarea name="vendor_suggestion" rows="3"
+                              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-3 resize-y focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                              placeholder="Contoh: Tokopedia (https://tokopedia.com/...), atau Monotaro">{{ old('vendor_suggestion', $procurementRequest->vendor_suggestion) }}</textarea>
+                    <p class="mt-1 text-[11px] text-gray-500">Anda bisa mengusulkan nama toko atau menempelkan link produk yang Anda temukan sebagai referensi untuk Admin.</p>
+                </div>
+                {{-- ══════════════════════════════════ --}}
             </div>
         </section>
 
@@ -292,28 +302,27 @@
         const tr = document.createElement('tr');
         tr.className = 'item-row align-top';
         
-        // Menggunakan template literal tanpa escape character (\)
         tr.innerHTML = `
             <td class="py-3 px-4 text-center"><span class="row-number text-sm font-medium text-gray-500"></span></td>
             <td class="py-3 px-4">
-                <textarea name="items[${itemIndex}][item_name]" rows="2" required
+                <textarea name="items[\${itemIndex}][item_name]" rows="2" required
                           class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
             </td>
             <td class="py-3 px-4">
-                <textarea name="items[${itemIndex}][item_requirement_note]" rows="2"
+                <textarea name="items[\${itemIndex}][item_requirement_note]" rows="2"
                           class="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm p-2 resize-y focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
             </td>
             <td class="py-3 px-4">
-                <input type="number" step="0.01" name="items[${itemIndex}][quantity]" value="1" min="0.01" required
+                <input type="number" step="0.01" name="items[\${itemIndex}][quantity]" value="1" min="0.01" required
                        class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
             </td>
             <td class="py-3 px-4">
-                <input type="text" name="items[${itemIndex}][unit]" value="Pcs"
+                <input type="text" name="items[\${itemIndex}][unit]" value="Pcs"
                        class="w-full h-9 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm px-2 text-center focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors">
             </td>
             <td class="py-3 px-4">
-                <input type="hidden" name="items[${itemIndex}][existing_picture]" value="">
-                <input type="file" name="items[${itemIndex}][picture]" accept="image/*"
+                <input type="hidden" name="items[\${itemIndex}][existing_picture]" value="">
+                <input type="file" name="items[\${itemIndex}][picture]" accept="image/*"
                        class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-gray-100 dark:file:bg-gray-700 dark:text-gray-300">
             </td>
             <td class="py-3 px-4 text-center">

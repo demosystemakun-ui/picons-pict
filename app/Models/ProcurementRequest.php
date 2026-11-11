@@ -36,6 +36,7 @@ class ProcurementRequest extends Model
         'background',
         'purpose',
         'required_spec',
+        'vendor_suggestion',
 
         'item_name',
         'item_requirement_note',

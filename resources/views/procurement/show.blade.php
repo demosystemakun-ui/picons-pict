@@ -333,6 +333,17 @@
                         </p>
                     </div>
                 @endforeach
+
+                {{-- ═══ SECTION BARU: Usulan Vendor ═══ --}}
+                @if($procurementRequest->vendor_suggestion)
+                    <div class="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60">
+                        <span class="flex items-center gap-1.5 text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1.5">
+                            <i data-lucide="lightbulb" class="w-4 h-4"></i> Usulan Vendor / Referensi dari User
+                        </span>
+                        <p class="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-line leading-relaxed">{{ $procurementRequest->vendor_suggestion }}</p>
+                    </div>
+                @endif
+                {{-- ═══════════════════════════════════ --}}
             </div>
         </section>
 
