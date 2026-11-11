@@ -279,7 +279,7 @@ if (app()->environment('local', 'staging')) {
         try {
             $wa = new \App\Services\WhatsAppService();
             // GANTI DENGAN NOMOR ANDA (contoh: 081234567890)
-            $nomorSaya = '081234567890';
+            $nomorSaya = '6283894100924';
             $pesan = 'Halo! Ini pesan tes dari sistem PAMASESA pada ' . now()->format('d-m-Y H:i:s');
             
             $sukses = $wa->send($nomorSaya, $pesan);
