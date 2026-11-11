@@ -243,8 +243,9 @@ class VendorComparisonController extends Controller
                 }
             }
 
-            // ═══ TRIGGER WA KE ADMIN (PR Final baru menunggu review) ═══
+            // ═══ TRIGGER WA KE ADMIN & USER (PR Final baru dibuat) ═══
             $this->notifyAdminsFinalPrCreated($procurement);
+            $this->notifyUserFinalPrCreated($procurement);
             // ═══════════════════════════════════════════════════════════
 
             DB::commit();
@@ -262,7 +263,6 @@ class VendorComparisonController extends Controller
 
     /**
      * ═══ TRIGGER WA: Notifikasi ke Admin saat Final PR baru dibuat ═══
-     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
      */
     private function notifyAdminsFinalPrCreated(ProcurementRequest $procurement): void
     {
@@ -282,6 +282,32 @@ class VendorComparisonController extends Controller
             }
         } catch (\Throwable $e) {
             Log::warning('WhatsApp notify admins failed for PR #' . $procurement->id . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ═══ TRIGGER WA: Notifikasi ke User (Pembuat PR) saat Final PR dibuat ═══
+     */
+    private function notifyUserFinalPrCreated(ProcurementRequest $procurement): void
+    {
+        try {
+            $user = $procurement->user;
+            if (!$user || empty($user->phone_number)) {
+                return;
+            }
+
+            $wa = new WhatsAppService();
+            $prNo = $procurement->final_number ?? $procurement->no;
+
+            $pesan = "Halo *{$user->name}*,\n\n";
+            $pesan .= "PR Final untuk pengajuan Anda telah dibuat oleh Admin.\n\n";
+            $pesan .= "No PR Final: `{$prNo}`\n";
+            $pesan .= "Status: *Menunggu Review Format*\n\n";
+            $pesan .= "Silakan pantau terus sistem untuk melihat perkembangan statusnya.";
+
+            $wa->send($user->phone_number, $pesan);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notify user (Final PR) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
     }
 
@@ -334,10 +360,40 @@ class VendorComparisonController extends Controller
                 'status' => 'pending_final_sign',
             ]);
 
+            // ═══ TRIGGER WA KE USER (Format PR Final disetujui) ═══
+            $this->notifyUserFormatApproved($procurementRequest);
+            // ══════════════════════════════════════════════════════
+
             return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurementRequest->status . '".');
+    }
+
+    /**
+     * ═══ TRIGGER WA: Notifikasi ke User saat Format PR Final disetujui ═══
+     */
+    private function notifyUserFormatApproved(ProcurementRequest $procurement): void
+    {
+        try {
+            $user = $procurement->user;
+            if (!$user || empty($user->phone_number)) {
+                return;
+            }
+
+            $wa = new WhatsAppService();
+            $prNo = $procurement->final_number ?? $procurement->no;
+
+            $pesan = "Halo *{$user->name}*,\n\n";
+            $pesan .= "Kabar baik! Format *PR Final* Anda telah disetujui.\n\n";
+            $pesan .= "No PR Final: `{$prNo}`\n";
+            $pesan .= "Status: *Menunggu TTD Manajer*\n\n";
+            $pesan .= "Dokumen fisik sedang dalam proses tanda tangan. Kami akan mengabari lagi jika sudah selesai.";
+
+            $wa->send($user->phone_number, $pesan);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notify user (Format Approved) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
+        }
     }
 
     public function validateFinalSignature(ProcurementRequest $procurementRequest)
@@ -350,7 +406,39 @@ class VendorComparisonController extends Controller
             'status' => 'final_approved',
         ]);
 
+        // ═══ TRIGGER WA KE USER (TTD Final Selesai) ═══
+        $this->notifyUserFinalApproved($procurementRequest);
+        // ══════════════════════════════════════════════
+
         return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
+    }
+
+    /**
+     * ═══ TRIGGER WA: Notifikasi ke User saat TTD Final divalidasi ═══
+     */
+    private function notifyUserFinalApproved(ProcurementRequest $procurement): void
+    {
+        try {
+            $user = $procurement->user;
+            if (!$user || empty($user->phone_number)) {
+                return;
+            }
+
+            $wa = new WhatsAppService();
+            $prNo = $procurement->final_number ?? $procurement->no;
+            $total = number_format((float) $procurement->final_total_price, 0, ',', '.');
+
+            $pesan = "Halo *{$user->name}*,\n\n";
+            $pesan .= "PR Final Anda telah *SELESAI divalidasi* (TTD lengkap).\n\n";
+            $pesan .= "No PR Final: `{$prNo}`\n";
+            $pesan .= "Total Nilai: *Rp {$total}*\n";
+            $pesan .= "Vendor Pemenang: " . ($procurement->winnerVendor->vendor_name ?? '-') . "\n\n";
+            $pesan .= "Silakan ambil dokumen fisiknya di Admin untuk diproses ke tahap PO.";
+
+            $wa->send($user->phone_number, $pesan);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notify user (Final Approved) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
+        }
     }
 
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
