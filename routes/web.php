@@ -287,7 +287,7 @@ if (app()->environment('local', 'staging')) {
             if ($sukses) {
                 return 'Pesan sudah dikirim ke Fonnte. Cek HP Anda!';
             } else {
-                return 'Pesan GAGAL dikirim ke Fonnte. Cek file <b>storage/logs/laravel.log</b> untuk melihat respons aslinya.';
+                return 'Pesan tidak dikirim ke Fonnte. Cek file <b>storage/logs/laravel.log</b> untuk melihat respons aslinya.';
             }
         } catch (\Throwable $e) {
             return 'Terjadi Error: ' . $e->getMessage();
