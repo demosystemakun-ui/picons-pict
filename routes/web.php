@@ -10,6 +10,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\InventoryStockController;
 use App\Http\Controllers\ProcurementRequestController;
 use App\Http\Controllers\ReimbursementController;
+use App\Http\Controllers\ReportController; // ═══ TAMBAHKAN INI ═══
 use App\Http\Controllers\SignerController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\VendorController;
@@ -88,7 +89,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
         Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
 
-        // Route Cetak QR (Hanya bisa diakses Admin)
         Route::get('/inventory/department/{id}/print-qr', [InventoryStockController::class, 'printDepartmentQr'])->name('inventory.department.print-qr');
     });
 
@@ -160,26 +160,19 @@ Route::middleware(['auth'])->group(function () {
     ───────────────────────────────────────────── */
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
-        // ═══ LIST & GLOBAL ═══
         Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
         
-        // ═══ GLOBAL VENDOR COMPARISON (HANYA ADMIN) ═══
         Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])
             ->name('comparisons.global')
             ->middleware('role:Super Admin|Admin');
 
-        // ═══ CREATE & STORE PR AWAL ═══
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
         Route::post('/', [ProcurementRequestController::class, 'store'])->name('store');
 
-        // ═══ UPDATE NOMOR PR AWAL (KHUSUS ADMIN) ═══
         Route::patch('/{procurementRequest}/update-number', [ProcurementRequestController::class, 'updateNumber'])
             ->name('update-number')
             ->middleware('role:Super Admin|Admin');
 
-        // ═══════════════════════════════════════════════════════════
-        // VENDOR COMPARISON (per PR) — HANYA ADMIN
-        // ═══════════════════════════════════════════════════════════
         Route::prefix('/{procurement}/comparisons')->name('comparisons.')
             ->middleware('role:Super Admin|Admin')
             ->group(function () {
@@ -197,14 +190,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/final-pr/create', [VendorComparisonController::class, 'createFinalPr'])->name('final-pr.create');
             Route::post('/final-pr/store', [VendorComparisonController::class, 'storeFinalPr'])->name('final-pr.store');
 
-            // ═══ UPDATE NOMOR FINAL PR (KHUSUS ADMIN) ═══
             Route::patch('/update-final-number', [VendorComparisonController::class, 'updateFinalNumber'])
                 ->name('update-final-number');
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // PDF, PRINT, VALIDASI
-        // ═══════════════════════════════════════════════════════════
         Route::get('/{procurementRequest}/pdf-final', [ProcurementRequestController::class, 'pdfFinal'])->name('pdf.final');
         Route::get('/{procurementRequest}/pdf',       [ProcurementRequestController::class, 'pdf'])->name('pdf');
         Route::get('/{procurementRequest}/print',     [ProcurementRequestController::class, 'print'])->name('print');
@@ -232,18 +221,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('status')
             ->middleware('role:Super Admin');
 
-        // ═══════════════════════════════════════════════════════════
-        // PURCHASE ORDER (PO) & RECEIVING
-        // ═══════════════════════════════════════════════════════════
         Route::get('/purchases',                       [PurchaseController::class, 'index'])->name('purchases.index');
         Route::get('/purchases/{purchase}',            [PurchaseController::class, 'show'])->name('purchases.show');
         Route::post('/purchases/{purchase}/receive',   [PurchaseController::class, 'receive'])->name('purchases.receive');
         Route::get('/{procurement}/purchases/create',  [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/{procurement}/purchases',        [PurchaseController::class, 'store'])->name('purchases.store');
 
-        // ═══════════════════════════════════════════════════════════
-        // CRUD PR — PALING BAWAH
-        // ═══════════════════════════════════════════════════════════
         Route::get('/{procurementRequest}',      [ProcurementRequestController::class, 'show'])->name('show');
         Route::get('/{procurementRequest}/edit', [ProcurementRequestController::class, 'edit'])->name('edit');
         Route::put('/{procurementRequest}',      [ProcurementRequestController::class, 'update'])->name('update');
@@ -257,6 +240,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reimbursement/{reimbursement}/pdf', [ReimbursementController::class, 'pdf'])->name('reimbursement.pdf');
     Route::resource('reimbursement', ReimbursementController::class);
     Route::post('reimbursement/{reimbursement}/approve', [ReimbursementController::class, 'approve'])->name('reimbursement.approve');
+
+    /* ─────────────────────────────────────────────
+       REPORTS (TAMBAHAN BARU)
+    ───────────────────────────────────────────── */
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -289,11 +277,9 @@ if (app()->environment('local', 'staging')) {
         return 'Cache (Route, Config, View) berhasil dibersihkan!';
     });
 
-    // ═══ TES WHATSAPP (KHUSUS DEBUG) ═══
     Route::get('/tes-wa', function () {
         try {
             $wa = new \App\Services\WhatsAppService();
-            // GANTI DENGAN NOMOR ANDA (contoh: 081234567890)
             $nomorSaya = '6283894100924';
             $pesan = 'Halo! Ini pesan tes dari sistem PAMASESA pada ' . now()->format('d-m-Y H:i:s');
             

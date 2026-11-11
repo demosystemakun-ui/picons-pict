@@ -118,18 +118,14 @@
             $procurementLinks = [];
             
             if (auth()->check()) {
-                // 1. Procurement Request
                 $procurementLinks[] = ['route' => 'procurement.index', 'label' => 'Procurement Request'];
                 
-                // 2. Vendor Comparison (HANYA ADMIN)
                 if (auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
                     $procurementLinks[] = ['route' => 'procurement.comparisons.global', 'label' => 'Vendor Comparison'];
                 }
                 
-                // 3. Purchase Orders (PO)
                 $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];
                 
-                // Menu Keuangan
                 $procurementLinks[] = ['route' => 'cash-advances.index', 'label' => 'Cash Advance'];
                 $procurementLinks[] = ['route' => 'reimbursement.index', 'label' => 'Reimbursement'];
                 $procurementLinks[] = ['route' => null,                 'label' => 'Liquidation'];
@@ -149,13 +145,9 @@
         @include('layouts.partials.sidebar-group', [
             'label'  => 'Reports',
             'icon'   => 'bar-chart-3',
-            'active' => false,
+            'active' => request()->routeIs('reports.*'), // ═══ UBAH AGAR MENYALA SAAT DIBUKA ═══
             'links'  => [
-                ['route' => null, 'label' => 'Stock Report'],
-                ['route' => null, 'label' => 'Usage Report'],
-                ['route' => null, 'label' => 'Purchase Report'],
-                ['route' => null, 'label' => 'Vendor Report'],
-                ['route' => null, 'label' => 'Cash Advance Report'],
+                ['route' => 'reports.index', 'label' => 'Purchase & Vendor Report'], // ═══ RUTE LAPORAN BARU ═══
             ],
         ])
 
