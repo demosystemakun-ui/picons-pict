@@ -239,14 +239,22 @@
 
         {{-- AREA TANDA TANGAN KANAN --}}
         <td colspan="2" rowspan="3" style="padding: 8px; vertical-align: top;">
-            <div class="sign-box"></div>
-            <div class="sign-lbl">Ops. MGR</div>
-            
-            <div class="sign-box" style="margin-top: 12px;"></div>
-            <div class="sign-lbl">FEM. MGR</div>
-            
-            <div class="sign-box" style="margin-top: 12px;"></div>
-            <div class="sign-lbl">COO</div>
+            @foreach($procurement['signatures'] as $sig)
+                <div class="sign-box" style="position: relative;">
+                    <div style="text-align: center; font-size: 9px; padding-top: 4px;">
+                        {{ $sig['name'] }}
+                    </div>
+                    @if($sig['approved'])
+                        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #15803d; font-weight: bold;">
+                            [ APPROVED ]
+                        </div>
+                    @endif
+                </div>
+                <div class="sign-lbl">{{ $sig['role'] }}</div>
+                @if(!$loop->last)
+                    <div style="margin-top: 10px;"></div>
+                @endif
+            @endforeach
         </td>
     </tr>
     <tr>
