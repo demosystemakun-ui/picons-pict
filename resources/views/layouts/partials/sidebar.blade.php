@@ -74,10 +74,6 @@
                 'icon'   => 'archive',
                 'active' => request()->routeIs(['items.*', 'categories.*', 'units.*', 'vendors.*', 'departments.*', 'signers.*']),
                 'links'  => [
-                    ['route' => 'items.index',       'label' => 'Items'],
-                    ['route' => 'categories.index',  'label' => 'Categories'],
-                    ['route' => 'units.index',       'label' => 'Units'],
-                    ['route' => 'vendors.index',     'label' => 'Vendors'],
                     ['route' => 'departments.index', 'label' => 'Departments'],
                     ['route' => 'signers.index',     'label' => 'Signers'],
                     ['route' => 'users.index',       'label' => 'Users'],
