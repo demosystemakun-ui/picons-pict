@@ -1,4 +1,4 @@
-{{-- resources/views/procurement/pdf-final.blade.php --}}
+{{-- resources/views/procurement/print-final.blade.php --}}
 @php
     $vendors     = $procurement['vendors'] ?? [];
     $winner      = $procurement['winner']  ?? null;
@@ -17,15 +17,16 @@
 <html lang="id">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<title>Procurement Request Form — {{ $procurement['no'] }}</title>
+<title>Procurement Request Form (Final) — {{ $procurement['no'] }}</title>
 <style>
-    @page { margin: 0; }
+    @page { size: a4 portrait; margin: 10mm 12mm; }
     * { box-sizing: border-box; }
     body {
         font-family: 'Helvetica', 'Arial', sans-serif;
-        font-size: 9px;
+        font-size: 11px;
         color: #000;
-        margin: 25px 30px;
+        margin: 0;
+        padding: 0;
     }
 
     /* ═══ CSS WATERMARK DRAFT ═══ */
@@ -34,85 +35,86 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 140px;
-        font-weight: bold;
-        color: rgba(180, 180, 180, 0.4);
+        font-size: 150px;
+        font-weight: 900;
+        color: rgba(200, 200, 200, 0.35);
         z-index: 9999;
         text-align: center;
         white-space: nowrap;
         pointer-events: none;
         font-family: sans-serif;
-        letter-spacing: 10px;
+        letter-spacing: 5px;
     }
-    /* ═════════════════════════════ */
+    /* ═══════════════════════════ */
 
     table { width: 100%; border-collapse: collapse; }
     .main-table { table-layout: fixed; border: 1.5px solid #000; }
     .main-table td, .main-table th {
         border: 1px solid #000;
-        padding: 3px 5px;
+        padding: 4px 6px;
         vertical-align: top;
     }
-    .title-cell { text-align: center; padding: 6px !important; }
+    .title-cell { text-align: center; padding: 8px !important; }
     .title {
-        font-size: 16px; font-weight: bold;
+        font-size: 20px; font-weight: bold;
         display: inline-block;
-        border-bottom: 1.8px solid #000;
+        border-bottom: 2px solid #000;
         padding-bottom: 2px;
     }
-    .no-cell { text-align: center; font-size: 10px; padding: 4px !important; }
-    .no-cell strong { font-family: 'Courier New', monospace; }
-    .label-col { width: 22%; font-weight: bold; font-size: 8.5px; }
-    .budget-col { width: 12%; text-align: center; font-size: 7.5px; }
+    .no-cell { text-align: center; font-size: 12px; padding: 6px !important; }
+    .no-cell strong { font-family: 'Courier New', monospace; font-size: 13px; }
+    .label-col { width: 22%; font-weight: bold; font-size: 10px; }
+    .budget-col { width: 12%; text-align: center; font-size: 9px; }
     .section-header {
         background: #d9d9d9;
         font-weight: bold;
         text-align: center;
-        font-size: 9.5px;
-        padding: 4px !important;
+        font-size: 11px;
+        padding: 6px !important;
     }
     .vendor-wrap { display: table; width: 100%; table-layout: fixed; }
     .vendor-cell {
         display: table-cell;
         width: 33.333%;
-        padding: 6px;
+        padding: 8px;
         vertical-align: top;
         border-right: 1px solid #000;
     }
     .vendor-cell:last-child { border-right: none; }
     .vendor-card {
         border: 1.2px solid #000;
-        padding: 6px 4px;
+        padding: 8px 6px;
         text-align: center;
     }
     .vendor-card .header {
-        font-size: 8px;
-        padding-bottom: 3px;
+        font-size: 10px;
+        padding-bottom: 4px;
         border-bottom: 1px solid #000;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
     .vendor-card .body {
-        font-size: 8.5px;
-        min-height: 24px;
+        font-size: 10px;
+        min-height: 30px;
         line-height: 1.3;
     }
     .vendor-card .total-lbl {
-        font-size: 8px;
-        margin-top: 5px;
-        padding-top: 4px;
+        font-size: 10px;
+        margin-top: 8px;
+        padding-top: 6px;
         border-top: 1px solid #000;
     }
-    .vendor-card .total-val { font-weight: bold; font-size: 9px; margin-top: 1px; }
-    .vendor-card .tax { font-size: 7.5px; margin-top: 1px; }
+    .vendor-card .total-val { font-weight: bold; font-size: 11px; margin-top: 2px; }
+    .vendor-card .tax { font-size: 9px; margin-top: 2px; }
     .notes {
-        font-size: 7.5px;
-        padding: 4px 6px !important;
-        line-height: 1.4;
+        font-size: 9px;
+        padding: 6px 8px !important;
+        line-height: 1.5;
     }
     .decision-table { width: 100%; table-layout: fixed; }
-    .decision-table td { border: 1px solid #000; padding: 4px; text-align: center; }
-    .sign-box { border: 1px solid #000; height: 36px; margin-bottom: 3px; position: relative; }
-    .sign-lbl { text-align: center; font-size: 8px; font-weight: bold; padding-top: 2px; }
+    .decision-table td { border: 1px solid #000; padding: 6px; text-align: center; }
+    .sign-box { border: 1px solid #000; height: 45px; margin-bottom: 4px; position: relative; }
+    .sign-lbl { text-align: center; font-size: 10px; font-weight: bold; padding-top: 2px; }
+    .approved-stamp { font-size: 8px; color: #15803d; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -128,12 +130,12 @@
     {{-- ═══ HEADER ═══ --}}
     <tr>
         <td colspan="5" class="title-cell">
-            <span class="title">Procurement Request form</span>
+            <span class="title">Procurement Request Form</span>
         </td>
     </tr>
     <tr>
         <td colspan="5" class="no-cell">
-            No. &nbsp; <strong>{{ $procurement['no'] }}</strong>
+            No. &nbsp;&nbsp;&nbsp; <strong>{{ $procurement['no'] }}</strong>
         </td>
     </tr>
 
@@ -167,7 +169,7 @@
         <td colspan="5" class="section-header">Candidates of suppliers</td>
     </tr>
     <tr>
-        <td colspan="5" style="padding: 6px; border: 1px solid #000;">
+        <td colspan="5" style="padding: 8px; border: 1px solid #000;">
             @if(count($vendors) > 0)
                 <div class="vendor-wrap">
                     @foreach(array_slice($vendors, 0, 3) as $v)
@@ -175,9 +177,9 @@
                             <div class="vendor-card">
                                 <div class="header">Company name</div>
                                 <div class="body">
-                                    <strong>{{ $v['vendor_name'] }}</strong>
+                                    <strong>{{ $v['company_name'] ?: $v['vendor_name'] }}</strong>
                                     @if(!empty($v['marketplace']))
-                                        <br><span style="font-size:7px; color:#555;">({{ $v['marketplace'] }})</span>
+                                        <br><span style="font-size:9px; color:#555;">({{ $v['marketplace'] }})</span>
                                     @endif
                                 </div>
                                 <div class="total-lbl">TOTAL price</div>
@@ -190,8 +192,8 @@
                     @endforeach
                 </div>
             @else
-                <div style="text-align:center; font-size:8.5px; color:#666; padding: 12px 0;">
-                    Belum ada vendor yang di-input untuk PR ini.
+                <div style="text-align:center; font-size:10px; color:#666; padding: 15px 0;">
+                    No vendors have been added for this PR yet.
                 </div>
             @endif
         </td>
@@ -200,8 +202,8 @@
     {{-- ═══ NOTES ═══ --}}
     <tr>
         <td colspan="5" class="notes">
-            ※ The contents of quotation should be attached (at least 3 or more)<br>
-            ※ If the supplier recommend similar products instead of our request, please indicate the reason
+            ? The contents of quotation should be attached (at least 3 or more)<br>
+            ? If the supplier recommend similar products instead of our request, please indicate the reason
         </td>
     </tr>
 
@@ -214,19 +216,19 @@
         <td colspan="3" style="padding: 0; border: 1px solid #000;">
             <table class="decision-table">
                 <tr>
-                    <td style="width: 55%; font-size: 8.5px;">Vendor/Supplier name</td>
-                    <td style="width: 45%; font-size: 8.5px;">Total Price</td>
+                    <td style="width: 55%; font-size: 10px;">Vendor/Supplier name</td>
+                    <td style="width: 45%; font-size: 10px;">Total Price</td>
                 </tr>
                 <tr>
-                    <td style="padding: 14px 4px; font-weight: bold; font-size: 9px;">
+                    <td style="padding: 18px 4px; font-weight: bold; font-size: 11px;">
                         {{ $winner['vendor_name'] ?? '—' }}
                     </td>
-                    <td style="padding: 14px 4px;">
+                    <td style="padding: 18px 4px;">
                         @if($winner)
-                            <div style="font-weight:bold; font-size:9px;">
+                            <div style="font-weight:bold; font-size:11px;">
                                 Total: {{ number_format($winner['total_price'], 0, ',', '.') }}
                             </div>
-                            <div style="font-size:7.5px;">{{ $winner['tax_note'] ?? '' }}</div>
+                            <div style="font-size:9px;">{{ $winner['tax_note'] ?? '' }}</div>
                         @else
                             —
                         @endif
@@ -235,21 +237,22 @@
             </table>
         </td>
 
-        <td colspan="2" rowspan="3" style="padding: 6px; vertical-align: top;">
+        {{-- AREA TANDA TANGAN KANAN --}}
+        <td colspan="2" rowspan="3" style="padding: 8px; vertical-align: top;">
             @foreach($procurement['signatures'] as $sig)
                 <div class="sign-box" style="position: relative;">
-                    <div style="text-align: center; font-size: 8px; padding-top: 3px;">
+                    <div style="text-align: center; font-size: 9px; padding-top: 4px;">
                         {{ $sig['name'] }}
                     </div>
                     @if($sig['approved'])
-                        <div style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 7px; color: #15803d; font-weight: bold;">
+                        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #15803d; font-weight: bold;">
                             [ APPROVED ]
                         </div>
                     @endif
                 </div>
                 <div class="sign-lbl">{{ $sig['role'] }}</div>
                 @if(!$loop->last)
-                    <div style="margin-top: 8px;"></div>
+                    <div style="margin-top: 10px;"></div>
                 @endif
             @endforeach
         </td>
@@ -258,7 +261,7 @@
         <td colspan="3" class="section-header">Reason why choose this vendor/supplier</td>
     </tr>
     <tr>
-        <td colspan="3" style="padding: 10px 6px; min-height: 60px; font-size: 8.5px; line-height: 1.4;">
+        <td colspan="3" style="padding: 12px 8px; min-height: 80px; font-size: 10px; line-height: 1.5;">
             @if(!empty($procurement['reason_choose_vendor']))
                 {{ $procurement['reason_choose_vendor'] }}
             @elseif($winner)
@@ -279,19 +282,19 @@
         <td colspan="5" style="padding: 0;">
             <table class="decision-table">
                 <tr>
-                    <td style="width: 55%; font-size: 8.5px;">Vendor/Supplier name</td>
-                    <td style="width: 45%; font-size: 8.5px;">Total Price</td>
+                    <td style="width: 55%; font-size: 10px;">Vendor/Supplier name</td>
+                    <td style="width: 45%; font-size: 10px;">Total Price</td>
                 </tr>
                 <tr>
-                    <td style="padding: 14px 4px; font-weight: bold; font-size: 9px;">
+                    <td style="padding: 18px 4px; font-weight: bold; font-size: 11px;">
                         {{ $winner['vendor_name'] ?? '—' }}
                     </td>
-                    <td style="padding: 14px 4px;">
+                    <td style="padding: 18px 4px;">
                         @if($winner)
-                            <div style="font-weight:bold; font-size:9px;">
+                            <div style="font-weight:bold; font-size:11px;">
                                 Total: {{ number_format($winner['total_price'], 0, ',', '.') }}
                             </div>
-                            <div style="font-size:7.5px;">{{ $winner['tax_note'] ?? '' }}</div>
+                            <div style="font-size:9px;">{{ $winner['tax_note'] ?? '' }}</div>
                         @else
                             —
                         @endif
@@ -303,20 +306,23 @@
 
     {{-- ═══ BOTTOM SIGNATURES ═══ --}}
     <tr>
-        <td colspan="5" style="padding: 14px 8px;">
+        <td colspan="5" style="padding: 16px 10px;">
             <table style="width: 100%; table-layout: fixed;">
                 <tr>
-                    @foreach([
-                        ['label' => 'Accounting MGR', 'name' => $procurement['accounting_mgr_name'] ?? ''],
-                        ['label' => 'CFO',            'name' => $procurement['cfo_name'] ?? ''],
-                        ['label' => 'CEO',            'name' => $procurement['ceo_name'] ?? ''],
-                    ] as $sign)
-                        <td style="width: 30%; padding: 0 6px; vertical-align: bottom;">
-                            <div style="height: 34px; text-align: center; font-size: 8px; padding-top: 4px;">
-                                {{ $sign['name'] }}
+                    @foreach($procurement['bottom_signatures'] as $sign)
+                        <td style="width: 30%; padding: 0 8px; vertical-align: bottom;">
+                            <div style="height: 40px; position: relative; text-align: center;">
+                                <div style="font-size: 10px; padding-top: 4px;">
+                                    {{ $sign['name'] }}
+                                </div>
+                                @if($sign['approved'])
+                                    <div style="position: absolute; bottom: 0; left: 0; right: 0; font-size: 8px; color: #15803d; font-weight: bold;">
+                                        [ APPROVED ]
+                                    </div>
+                                @endif
                             </div>
-                            <div style="border: 1px solid #000; text-align: center; padding: 5px 0; font-size: 8.5px; font-weight: bold;">
-                                {{ $sign['label'] }}
+                            <div style="border: 1px solid #000; text-align: center; padding: 6px 0; font-size: 10px; font-weight: bold;">
+                                {{ $sign['role'] }}
                             </div>
                         </td>
                     @endforeach
@@ -327,6 +333,29 @@
     </tr>
 
 </table>
+
+{{-- AUTO PRINT --}}
+<script>
+    (function () {
+        const returnUrl = document.referrer || null;
+
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                window.print();
+            }, 300);
+        });
+
+        window.addEventListener('afterprint', function () {
+            setTimeout(function () {
+                if (returnUrl) {
+                    window.location.href = returnUrl;
+                } else if (window.history.length > 1) {
+                    window.history.back();
+                }
+            }, 100);
+        });
+    })();
+</script>
 
 </body>
 </html>

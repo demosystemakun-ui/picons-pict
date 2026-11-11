@@ -366,6 +366,12 @@ class ProcurementRequestController extends Controller
             ['role' => 'COO',      'name' => $procurementRequest->coo_name,         'approved' => (bool) $procurementRequest->is_coo_approved],
         ];
 
+        $procurement['bottom_signatures'] = [
+            ['role' => 'Accounting MGR', 'name' => $procurementRequest->accounting_mgr_name, 'approved' => (bool) $procurementRequest->is_accounting_approved],
+            ['role' => 'CFO',            'name' => $procurementRequest->cfo_name,            'approved' => (bool) $procurementRequest->is_cfo_approved],
+            ['role' => 'CEO',            'name' => $procurementRequest->ceo_name,            'approved' => (bool) $procurementRequest->is_ceo_approved],
+        ];
+
         return view('procurement.print-final', compact('procurement', 'isDraft'));
     }
 
@@ -472,6 +478,12 @@ class ProcurementRequestController extends Controller
             ['role' => 'Ops. MGR', 'name' => $procurementRequest->ops_manager_name, 'approved' => (bool) $procurementRequest->is_ops_approved],
             ['role' => 'FEM. MGR', 'name' => $procurementRequest->fem_manager_name, 'approved' => (bool) $procurementRequest->is_fem_approved],
             ['role' => 'COO',      'name' => $procurementRequest->coo_name,         'approved' => (bool) $procurementRequest->is_coo_approved],
+        ];
+
+        $procurement['bottom_signatures'] = [
+            ['role' => 'Accounting MGR', 'name' => $procurementRequest->accounting_mgr_name, 'approved' => (bool) $procurementRequest->is_accounting_approved],
+            ['role' => 'CFO',            'name' => $procurementRequest->cfo_name,            'approved' => (bool) $procurementRequest->is_cfo_approved],
+            ['role' => 'CEO',            'name' => $procurementRequest->ceo_name,            'approved' => (bool) $procurementRequest->is_ceo_approved],
         ];
 
         $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement', 'isDraft'))->setPaper('a4', 'portrait');
