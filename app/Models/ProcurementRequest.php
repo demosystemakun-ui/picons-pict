@@ -96,10 +96,9 @@ class ProcurementRequest extends Model
         return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+  public function user() {
+    return $this->belongsTo(\App\Models\User::class, 'user_id');
+}
 
     public function department()
     {

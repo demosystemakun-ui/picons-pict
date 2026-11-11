@@ -1,62 +1,105 @@
-@php
-    $isEdit = $user->exists;
-    $currentRole = old('role', $user->roles->first()->name ?? '');
-    $input = 'w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:ring-blue-500 focus:border-blue-500';
-@endphp
+@extends('layouts.app')
 
-@csrf
-@if ($isEdit) @method('PUT') @endif
+@section('title', 'Users')
+@section('page-title', 'Master Data - Users')
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-        <label class="block text-sm font-medium mb-1">Nama</label>
-        <input type="text" name="name" value="{{ old('name', $user->name) }}" class="{{ $input }}" required>
-        @error('name') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+@section('content')
+<div class="space-y-4">
+
+    @if (session('success'))
+        <div class="px-4 py-3 rounded-lg bg-green-50 text-green-700 text-sm">{{ session('success') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="px-4 py-3 rounded-lg bg-red-50 text-red-700 text-sm">{{ session('error') }}</div>
+    @endif
+
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <form method="GET" class="flex flex-wrap items-center gap-2">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama / email / WA..."
+                   class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 w-56">
+            <select name="role" class="text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2">
+                <option value="">Semua Role</option>
+                @foreach ($roles as $r)
+                    <option value="{{ $r->name }}" @selected(request('role') == $r->name)>{{ $r->name }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="text-sm px-3 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900">Filter</button>
+        </form>
+
+        <a href="{{ route('users.create') }}"
+           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <i data-lucide="plus" class="w-4 h-4"></i> Tambah User
+        </a>
     </div>
 
-    <div>
-        <label class="block text-sm font-medium mb-1">Email</label>
-        <input type="email" name="email" value="{{ old('email', $user->email) }}" class="{{ $input }}" required>
-        @error('email') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium mb-1">
-            Password @if ($isEdit) <span class="text-gray-400 font-normal">(kosongkan jika tidak diganti)</span> @endif
-        </label>
-        <input type="password" name="password" class="{{ $input }}" autocomplete="new-password" @required(!$isEdit)>
-        @error('password') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium mb-1">Konfirmasi Password</label>
-        <input type="password" name="password_confirmation" class="{{ $input }}" autocomplete="new-password" @required(!$isEdit)>
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium mb-1">Role</label>
-        <select name="role" class="{{ $input }}" required>
-            <option value="">-- Pilih Role --</option>
-            @foreach ($roles as $r)
-                <option value="{{ $r->name }}" @selected($currentRole == $r->name)>{{ $r->name }}</option>
-            @endforeach
-        </select>
-        @error('role') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium mb-1">Departemen</label>
-        <select name="department_id" class="{{ $input }}">
-            <option value="">-- Tanpa Departemen --</option>
-            @foreach ($departments as $d)
-                <option value="{{ $d->id }}" @selected(old('department_id', $user->department_id) == $d->id)>{{ $d->name }}</option>
-            @endforeach
-        </select>
-        @error('department_id') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+                    <tr>
+                        <th class="text-left px-5 py-3">Nama</th>
+                        <th class="text-left px-5 py-3">Email</th>
+                        {{-- ═══ KOLOM BARU: No. WhatsApp ═══ --}}
+                        <th class="text-left px-5 py-3">No. WhatsApp</th>
+                        {{-- ══════════════════════════════ --}}
+                        <th class="text-left px-5 py-3">Departemen</th>
+                        <th class="text-left px-5 py-3">Role</th>
+                        <th class="text-right px-5 py-3">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    @forelse ($users as $u)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-5 py-3 font-medium">{{ $u->name }}</td>
+                            <td class="px-5 py-3 text-gray-500">{{ $u->email }}</td>
+                            {{-- ═══ SEL BARU: No. WhatsApp ═══ --}}
+                            <td class="px-5 py-3 text-gray-500 font-mono text-xs">
+                                @if ($u->phone_number)
+                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $u->phone_number) }}"
+                                       target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-1 text-green-600 hover:text-green-700">
+                                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                                        {{ $u->phone_number }}
+                                    </a>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+                            {{-- ══════════════════════════════ --}}
+                            <td class="px-5 py-3 text-gray-500">{{ $u->department->name ?? '-' }}</td>
+                            <td class="px-5 py-3">
+                                @foreach ($u->roles as $role)
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">{{ $role->name }}</span>
+                                @endforeach
+                            </td>
+                            <td class="px-5 py-3">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{{ route('users.nonaktif', $u) }}" class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                                        <i data-lucide="user-x" class="w-4 h-4"></i>
+                                    </a>
+                                    <a href="{{ route('users.edit', $u) }}" class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                                    </a>
+                                    @if ($u->id !== auth()->id())
+                                        <form action="{{ route('users.destroy', $u) }}" method="POST" onsubmit="return confirm('Hapus user ini?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">Belum ada data user.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700">
+            {{ $users->links() }}
+        </div>
     </div>
 </div>
-
-<div class="flex justify-end gap-2 mt-6">
-    <a href="{{ route('users.index') }}" class="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700">Batal</a>
-    <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">Simpan</button>
-</div>
+@endsection

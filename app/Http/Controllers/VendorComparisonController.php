@@ -6,6 +6,7 @@ use App\Models\ProcurementRequest;
 use App\Models\ProcurementVendor;
 use App\Models\CashAdvance;
 use App\Services\GeminiVisionService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -242,6 +243,10 @@ class VendorComparisonController extends Controller
                 }
             }
 
+            // ═══ TRIGGER WA KE ADMIN (PR Final baru menunggu review) ═══
+            $this->notifyAdminsFinalPrCreated($procurement);
+            // ═══════════════════════════════════════════════════════════
+
             DB::commit();
 
             return redirect()
@@ -252,6 +257,31 @@ class VendorComparisonController extends Controller
             DB::rollBack();
             Log::error('Store Final PR Error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Failed to save Final PR: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ═══ TRIGGER WA: Notifikasi ke Admin saat Final PR baru dibuat ═══
+     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
+     */
+    private function notifyAdminsFinalPrCreated(ProcurementRequest $procurement): void
+    {
+        try {
+            $wa = new WhatsAppService();
+            $prNo = $procurement->final_number ?? $procurement->no;
+
+            $admins = \App\Models\User::role(['Super Admin', 'Admin'])->get();
+
+            foreach ($admins as $admin) {
+                if (!empty($admin->phone_number)) {
+                    $wa->send(
+                        $admin->phone_number,
+                        "Halo {$admin->name}, ada *PR Final baru* menunggu review format:\n\nNo: {$prNo}\nDept: " . ($procurement->division ?? '-') . "\nTotal: Rp " . number_format((float) $procurement->final_total_price, 0, ',', '.') . "\n\nSilakan cek di sistem."
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notify admins failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
     }
 

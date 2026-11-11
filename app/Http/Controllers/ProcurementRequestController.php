@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\WhatsAppService;
 
 class ProcurementRequestController extends Controller
 {
@@ -506,6 +507,11 @@ class ProcurementRequestController extends Controller
         if (!$procurementRequest->winnerVendor) return back()->with('error', 'No winning vendor. Please select a vendor first.');
         if ($procurementRequest->status !== 'approved') return back()->with('error', 'Invalid PR status for validation. Current status: ' . $procurementRequest->status);
         $procurementRequest->update(['status' => 'processed']);
+
+        // ═══ TRIGGER WA ═══
+        $this->sendWhatsAppNotification($procurementRequest, 'processed');
+        // ═════════════════
+
         return redirect()->route('procurement.comparisons.index', $procurementRequest)->with('success', 'PR Awal validation successful. You can now create PR Final.');
     }
 
@@ -530,6 +536,10 @@ class ProcurementRequestController extends Controller
             'final_number' => $request->input('final_number'),
             'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
         ]);
+
+        // ═══ TRIGGER WA ═══
+        $this->sendWhatsAppNotification($procurementRequest, 'final_approved');
+        // ═════════════════
 
         return redirect()->route('procurement.pdf.final', $procurementRequest)->with('success', 'PR Final validated with number: ' . $request->input('final_number'));
     }
@@ -584,6 +594,10 @@ class ProcurementRequestController extends Controller
 
         $procurementRequest->update(['status' => $validated['status'], 'review_notes' => $validated['review_notes'] ?? null]);
 
+        // ═══ TRIGGER WA ═══
+        $this->sendWhatsAppNotification($procurementRequest, $validated['status']);
+        // ═════════════════
+
         $messages = [
             'approved' => 'Request has been approved.',
             'rejected' => 'Request has been rejected.',
@@ -596,6 +610,40 @@ class ProcurementRequestController extends Controller
         ];
 
         return back()->with('success', $messages[$validated['status']] ?? 'Status updated successfully.');
+    }
+
+    /**
+     * ═══ TRIGGER WA: Kirim notifikasi WhatsApp saat status PR berubah ═══
+     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
+     */
+    private function sendWhatsAppNotification(ProcurementRequest $pr, string $newStatus): void
+    {
+        try {
+            $user = $pr->user; // Relasi ke User (pembuat PR)
+            if (!$user || empty($user->phone_number)) {
+                return;
+            }
+
+            $wa   = new WhatsAppService();
+            $prNo = $pr->final_number ?? $pr->no;
+
+            $messages = [
+                'approved'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *disetujui* oleh Admin. Silakan cek detailnya.",
+                'rejected'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *ditolak*. Catatan: {$pr->review_notes}",
+                'revision'       => "Halo {$user->name}, PR Anda ({$prNo}) *perlu revisi*. Catatan: {$pr->review_notes}",
+                'processed'      => "Halo {$user->name}, PR Anda ({$prNo}) telah *diproses*. Lanjut ke tahap berikutnya.",
+                'final_approved' => "Halo {$user->name}, PR Final Anda ({$prNo}) telah *divalidasi*. Silakan ambil dokumen fisik di Admin.",
+                'received'       => "Halo {$user->name}, barang untuk PR ({$prNo}) telah *diterima* oleh Admin.",
+                'completed'      => "Halo {$user->name}, PR Anda ({$prNo}) telah *selesai*.",
+            ];
+
+            $message = $messages[$newStatus] ?? null;
+            if ($message) {
+                $wa->send($user->phone_number, $message);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp notification failed for PR #' . $pr->id . ': ' . $e->getMessage());
+        }
     }
 
     private function mapToPrintData(ProcurementRequest $model): array
