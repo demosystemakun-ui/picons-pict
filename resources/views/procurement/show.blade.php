@@ -91,8 +91,8 @@
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
 
-            {{-- 1. TOMBOL PREVIEW DRAFT (Bisa dilihat semua user) --}}
-            @if($currStatus === 'pending')
+            {{-- 1. TOMBOL PREVIEW DRAFT (Hanya untuk Admin saat pending) --}}
+            @if($currStatus === 'pending' && $isAdmin)
                 <a href="{{ route('procurement.pdf', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Preview PDF (Draft)
                 </a>
@@ -189,8 +189,8 @@
                 </a>
             @endif
 
-            {{-- 8. Tombol Print & PDF (versi awal / final sesuai tahap) --}}
-            @if($currStatus !== 'pending')
+            {{-- 8. Tombol Print & PDF (HANYA ADMIN) --}}
+            @if($currStatus !== 'pending' && $isAdmin)
                 <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
 
                 <a href="{{ $isFinalStage ? route('procurement.print.final', $procurementRequest) : route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -210,13 +210,11 @@
             
             @php
                 // Ambil suffix (bagian setelah nomor urut)
-                // Jika masih DRAFT, buat suffix standar berdasarkan tanggal hari ini
                 if (str_starts_with($procurementRequest->no, 'DRAFT-')) {
                     $bulanRomawi = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
                     $suffix = 'OPS/PICT-' . $bulanRomawi[(int)date('n') - 1] . '-' . date('Y');
                     $prefix = '';
                 } else {
-                    // Jika sudah pernah edit, ambil prefix dan suffix-nya
                     $parts  = explode('/PR/', $procurementRequest->no);
                     $prefix = $parts[0] ?? '';
                     $suffix = $parts[1] ?? 'OPS/PICT-' . date('m') . '-' . date('Y');
@@ -228,14 +226,12 @@
                 @method('PATCH')
                 
                 <div class="flex items-center w-full sm:max-w-md rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                    {{-- Input Nomor Urut --}}
                     <input type="text" name="no_prefix" 
                            value="{{ old('no_prefix', $prefix) }}"
                            required
                            placeholder="Contoh: 15"
                            class="w-20 text-center border-none text-sm px-3 py-2 font-mono focus:ring-0 focus:outline-none">
                     
-                    {{-- Suffix Otomatis --}}
                     <span class="text-sm font-mono text-gray-500 bg-gray-50 dark:bg-gray-800 px-3 py-2 border-l border-gray-200 dark:border-gray-700 w-full">
                         /PR/{{ $suffix }}
                     </span>

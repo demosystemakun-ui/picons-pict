@@ -19,7 +19,7 @@
     $canInputVendor = in_array($procurement->status, ['approved', 'processed']);
 
     // Cek role admin untuk tombol-tombol khusus
-    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']);
+    $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 @endphp
 
 @section('content')
