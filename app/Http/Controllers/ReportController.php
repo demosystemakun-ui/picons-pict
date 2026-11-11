@@ -39,12 +39,13 @@ class ReportController extends Controller
         ═══════════════════════════════════════════════════════ */
         $topVendors = Purchase::query()
             ->join('procurement_vendors', 'purchases.vendor_id', '=', 'procurement_vendors.id')
+            ->join('purchase_items', 'purchases.id', '=', 'purchase_items.purchase_id') // Join ke item untuk hitung total
             ->whereDate('purchases.order_date', '>=', $startDate)
             ->whereDate('purchases.order_date', '<=', $endDate)
             ->select(
                 'procurement_vendors.vendor_name',
-                DB::raw('COUNT(purchases.id) as total_po'),
-                DB::raw('SUM(purchases.final_total_price) as total_spent') // Asumsi ada kolom total di purchases
+                DB::raw('COUNT(DISTINCT purchases.id) as total_po'), // Gunakan DISTINCT agar PO tidak terhitung ganda
+                DB::raw('SUM(purchase_items.qty_ordered * purchase_items.unit_price) as total_spent')
             )
             ->groupBy('procurement_vendors.vendor_name')
             ->orderByDesc('total_spent')
