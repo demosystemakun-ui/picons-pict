@@ -25,7 +25,7 @@ class SignerController extends Controller
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'title' => 'required|string|max:255',
-            'slot'  => 'nullable|integer',
+             'slot'  => 'required|string',
         ]);
 
         Signer::create($validated);
@@ -50,7 +50,7 @@ class SignerController extends Controller
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'title' => 'required|string|max:255',
-              'slot'  => ['required', Rule::in(array_keys(Signer::SLOTS))],
+              'slot'  => 'required|string',
         ]);
 
         $signer->update($validated);
