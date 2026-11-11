@@ -23,7 +23,8 @@ class UserController extends Controller
         $users = User::with(['department', 'roles'])
             ->when($request->search, function ($q, $s) {
                 $q->where(fn ($w) => $w->where('name', 'like', "%{$s}%")
-                                       ->orWhere('email', 'like', "%{$s}%"));
+                                       ->orWhere('email', 'like', "%{$s}%")
+                                       ->orWhere('phone_number', 'like', "%{$s}%")); // ═══ TAMBAHAN WA ═══
             })
             ->when($request->role, fn ($q, $r) => $q->role($r))
             ->orderBy('name')
@@ -52,6 +53,7 @@ class UserController extends Controller
             'password'      => 'required|string|min:8|confirmed',
             'role'          => ['required', Rule::exists('roles', 'name')->where('guard_name', 'web')],
             'department_id' => 'nullable|exists:departments,id',
+            'phone_number'  => 'nullable|string|max:20', // ═══ TAMBAHAN WA ═══
         ]);
 
         $role = Role::where('name', $data['role'])->where('guard_name', 'web')->firstOrFail();
@@ -62,6 +64,7 @@ class UserController extends Controller
                 'email'         => $data['email'],
                 'password'      => Hash::make($data['password']),
                 'department_id' => $data['department_id'] ?? null,
+                'phone_number'  => $data['phone_number'] ?? null, // ═══ TAMBAHAN WA ═══
             ]);
 
             $user->syncRoles([$role]);
@@ -87,6 +90,7 @@ class UserController extends Controller
             'password'      => 'nullable|string|min:8|confirmed',
             'role'          => ['required', Rule::exists('roles', 'name')->where('guard_name', 'web')],
             'department_id' => 'nullable|exists:departments,id',
+            'phone_number'  => 'nullable|string|max:20', // ═══ TAMBAHAN WA ═══
         ]);
 
         // Cegah Super Admin mencabut role dirinya sendiri
@@ -101,6 +105,7 @@ class UserController extends Controller
                 'name'          => $data['name'],
                 'email'         => $data['email'],
                 'department_id' => $data['department_id'] ?? null,
+                'phone_number'  => $data['phone_number'] ?? null, // ═══ TAMBAHAN WA ═══
             ]);
 
             if (!empty($data['password'])) {
