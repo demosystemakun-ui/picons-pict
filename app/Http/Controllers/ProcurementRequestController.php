@@ -632,7 +632,7 @@ class ProcurementRequestController extends Controller
             $prNo = $pr->final_number ?? $pr->no;
 
             $messages = [
-                'approved'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *disetujui* oleh Admin. Silakan cek detailnya.",
+                'approved'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *disetujui* oleh Admin. Silakan ambil dokumen fisik di Admin.",
                 'rejected'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *ditolak*. Catatan: {$pr->review_notes}",
                 'revision'       => "Halo {$user->name}, PR Anda ({$prNo}) *perlu revisi*. Catatan: {$pr->review_notes}",
                 'processed'      => "Halo {$user->name}, PR Anda ({$prNo}) telah *diproses*. Lanjut ke tahap berikutnya.",
