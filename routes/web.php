@@ -102,7 +102,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/inventory/scan-dept/{department_id}', [InventoryStockController::class, 'scanDepartment'])->name('inventory.scan.dept');
     Route::post('/inventory/scan-item/{stock_id}', [InventoryStockController::class, 'processScanDepartment'])->name('inventory.scan.item');
-
+   Route::get('/inventory/department/{id}/print-qr', [InventoryStockController::class, 'printDepartmentQr'])->name('inventory.department.print-qr');
 
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST

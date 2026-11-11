@@ -923,6 +923,16 @@ class InventoryStockController extends Controller
         return view('inventory.stock.scan-department', compact('department', 'stocks'));
     }
 
+        public function printDepartmentQr($id)
+    {
+        $department = Department::findOrFail($id);
+        
+        // URL yang akan dibuka saat user scan
+        $scanUrl = route('inventory.scan.dept', $department->id);
+
+        return view('inventory.stock.print-qr', compact('department', 'scanUrl'));
+    }
+
     public function processScanDepartment(Request $request, $stock_id)
     {
         $validated = $request->validate([

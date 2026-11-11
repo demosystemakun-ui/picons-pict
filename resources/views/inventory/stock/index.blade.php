@@ -40,6 +40,12 @@
                 Export
             </button>
 
+            @if(request('department_id'))
+    <a href="{{ route('inventory.department.print-qr', request('department_id')) }}" target="_blank" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition">
+        <i data-lucide="qr-code" class="w-4 h-4"></i> Cetak QR Lemari
+    </a>
+@endif
+
             @if(auth()->user()->hasRole('Super Admin'))
                 <a href="{{ route('inventory.stock.create') }}"
                    class="inline-flex items-center gap-2 rounded-md bg-slate-900 dark:bg-white px-4 py-2 text-sm font-medium text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-gray-100 transition">
