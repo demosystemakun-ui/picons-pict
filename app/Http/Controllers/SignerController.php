@@ -25,6 +25,7 @@ class SignerController extends Controller
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'title' => 'required|string|max:255',
+            'slot'  => 'nullable|integer',
         ]);
 
         Signer::create($validated);
@@ -49,6 +50,7 @@ class SignerController extends Controller
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
             'title' => 'required|string|max:255',
+              'slot'  => ['required', Rule::in(array_keys(Signer::SLOTS))],
         ]);
 
         $signer->update($validated);
@@ -56,9 +58,7 @@ class SignerController extends Controller
         return redirect()->route('signers.index')->with('success', 'Signer berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus signer.
-     */
+  
     public function destroy(Signer $signer)
     {
         $signer->delete();
