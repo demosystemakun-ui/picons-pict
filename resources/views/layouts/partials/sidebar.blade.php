@@ -119,13 +119,14 @@
         @php
             $procurementLinks = [];
             
-            // Semua user yang login bisa mengakses menu Procurement
             if (auth()->check()) {
                 // 1. Procurement Request
                 $procurementLinks[] = ['route' => 'procurement.index', 'label' => 'Procurement Request'];
                 
-                // 2. Vendor Comparison
-                $procurementLinks[] = ['route' => 'procurement.comparisons.global', 'label' => 'Vendor Comparison'];
+                // 2. Vendor Comparison (HANYA ADMIN)
+                if (auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
+                    $procurementLinks[] = ['route' => 'procurement.comparisons.global', 'label' => 'Vendor Comparison'];
+                }
                 
                 // 3. Purchase Orders (PO)
                 $procurementLinks[] = ['route' => 'procurement.purchases.index', 'label' => 'Purchase Orders (PO)'];

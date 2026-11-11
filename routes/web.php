@@ -147,7 +147,11 @@ Route::middleware(['auth'])->group(function () {
 
         // ═══ LIST & GLOBAL ═══
         Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
-        Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])->name('comparisons.global');
+        
+        // ═══ GLOBAL VENDOR COMPARISON (HANYA ADMIN) ═══
+        Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])
+            ->name('comparisons.global')
+            ->middleware('role:Super Admin|Admin');
 
         // ═══ CREATE & STORE PR AWAL ═══
         Route::get('/create', [ProcurementRequestController::class, 'create'])->name('create');
@@ -159,9 +163,11 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('role:Super Admin|Admin');
 
         // ═══════════════════════════════════════════════════════════
-        // VENDOR COMPARISON (per PR)
+        // VENDOR COMPARISON (per PR) — HANYA ADMIN
         // ═══════════════════════════════════════════════════════════
-        Route::prefix('/{procurement}/comparisons')->name('comparisons.')->group(function () {
+        Route::prefix('/{procurement}/comparisons')->name('comparisons.')
+            ->middleware('role:Super Admin|Admin')
+            ->group(function () {
 
             Route::get('/',  [VendorComparisonController::class, 'index'])->name('index');
             Route::post('/', [VendorComparisonController::class, 'store'])->name('store');
@@ -178,8 +184,7 @@ Route::middleware(['auth'])->group(function () {
 
             // ═══ UPDATE NOMOR FINAL PR (KHUSUS ADMIN) ═══
             Route::patch('/update-final-number', [VendorComparisonController::class, 'updateFinalNumber'])
-                ->name('update-final-number')
-                ->middleware('role:Super Admin|Admin');
+                ->name('update-final-number');
         });
 
         // ═══════════════════════════════════════════════════════════
