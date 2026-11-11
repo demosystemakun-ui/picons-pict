@@ -184,8 +184,9 @@
                                     {{-- ═══ JIKA DI TAB VENDOR COMPARISON (TAHAP 2) ═══ --}}
                                     @if(request('stage') == 'final')
                                         
-                                        <a href="{{ route('procurement.pdf.final', $r) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-teal-600 bg-white text-teal-700 hover:bg-teal-50 transition" title="Lihat Draft PDF">
-                                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Draft
+                                        {{-- Tombol View Document (Bukan Draft) --}}
+                                        <a href="{{ route('procurement.pdf.final', $r) }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-teal-600 bg-white text-teal-700 hover:bg-teal-50 transition" title="Lihat Dokumen PDF">
+                                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> View Document
                                         </a>
 
                                         {{-- Tombol Approve & Validate TTD hanya untuk Admin --}}
@@ -267,7 +268,7 @@
                                                     </a>
                                                 @endif
 
-                                                {{-- PRINT & PDF (HANYA ADMIN) ═══ PERBAIKAN DI SINI ═══ --}}
+                                                {{-- PRINT & PDF (HANYA ADMIN) --}}
                                                 @if($isAdmin)
                                                     <button type="button" onclick="printDirect('{{ $isFinalPR ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                                         <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
@@ -276,7 +277,6 @@
                                                         <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
                                                     </a>
                                                 @endif
-                                                {{-- ═══════════════════════════════════════════════════════ --}}
 
                                                 {{-- Edit Data (Hanya Admin & Status Pending/Revision) --}}
                                                 @if(in_array($currStatus, ['pending', 'revision']) && $isAdmin)
