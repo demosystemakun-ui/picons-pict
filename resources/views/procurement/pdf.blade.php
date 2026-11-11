@@ -109,8 +109,8 @@
         transform: translate(-50%, -50%) rotate(-45deg);
         font-size: 140px;
         font-weight: bold;
-        color: rgba(180, 180, 180, 0.4); /* Lebih tegas */
-        z-index: 9999; /* Memastikan di atas tabel */
+        color: rgba(180, 180, 180, 0.4);
+        z-index: 9999;
         text-align: center;
         white-space: nowrap;
         pointer-events: none;

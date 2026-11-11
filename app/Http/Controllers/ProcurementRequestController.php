@@ -1,3 +1,6 @@
+Berikut adalah kode final untuk `app/Http/Controllers/ProcurementRequestController.php`. Saya sudah memperbaiki logika `$isDraft` di method `pdfFinal` dan `printFinal` agar watermark **DRAFT** selalu muncul untuk user biasa, meskipun statusnya sudah `final_approved`.
+
+```php
 <?php
 
 namespace App\Http\Controllers;
@@ -193,7 +196,7 @@ class ProcurementRequestController extends Controller
         }
     }
 
-       public function updateNumber(Request $request, ProcurementRequest $procurementRequest)
+    public function updateNumber(Request $request, ProcurementRequest $procurementRequest)
     {
         if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
             abort(403, 'Only Admin can edit PR number.');
@@ -452,7 +455,17 @@ class ProcurementRequestController extends Controller
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
-        $isDraft = $procurementRequest->status === 'pending_review_final';
+        // ═══ LOGIKA WATERMARK ═══
+        // User biasa SELALU melihat DRAFT
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            $isDraft = true;
+        } else {
+            // Admin/Super Admin: Cek status
+            $isDraft = $procurementRequest->status !== 'final_approved' 
+                    && $procurementRequest->status !== 'received' 
+                    && $procurementRequest->status !== 'completed';
+        }
+        // ══════════════════════════
 
         return view('procurement.print-final', compact('procurement', 'isDraft'));
     }
@@ -567,7 +580,17 @@ class ProcurementRequestController extends Controller
         $procurement['ceo_name']             = $procurementRequest->ceo_name;
         $procurement['cfo_name']             = $procurementRequest->cfo_name;
 
-        $isDraft = $procurementRequest->status === 'pending_review_final';
+        // ═══ LOGIKA WATERMARK ═══
+        // User biasa SELALU melihat DRAFT
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            $isDraft = true;
+        } else {
+            // Admin/Super Admin: Cek status
+            $isDraft = $procurementRequest->status !== 'final_approved' 
+                    && $procurementRequest->status !== 'received' 
+                    && $procurementRequest->status !== 'completed';
+        }
+        // ══════════════════════════
 
         $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement', 'isDraft'))
             ->setPaper('a4', 'portrait');
@@ -819,3 +842,4 @@ class ProcurementRequestController extends Controller
         ];
     }
 }
+```

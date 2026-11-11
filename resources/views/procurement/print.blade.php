@@ -98,8 +98,8 @@
         transform: translate(-50%, -50%) rotate(-45deg);
         font-size: 150px;
         font-weight: 900;
-        color: rgba(200, 200, 200, 0.35); /* Warna abu-abu transparan */
-        z-index: 9999; /* Menimpa semua elemen (termasuk tabel) */
+        color: rgba(200, 200, 200, 0.35);
+        z-index: 9999;
         text-align: center;
         white-space: nowrap;
         pointer-events: none;
@@ -115,7 +115,7 @@
         background: #fff;
         border: none;
         padding: 0;
-        position: relative; /* Penting untuk tumpukan z-index */
+        position: relative;
     }
 
     table { width: 100%; border-collapse: collapse; }

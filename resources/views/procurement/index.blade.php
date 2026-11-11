@@ -249,7 +249,7 @@
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
 
-                                                {{-- Approve TTD (Hanya Admin) ═══ PERBAIKAN DI SINI ═══ --}}
+                                                {{-- Approve TTD (Hanya Admin) --}}
                                                 @if($currStatus === 'approved' && !$isAllSigned && $isAdmin)
                                                     <form action="{{ route('procurement.approve-all-signatures', $r) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan?')">
                                                         @csrf @method('PATCH')
@@ -259,7 +259,6 @@
                                                     </form>
                                                     <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                                 @endif
-                                                {{-- ═══════════════════════════════════════════════════ --}}
 
                                                 {{-- Vendor Comparison (Bisa dilihat semua) --}}
                                                 @if(in_array($currStatus, ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']) || ($currStatus === 'approved' && $isAllSigned))
@@ -268,13 +267,16 @@
                                                     </a>
                                                 @endif
 
-                                                {{-- Print & PDF (Bisa dilihat semua) --}}
-                                                <button type="button" onclick="printDirect('{{ $isFinalPR ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
-                                                </button>
-                                                <a href="{{ $isFinalPR ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                                    <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
-                                                </a>
+                                                {{-- PRINT & PDF (HANYA ADMIN) ═══ PERBAIKAN DI SINI ═══ --}}
+                                                @if($isAdmin)
+                                                    <button type="button" onclick="printDirect('{{ $isFinalPR ? route('procurement.print.final', $r) : route('procurement.print', $r) }}')" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Form
+                                                    </button>
+                                                    <a href="{{ $isFinalPR ? route('procurement.pdf.final', $r) : route('procurement.pdf', $r) }}" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                        <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
+                                                    </a>
+                                                @endif
+                                                {{-- ═══════════════════════════════════════════════════════ --}}
 
                                                 {{-- Edit Data (Hanya Admin & Status Pending/Revision) --}}
                                                 @if(in_array($currStatus, ['pending', 'revision']) && $isAdmin)
