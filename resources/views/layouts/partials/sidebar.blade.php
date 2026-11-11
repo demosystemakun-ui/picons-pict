@@ -85,18 +85,20 @@
             ])
         @endif
 
-        {{-- ─── Inventory ─── --}}
-        @include('layouts.partials.sidebar-group', [
-            'label'  => 'Inventory',
-            'icon'   => 'box',
-            'active' => request()->routeIs('inventory.*'),
-            'links'  => [
-                ['route' => 'inventory.stock.index', 'label' => 'Stock'],
-                ['route' => null,                    'label' => 'Goods Receipt'],
-                ['route' => null,                    'label' => 'Goods Issue'],
-                ['route' => null,                    'label' => 'Stock Adjustment'],
-            ],
-        ])
+        {{-- ─── Inventory (HANYA ADMIN & ADMIN DEPARTEMEN) ─── --}}
+        @if(auth()->check() && auth()->user()->hasAnyRole(['Super Admin', 'Admin', 'Admin Departemen']))
+            @include('layouts.partials.sidebar-group', [
+                'label'  => 'Inventory',
+                'icon'   => 'box',
+                'active' => request()->routeIs('inventory.*'),
+                'links'  => [
+                    ['route' => 'inventory.stock.index', 'label' => 'Stock'],
+                    ['route' => null,                    'label' => 'Goods Receipt'],
+                    ['route' => null,                    'label' => 'Goods Issue'],
+                    ['route' => null,                    'label' => 'Stock Adjustment'],
+                ],
+            ])
+        @endif
 
         {{-- ─── Consumable Request ─── --}}
         @php

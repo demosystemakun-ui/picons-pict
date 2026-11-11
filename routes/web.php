@@ -76,13 +76,23 @@ Route::middleware(['auth'])->group(function () {
     Route::get('liquidations/{liquidation}/pdf', [LiquidationController::class, 'pdf'])->name('liquidations.pdf');
 
     /* ─────────────────────────────────────────────
-       INVENTORY STOCK
+       INVENTORY STOCK (HANYA ADMIN & ADMIN DEPT)
     ───────────────────────────────────────────── */
-    Route::get('/inventory/stock', [InventoryStockController::class, 'index'])->name('inventory.stock.index');
-    Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])->name('inventory.stock.export-usage');
-    Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])->name('inventory.stock.use');
-    Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])->name('inventory.stock.items-by-department');
+    Route::middleware(['role:Super Admin|Admin|Admin Departemen'])->group(function () {
+        Route::get('/inventory/stock', [InventoryStockController::class, 'index'])->name('inventory.stock.index');
+        Route::get('/inventory/stock/export-usage', [InventoryStockController::class, 'exportUsage'])->name('inventory.stock.export-usage');
+        Route::get('/inventory/stock/use', [InventoryStockController::class, 'useStockForm'])->name('inventory.stock.use');
+        Route::get('/inventory/stock/items-by-department', [InventoryStockController::class, 'getItemsByDepartment'])->name('inventory.stock.items-by-department');
 
+        Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])->name('inventory.stock.usage-detail');
+        Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
+        Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
+
+        // Route Cetak QR (Hanya bisa diakses Admin)
+        Route::get('/inventory/department/{id}/print-qr', [InventoryStockController::class, 'printDepartmentQr'])->name('inventory.department.print-qr');
+    });
+
+    // Rute Super Admin (seperti Import)
     Route::middleware(['role:Super Admin'])->group(function () {
         Route::get('/inventory/stock/create', [InventoryStockController::class, 'create'])->name('inventory.stock.create');
         Route::post('/inventory/stock', [InventoryStockController::class, 'store'])->name('inventory.stock.store');
@@ -90,19 +100,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/inventory/stock/import-process', [InventoryStockController::class, 'importProcess'])->name('inventory.stock.import-process');
     });
 
-    Route::get('/inventory/stock/{id}/usage-detail', [InventoryStockController::class, 'usageDetail'])->name('inventory.stock.usage-detail');
-    Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
-    Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
-
     /* ─────────────────────────────────────────────
-       INVENTORY SCAN QR (PER BARANG & PER DEPARTEMEN)
+       INVENTORY SCAN QR (BISA DIAKSES SEMUA USER)
     ───────────────────────────────────────────── */
     Route::get('/inventory/scan/{id}', [InventoryStockController::class, 'scanForm'])->name('inventory.scan.form');
     Route::post('/inventory/scan/{id}', [InventoryStockController::class, 'processScan'])->name('inventory.scan.submit');
 
     Route::get('/inventory/scan-dept/{department_id}', [InventoryStockController::class, 'scanDepartment'])->name('inventory.scan.dept');
     Route::post('/inventory/scan-item/{stock_id}', [InventoryStockController::class, 'processScanDepartment'])->name('inventory.scan.item');
-   Route::get('/inventory/department/{id}/print-qr', [InventoryStockController::class, 'printDepartmentQr'])->name('inventory.department.print-qr');
 
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
