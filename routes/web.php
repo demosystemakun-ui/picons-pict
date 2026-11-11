@@ -94,6 +94,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/stock/{id}/use', [InventoryStockController::class, 'useItemForm'])->name('inventory.stock.use.item');
     Route::post('/inventory/stock/{id}/use', [InventoryStockController::class, 'processUseItem'])->name('inventory.stock.process-use');
 
+        /* ─────────────────────────────────────────────
+       INVENTORY STOCK (TAMBAHAN SCAN QR)
+    ───────────────────────────────────────────── */
+    Route::get('/inventory/scan/{id}', [InventoryStockController::class, 'scanForm'])->name('inventory.stock.scan');
+    Route::post('/inventory/scan/{id}', [InventoryStockController::class, 'processScan'])->name('inventory.stock.process-scan');
     /* ─────────────────────────────────────────────
        CONSUMABLE REQUEST
     ───────────────────────────────────────────── */

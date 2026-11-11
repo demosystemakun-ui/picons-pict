@@ -853,4 +853,58 @@ class InventoryStockController extends Controller
             $filename
         );
     }
+
+        /* ═══════════════════════════════════════════════════════════════
+       SCAN QR CODE (PENGGUNAAN BARANG VIA MOBILE)
+    ═══════════════════════════════════════════════════════════════ */
+
+    public function scanForm($id)
+    {
+        $stock = DepartmentStock::with(['department', 'item'])->findOrFail($id);
+        
+        // Pastikan user hanya bisa scan barang dari departemennya sendiri atau Office
+        $this->authorizeDepartment($stock);
+
+        return view('inventory.stock.scan-form', compact('stock'));
+    }
+
+    public function processScan(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'used_stock' => 'required|integer|min:1',
+            'purpose'    => 'required|string|max:255', // Tambahan: untuk mencatat keperluan
+        ]);
+
+        $stock = DepartmentStock::with('item')->findOrFail($id);
+
+        $this->authorizeDepartment($stock);
+
+        if ($stock->stock < $validated['used_stock']) {
+            return back()->with('error', 'Stok tidak mencukupi! Sisa stok saat ini: ' . $stock->stock);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Kurangi Stok
+            $stock->decrement('stock', $validated['used_stock']);
+
+            // 2. Catat Log Pemakaian
+            StockUsage::create([
+                'department_stock_id' => $stock->id,
+                'user_id'             => auth()->id(),
+                'quantity_used'       => $validated['used_stock'],
+                'notes'               => $validated['purpose'] ?? null, 
+            ]);
+
+            DB::commit();
+
+            // Redirect ke halaman sukses / detail
+            return redirect()->route('inventory.stock.index')
+                ->with('success', "Berhasil! {$validated['used_stock']} {$stock->item->item_name} telah diambil dan dicatat atas nama Anda.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memproses: ' . $e->getMessage());
+        }
+    }
 }
