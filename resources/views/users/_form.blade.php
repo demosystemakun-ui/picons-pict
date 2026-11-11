@@ -52,6 +52,7 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-5 py-3 font-medium">{{ $u->name }}</td>
                             <td class="px-5 py-3 text-gray-500">{{ $u->email }}</td>
+                            
                             {{-- ═══ SEL BARU: No. WhatsApp ═══ --}}
                             <td class="px-5 py-3 text-gray-500 font-mono text-xs">
                                 @if ($u->phone_number)
@@ -66,6 +67,7 @@
                                 @endif
                             </td>
                             {{-- ══════════════════════════════ --}}
+                            
                             <td class="px-5 py-3 text-gray-500">{{ $u->department->name ?? '-' }}</td>
                             <td class="px-5 py-3">
                                 @foreach ($u->roles as $role)
