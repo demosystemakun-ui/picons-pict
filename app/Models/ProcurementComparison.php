@@ -16,7 +16,7 @@ class ProcurementComparison extends Model
         'is_selected',
         'reason',
         
-        // ═══ KOLOM BARU UNTUK DATA PR FINAL & TTD DIREKSI ═══
+        // ═══ KOLOM UNTUK DATA PR FINAL & TTD DIREKSI ═══
         'final_number',
         'budget_type',
         'reason_choose_vendor',
@@ -26,6 +26,9 @@ class ProcurementComparison extends Model
         'is_accounting_approved',
         'is_cfo_approved',
         'is_ceo_approved',
+        
+        // ═══ KOLOM STATUS PR 2 (TAMBAHAN BARU) ═══
+        'status', 
     ];
 
     protected $casts = [

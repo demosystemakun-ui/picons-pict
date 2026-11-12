@@ -25,7 +25,10 @@ class VendorComparisonController extends Controller
     {
         $user = auth()->user();
 
-        if (!in_array($procurement->status, ['approved', 'processed', 'pending_review_final', 'pending_final_sign', 'final_approved'])) {
+        // Cek status menggunakan status dari relasi finalComparison jika ada
+        $currentStatus = $procurement->finalComparison?->status ?? $procurement->status;
+
+        if (!in_array($currentStatus, ['approved', 'processed', 'pending_review_final', 'pending_final_sign', 'final_approved'])) {
             return redirect()
                 ->route('procurement.show', ['procurementRequest' => $procurement->id])
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
@@ -89,8 +92,8 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Please select a winning vendor first.');
         }
 
-        // Cek menggunakan relasi finalComparison
-        if ($procurement->status === 'final_approved' && $procurement->finalComparison?->final_number) {
+        // Cek dari relasi finalComparison
+        if ($procurement->finalComparison?->status === 'final_approved' && $procurement->finalComparison?->final_number) {
             return redirect()
                 ->route('procurement.pdf.final', ['procurementRequest' => $procurement->id])
                 ->with('info', 'Final PR already exists and validated.');
@@ -109,7 +112,6 @@ class VendorComparisonController extends Controller
         $tahun       = date('Y');
         $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
 
-        // Ambil nomor final terakhir dari tabel procurement_comparisons
         $lastFinal = ProcurementComparison::whereNotNull('final_number')
             ->where('final_number', 'like', "%/PR/{$prCode}-%")
             ->orderBy('id', 'desc')
@@ -167,7 +169,6 @@ class VendorComparisonController extends Controller
                 'string',
                 'max:100',
                 function ($attribute, $value, $fail) use ($procurement) {
-                    // Validasi ke tabel procurement_comparisons
                     $existsInFinal = ProcurementComparison::where('final_number', $value)
                         ->where('procurement_request_id', '!=', $procurement->id)
                         ->exists();
@@ -185,14 +186,14 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update data PR Induk (Hanya data umum)
+            // 1. Update data PR Induk (Status tetap processed untuk PR 1)
             $procurement->update([
                 'description'          => $validated['final_description'],
                 'request_date'         => $validated['request_date'],
                 'request_by'           => $validated['request_by'],
                 'division'             => $validated['division'],
                 'prepared_by'          => $validated['prepared_by'],
-                'status'               => 'pending_review_final',
+                'status'               => 'processed', // PR 1 Selesai
             ]);
 
             // 2. Simpan data final ke tabel procurement_comparisons
@@ -209,6 +210,7 @@ class VendorComparisonController extends Controller
                 'cfo_name'              => $validated['cfo_name'] ?? null,
                 'ceo_name'              => $validated['ceo_name'] ?? null,
                 'is_selected'           => 1, // Tandai sebagai pemenang
+                'status'                => 'pending_review_final', // PR 2 Mulai
             ]);
 
             if ($isAdmin && !empty($validated['final_number'])) {
@@ -344,7 +346,6 @@ class VendorComparisonController extends Controller
         if ($comparison) {
             $comparison->update(['final_number' => $fullNumber]);
         } else {
-            // Jika belum ada data comparison, buatkan baru
             ProcurementComparison::create([
                 'procurement_request_id' => $procurement->id,
                 'vendor_name'            => $procurement->winnerVendor->vendor_name ?? '-',
@@ -365,9 +366,10 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Nomor Final PR belum diisi. Silakan input nomor terlebih dahulu.');
         }
 
-        if ($procurementRequest->status === 'pending_review_final') {
-            $procurementRequest->update([
-                'status' => 'pending_final_sign',
+        // Cek status dari relasi comparison
+        if ($comparison->status === 'pending_review_final') {
+            $comparison->update([
+                'status' => 'pending_final_sign', // Update status PR 2
             ]);
 
             $this->notifyUserFormatApproved($procurementRequest, $comparison);
@@ -375,7 +377,7 @@ class VendorComparisonController extends Controller
             return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
 
-        return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurementRequest->status . '".');
+        return back()->with('error', 'Gagal Approve. Status saat ini: "' . ($comparison->status ?? 'unknown') . '".');
     }
 
     private function notifyUserFormatApproved(ProcurementRequest $procurement, $comparison): void
@@ -408,15 +410,18 @@ class VendorComparisonController extends Controller
 
     public function validateFinalSignature(ProcurementRequest $procurementRequest)
     {
-        if ($procurementRequest->status !== 'pending_final_sign') {
+        $comparison = $procurementRequest->finalComparison;
+
+        if (!$comparison || $comparison->status !== 'pending_final_sign') {
             return back()->with('error', 'Status tidak valid untuk validasi TTD Final.');
         }
 
-        $procurementRequest->update([
+        // Update status PR 2
+        $comparison->update([
             'status' => 'final_approved',
         ]);
 
-        $this->notifyUserFinalApproved($procurementRequest, $procurementRequest->finalComparison);
+        $this->notifyUserFinalApproved($procurementRequest, $comparison);
 
         return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
@@ -467,7 +472,6 @@ class VendorComparisonController extends Controller
 
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
-        // ... (Kode processScan tetap sama seperti milik Anda sebelumnya) ...
         $request->validate([
             'screenshots'   => 'required|array|min:1',
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -629,7 +633,6 @@ class VendorComparisonController extends Controller
 
     public function store(Request $request, ProcurementRequest $procurement)
     {
-        // ... (Kode store tetap sama seperti milik Anda sebelumnya) ...
         $validated = $request->validate([
             'budget_type'                      => 'nullable|in:Budgeted,Non Budgeted',
             'vendors'                          => 'required|array|min:1',
@@ -717,7 +720,6 @@ class VendorComparisonController extends Controller
 
     public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
     {
-        // ... (Kode selectVendor tetap sama seperti milik Anda sebelumnya) ...
         $user = auth()->user();
 
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
@@ -752,7 +754,6 @@ class VendorComparisonController extends Controller
 
     public function destroy(ProcurementVendor $vendor)
     {
-        // ... (Kode destroy tetap sama seperti milik Anda sebelumnya) ...
         $user = auth()->user();
         $procurement = $vendor->procurementRequest;
 
