@@ -4,11 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * ⚠️ LEGACY MODEL
- * Model ini adalah versi lama dari perbandingan vendor.
- * Untuk fitur baru, gunakan ProcurementVendor.
- */
 class ProcurementComparison extends Model
 {
     protected $fillable = [
@@ -20,20 +15,31 @@ class ProcurementComparison extends Model
         'sort_order',
         'is_selected',
         'reason',
+        
+        // ═══ KOLOM BARU UNTUK DATA PR FINAL & TTD DIREKSI ═══
+        'final_number',
+        'budget_type',
+        'reason_choose_vendor',
+        'accounting_mgr_name',
+        'cfo_name',
+        'ceo_name',
+        'is_accounting_approved',
+        'is_cfo_approved',
+        'is_ceo_approved',
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
         'is_selected' => 'boolean',
+        'is_accounting_approved' => 'boolean',
+        'is_cfo_approved' => 'boolean',
+        'is_ceo_approved' => 'boolean',
     ];
 
     /* ═══════════════════════════════════════════════════════════════
        RELATIONS
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Relasi ke Procurement Request (Induk).
-     */
     public function procurementRequest()
     {
         return $this->belongsTo(ProcurementRequest::class);
@@ -43,17 +49,11 @@ class ProcurementComparison extends Model
        SCOPES
     ═══════════════════════════════════════════════════════════════ */
 
-    /**
-     * Scope: Hanya ambil vendor yang sudah dipilih (pemenang).
-     */
     public function scopeSelected($query)
     {
         return $query->where('is_selected', true);
     }
 
-    /**
-     * Scope: Urutkan dari harga termurah.
-     */
     public function scopeCheapest($query)
     {
         return $query->orderBy('total_price', 'asc');

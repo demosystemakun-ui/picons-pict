@@ -20,7 +20,7 @@ class ProcurementRequest extends Model
     protected $fillable = [
         'no',
         'date',
-        'request_date', // <--- TAMBAHKAN INI
+        'request_date',
         'department_id',
         'request_by',
         'division',
@@ -57,25 +57,24 @@ class ProcurementRequest extends Model
         'procurement_method',
         'review_notes',
 
-        'budget_type',
-        'reason_choose_vendor',
-        'final_number', // <--- TAMBAHKAN INI
-        'final_total_price',
-        'accounting_mgr_name',
-        'ceo_name',
-        'cfo_name',
+        // 'budget_type',           // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'reason_choose_vendor',  // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'final_number',          // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'final_total_price',     // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'accounting_mgr_name',   // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'ceo_name',              // DIHAPUS (Sudah pindah ke finalComparison)
+        // 'cfo_name',              // DIHAPUS (Sudah pindah ke finalComparison)
 
         'user_id',
     ];
 
     protected $casts = [
         'date'              => 'datetime',
-        'request_date'      => 'date', // <--- TAMBAHKAN INI (opsional, untuk format tanggal)
+        'request_date'      => 'date',
         'is_new_order'      => 'boolean',
         'is_repeat_order'   => 'boolean',
         'is_goods'          => 'boolean',
         'is_services'       => 'boolean',
-        'final_total_price' => 'decimal:2',
     ];
 
     /* ═══════════════════════════════════════════════════════════════
@@ -97,9 +96,20 @@ class ProcurementRequest extends Model
         return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
     }
 
-  public function user() {
-    return $this->belongsTo(\App\Models\User::class, 'user_id');
-}
+    /**
+     * Relasi ke Data Final (TTD Direksi, Nomor Final, Budget, dll)
+     * Data ini disimpan di tabel procurement_comparisons
+     */
+    public function finalComparison()
+    {
+        return $this->hasOne(ProcurementComparison::class)
+                    ->whereNotNull('final_number');
+    }
+
+    public function user() 
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
 
     public function department()
     {

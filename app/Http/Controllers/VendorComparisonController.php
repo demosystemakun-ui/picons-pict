@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProcurementRequest;
 use App\Models\ProcurementVendor;
+use App\Models\ProcurementComparison;
 use App\Models\CashAdvance;
 use App\Services\GeminiVisionService;
 use App\Services\WhatsAppService;
@@ -30,7 +31,6 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Vendor Comparison can only be accessed after the PR is approved.');
         }
 
-        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
@@ -42,9 +42,8 @@ class VendorComparisonController extends Controller
                 }
             }
         }
-        // ═════════════════════════════════════════
 
-        $procurement->load('vendors.items', 'winnerVendor');
+        $procurement->load('vendors.items', 'winnerVendor', 'finalComparison');
 
         return view('procurement.comparison.index', compact('procurement'));
     }
@@ -54,8 +53,7 @@ class VendorComparisonController extends Controller
         $user = auth()->user();
 
         $procurements = ProcurementRequest::whereHas('vendors')
-            ->with(['vendors', 'winnerVendor', 'department'])
-            // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
+            ->with(['vendors', 'winnerVendor', 'department', 'finalComparison'])
             ->when(!$user->hasAnyRole(['Super Admin', 'Admin']), function ($q) use ($user) {
                 if ($user->hasRole('Admin Departemen')) {
                     $q->where('department_id', $user->department_id);
@@ -63,7 +61,6 @@ class VendorComparisonController extends Controller
                     $q->where('user_id', $user->id);
                 }
             })
-            // ═════════════════════════════════════════
             ->latest()
             ->paginate(15);
 
@@ -74,7 +71,6 @@ class VendorComparisonController extends Controller
     {
         $user = auth()->user();
 
-        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
@@ -86,7 +82,6 @@ class VendorComparisonController extends Controller
                 }
             }
         }
-        // ═════════════════════════════════════════
 
         if (!$procurement->winnerVendor) {
             return redirect()
@@ -94,7 +89,8 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Please select a winning vendor first.');
         }
 
-        if (in_array($procurement->status, ['final_approved']) && $procurement->final_number) {
+        // Cek menggunakan relasi finalComparison
+        if ($procurement->status === 'final_approved' && $procurement->finalComparison?->final_number) {
             return redirect()
                 ->route('procurement.pdf.final', ['procurementRequest' => $procurement->id])
                 ->with('info', 'Final PR already exists and validated.');
@@ -113,13 +109,14 @@ class VendorComparisonController extends Controller
         $tahun       = date('Y');
         $prCode      = $procurement->no ? preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) : 'OPS/PICT';
 
-        $lastPr = ProcurementRequest::whereNotNull('final_number')
+        // Ambil nomor final terakhir dari tabel procurement_comparisons
+        $lastFinal = ProcurementComparison::whereNotNull('final_number')
             ->where('final_number', 'like', "%/PR/{$prCode}-%")
             ->orderBy('id', 'desc')
             ->first();
 
-        if ($lastPr && $lastPr->final_number) {
-            $lastNumber = (int) substr($lastPr->final_number, 0, 2);
+        if ($lastFinal && $lastFinal->final_number) {
+            $lastNumber = (int) substr($lastFinal->final_number, 0, 2);
             $nextNumber = $lastNumber + 1;
         } else {
             $nextNumber = 1;
@@ -135,7 +132,6 @@ class VendorComparisonController extends Controller
         $user = auth()->user();
         $isAdmin = $user->hasAnyRole(['Super Admin', 'Admin']);
 
-        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
         if (!$isAdmin) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
@@ -147,13 +143,11 @@ class VendorComparisonController extends Controller
                 }
             }
         }
-        // ═════════════════════════════════════════
 
         if (!$procurement->winnerVendor) {
             return back()->with('error', 'Winning vendor is missing. Please select winner again.');
         }
 
-        // ═══ ATURAN VALIDASI ═══
         $rules = [
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
@@ -167,53 +161,63 @@ class VendorComparisonController extends Controller
             'ceo_name'             => 'nullable|string|max:255',
         ];
 
-        // Hanya Admin yang wajib mengisi final_number
         if ($isAdmin) {
             $rules['final_number'] = [
                 'required',
                 'string',
                 'max:100',
                 function ($attribute, $value, $fail) use ($procurement) {
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)
-                        ->where('id', '!=', $procurement->id)
+                    // Validasi ke tabel procurement_comparisons
+                    $existsInFinal = ProcurementComparison::where('final_number', $value)
+                        ->where('procurement_request_id', '!=', $procurement->id)
                         ->exists();
                     
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+                    $existsInNo = ProcurementRequest::where('no', $value)->exists();
 
                     if ($existsInFinal || $existsInNo) {
-                        $fail('Nomor Final PR ini sudah digunakan (baik sebagai PR Awal maupun PR Final). Silakan gunakan nomor lain.');
+                        $fail('Nomor Final PR ini sudah digunakan.');
                     }
                 },
             ];
         }
-        // ══════════════════════════
 
         $validated = $request->validate($rules);
 
         DB::beginTransaction();
         try {
-            $updateData = [
-                'budget_type'          => $validated['budget_type'],
+            // 1. Update data PR Induk (Hanya data umum)
+            $procurement->update([
                 'description'          => $validated['final_description'],
-                'reason_choose_vendor' => $validated['reason_choose_vendor'],
                 'request_date'         => $validated['request_date'],
                 'request_by'           => $validated['request_by'],
                 'division'             => $validated['division'],
                 'prepared_by'          => $validated['prepared_by'],
-                'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
-                'cfo_name'             => $validated['cfo_name'] ?? null,
-                'ceo_name'             => $validated['ceo_name'] ?? null,
-                'final_total_price'    => $procurement->winnerVendor->total_price,
                 'status'               => 'pending_review_final',
-            ];
+            ]);
 
-            // Simpan nomor hanya jika diinput oleh Admin
+            // 2. Simpan data final ke tabel procurement_comparisons
+            $finalData = ProcurementComparison::firstOrNew([
+                'procurement_request_id' => $procurement->id,
+                'vendor_name'            => $procurement->winnerVendor->vendor_name,
+            ]);
+
+            $finalData->fill([
+                'total_price'           => $procurement->winnerVendor->total_price,
+                'budget_type'           => $validated['budget_type'],
+                'reason_choose_vendor'  => $validated['reason_choose_vendor'],
+                'accounting_mgr_name'   => $validated['accounting_mgr_name'] ?? null,
+                'cfo_name'              => $validated['cfo_name'] ?? null,
+                'ceo_name'              => $validated['ceo_name'] ?? null,
+                'is_selected'           => 1, // Tandai sebagai pemenang
+            ]);
+
             if ($isAdmin && !empty($validated['final_number'])) {
-                $updateData['final_number'] = $validated['final_number'];
+                $finalData->final_number = $validated['final_number'];
             }
 
-            $procurement->update($updateData);
+            $finalData->save();
 
+            // 3. Logika Cash Advance
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
 
@@ -226,7 +230,7 @@ class VendorComparisonController extends Controller
                         'department'             => $procurement->department->name ?? '-',
                         'cost_department'        => $procurement->department->name ?? '-',
                         'status'                 => 'pending',
-                        'notes'                  => 'Otomatis dibuat dari PR: ' . ($procurement->final_number ?? 'DRAFT'),
+                        'notes'                  => 'Otomatis dibuat dari PR: ' . ($finalData->final_number ?? 'DRAFT'),
                     ]);
 
                     if ($procurement->winnerVendor) {
@@ -243,10 +247,9 @@ class VendorComparisonController extends Controller
                 }
             }
 
-            // ═══ TRIGGER WA KE ADMIN & USER (PR Final baru dibuat) ═══
-            $this->notifyAdminsFinalPrCreated($procurement);
-            $this->notifyUserFinalPrCreated($procurement);
-            // ═══════════════════════════════════════════════════════════
+            // 4. Notifikasi WA
+            $this->notifyAdminsFinalPrCreated($procurement, $finalData);
+            $this->notifyUserFinalPrCreated($procurement, $finalData);
 
             DB::commit();
 
@@ -261,14 +264,11 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /**
-     * ═══ TRIGGER WA: Notifikasi ke Admin saat Final PR baru dibuat ═══
-     */
-    private function notifyAdminsFinalPrCreated(ProcurementRequest $procurement): void
+    private function notifyAdminsFinalPrCreated(ProcurementRequest $procurement, $finalData): void
     {
         try {
             $wa = new WhatsAppService();
-            $prNo = $procurement->final_number ?? $procurement->no;
+            $prNo = $finalData->final_number ?? $procurement->no;
 
             $admins = \App\Models\User::role(['Super Admin', 'Admin'])->get();
 
@@ -276,7 +276,7 @@ class VendorComparisonController extends Controller
                 if (!empty($admin->phone_number)) {
                     $wa->send(
                         $admin->phone_number,
-                        "Halo {$admin->name}, ada *PR Final baru* menunggu review format:\n\nNo: {$prNo}\nDept: " . ($procurement->division ?? '-') . "\nTotal: Rp " . number_format((float) $procurement->final_total_price, 0, ',', '.') . "\n\nSilakan cek di sistem."
+                        "Halo {$admin->name}, ada *PR Final baru* menunggu review format:\n\nNo: {$prNo}\nDept: " . ($procurement->division ?? '-') . "\nTotal: Rp " . number_format((float) $finalData->total_price, 0, ',', '.') . "\n\nSilakan cek di sistem."
                     );
                 }
             }
@@ -285,10 +285,7 @@ class VendorComparisonController extends Controller
         }
     }
 
-    /**
-     * ═══ TRIGGER WA: Notifikasi ke User (Pembuat PR) saat Final PR dibuat ═══
-     */
-    private function notifyUserFinalPrCreated(ProcurementRequest $procurement): void
+    private function notifyUserFinalPrCreated(ProcurementRequest $procurement, $finalData): void
     {
         try {
             $user = $procurement->user;
@@ -297,7 +294,7 @@ class VendorComparisonController extends Controller
             }
 
             $wa = new WhatsAppService();
-            $prNo = $procurement->final_number ?? $procurement->no;
+            $prNo = $finalData->final_number ?? $procurement->no;
 
             $pesan = "Halo *{$user->name}*,\n\n";
             $pesan .= "PR Final untuk pengajuan Anda telah dibuat oleh Admin.\n\n";
@@ -313,12 +310,10 @@ class VendorComparisonController extends Controller
 
     public function updateFinalNumber(Request $request, ProcurementRequest $procurement)
     {
-        // Pastikan hanya Admin yang bisa mengubah
         if (!auth()->user()->hasAnyRole(['Super Admin', 'Admin'])) {
             abort(403, 'Only Admin can edit the Final PR Number.');
         }
 
-        // Gabungkan prefix dan suffix
         $fullNumber = $request->input('no_prefix') . '/PR/' . $request->input('no_suffix');
 
         $request->validate([
@@ -326,11 +321,11 @@ class VendorComparisonController extends Controller
                 'required',
                 'string',
                 function ($attribute, $value, $fail) use ($fullNumber, $procurement) {
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)
+                    $existsInNo = ProcurementRequest::where('no', $fullNumber)
                         ->where('id', '!=', $procurement->id)
                         ->exists();
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $fullNumber)
-                        ->where('id', '!=', $procurement->id)
+                    $existsInFinal = ProcurementComparison::where('final_number', $fullNumber)
+                        ->where('procurement_request_id', '!=', $procurement->id)
                         ->exists();
                     
                     if ($existsInNo || $existsInFinal) {
@@ -342,16 +337,31 @@ class VendorComparisonController extends Controller
             'no_prefix.required' => 'Nomor urut PR wajib diisi.'
         ]);
 
-        // HANYA update kolom final_number
-        $procurement->update(['final_number' => $fullNumber]);
+        $comparison = ProcurementComparison::where('procurement_request_id', $procurement->id)
+            ->where('is_selected', 1)
+            ->first();
+
+        if ($comparison) {
+            $comparison->update(['final_number' => $fullNumber]);
+        } else {
+            // Jika belum ada data comparison, buatkan baru
+            ProcurementComparison::create([
+                'procurement_request_id' => $procurement->id,
+                'vendor_name'            => $procurement->winnerVendor->vendor_name ?? '-',
+                'total_price'            => $procurement->winnerVendor->total_price ?? 0,
+                'final_number'           => $fullNumber,
+                'is_selected'            => 1,
+            ]);
+        }
 
         return back()->with('success', 'Nomor Final PR berhasil diperbarui menjadi ' . $fullNumber);
     }
 
     public function approveFinalFormat(ProcurementRequest $procurementRequest)
     {
-        // Pastikan nomor sudah diisi sebelum approve
-        if (!$procurementRequest->final_number) {
+        $comparison = $procurementRequest->finalComparison;
+
+        if (!$comparison || !$comparison->final_number) {
             return back()->with('error', 'Nomor Final PR belum diisi. Silakan input nomor terlebih dahulu.');
         }
 
@@ -360,9 +370,7 @@ class VendorComparisonController extends Controller
                 'status' => 'pending_final_sign',
             ]);
 
-            // ═══ TRIGGER WA KE USER (Format PR Final disetujui) ═══
-            $this->notifyUserFormatApproved($procurementRequest);
-            // ══════════════════════════════════════════════════════
+            $this->notifyUserFormatApproved($procurementRequest, $comparison);
 
             return back()->with('success', 'Format PR Final disetujui. Silakan cetak dan minta TTD Manajer.');
         }
@@ -370,10 +378,7 @@ class VendorComparisonController extends Controller
         return back()->with('error', 'Gagal Approve. Status saat ini: "' . $procurementRequest->status . '".');
     }
 
-    /**
-     * ═══ TRIGGER WA: Notifikasi ke User saat Format PR Final disetujui ═══
-     */
-    private function notifyUserFormatApproved(ProcurementRequest $procurement): void
+    private function notifyUserFormatApproved(ProcurementRequest $procurement, $comparison): void
     {
         try {
             $user = $procurement->user;
@@ -382,7 +387,7 @@ class VendorComparisonController extends Controller
             }
 
             $wa = new WhatsAppService();
-            $prNo = $procurement->final_number ?? $procurement->no;
+            $prNo = $comparison->final_number ?? $procurement->no;
             $winnerVendor = $procurement->winnerVendor;
 
             $pesan = "Halo *{$user->name}*,\n\n";
@@ -411,17 +416,12 @@ class VendorComparisonController extends Controller
             'status' => 'final_approved',
         ]);
 
-        // ═══ TRIGGER WA KE USER (TTD Final Selesai) ═══
-        $this->notifyUserFinalApproved($procurementRequest);
-        // ══════════════════════════════════════════════
+        $this->notifyUserFinalApproved($procurementRequest, $procurementRequest->finalComparison);
 
         return back()->with('success', 'TTD Final berhasil divalidasi. Anda sekarang bisa membuat PO.');
     }
 
-    /**
-     * ═══ TRIGGER WA: Notifikasi ke User saat TTD Final divalidasi ═══
-     */
-    private function notifyUserFinalApproved(ProcurementRequest $procurement): void
+    private function notifyUserFinalApproved(ProcurementRequest $procurement, $comparison): void
     {
         try {
             $user = $procurement->user;
@@ -430,8 +430,8 @@ class VendorComparisonController extends Controller
             }
 
             $wa = new WhatsAppService();
-            $prNo = $procurement->final_number ?? $procurement->no;
-            $total = number_format((float) $procurement->final_total_price, 0, ',', '.');
+            $prNo = $comparison?->final_number ?? $procurement->no;
+            $total = number_format((float) ($comparison?->total_price ?? 0), 0, ',', '.');
 
             $pesan = "Halo *{$user->name}*,\n\n";
             $pesan .= "PR Final Anda telah *SELESAI divalidasi* (TTD lengkap).\n\n";
@@ -446,6 +446,10 @@ class VendorComparisonController extends Controller
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // FUNGSI SCAN GEMINI & VENDOR LAINNYA (Tetap Sama)
+    // ═══════════════════════════════════════════════════════════════════
+    
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');
@@ -463,6 +467,7 @@ class VendorComparisonController extends Controller
 
     private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
     {
+        // ... (Kode processScan tetap sama seperti milik Anda sebelumnya) ...
         $request->validate([
             'screenshots'   => 'required|array|min:1',
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -624,6 +629,7 @@ class VendorComparisonController extends Controller
 
     public function store(Request $request, ProcurementRequest $procurement)
     {
+        // ... (Kode store tetap sama seperti milik Anda sebelumnya) ...
         $validated = $request->validate([
             'budget_type'                      => 'nullable|in:Budgeted,Non Budgeted',
             'vendors'                          => 'required|array|min:1',
@@ -711,9 +717,9 @@ class VendorComparisonController extends Controller
 
     public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
     {
+        // ... (Kode selectVendor tetap sama seperti milik Anda sebelumnya) ...
         $user = auth()->user();
 
-        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
@@ -725,7 +731,6 @@ class VendorComparisonController extends Controller
                 }
             }
         }
-        // ═════════════════════════════════════════
 
         if ($vendor->procurement_request_id !== $procurement->id) {
             abort(404);
@@ -739,8 +744,7 @@ class VendorComparisonController extends Controller
         $vendor->update(['is_winner' => true]);
 
         $procurement->update([
-            'final_total_price' => $vendor->total_price,
-            'status'            => 'processed',
+            'status' => 'processed',
         ]);
 
         return back()->with('success', 'Winning vendor selected: ' . $vendor->vendor_name . '. PR is now in Tahap 2.');
@@ -748,10 +752,10 @@ class VendorComparisonController extends Controller
 
     public function destroy(ProcurementVendor $vendor)
     {
+        // ... (Kode destroy tetap sama seperti milik Anda sebelumnya) ...
         $user = auth()->user();
         $procurement = $vendor->procurementRequest;
 
-        // ═══ LOGIKA FILTER DATA SESUAI ROLE ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             if ($user->hasRole('Admin Departemen')) {
                 if ($procurement->department_id !== $user->department_id) {
@@ -763,7 +767,6 @@ class VendorComparisonController extends Controller
                 }
             }
         }
-        // ═════════════════════════════════════════
 
         $vendor->delete();
 
@@ -784,10 +787,6 @@ class VendorComparisonController extends Controller
         if ($winner) {
             $winner->update(['is_winner' => true]);
         }
-
-        $procurement->update([
-            'final_total_price' => $winner?->total_price,
-        ]);
     }
 
     private function getRomawi($number)

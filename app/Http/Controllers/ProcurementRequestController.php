@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\ProcurementRequest;
 use App\Models\ConsumableRequest;
+use App\Models\ProcurementComparison;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,10 +30,12 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                $query->whereNull('final_number')
-                      ->whereIn('status', ['pending', 'approved', 'revision', 'processed', 'pending_review_final', 'pending_final_sign']);
+                // Tahap 1: Belum punya data final
+                $query->whereDoesntHave('finalComparison')
+                      ->whereIn('status', ['pending', 'approved', 'revision', 'processed']);
             } elseif ($request->stage === 'final') {
-                $query->whereHas('winnerVendor')
+                // Tahap 2: Sudah punya data final
+                $query->whereHas('finalComparison')
                       ->whereIn('status', ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
             }
         }
@@ -84,7 +87,7 @@ class ProcurementRequestController extends Controller
                 'required', 'string',
                 function ($attribute, $value, $fail) {
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->exists();
+                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $value)->exists();
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
@@ -144,9 +147,7 @@ class ProcurementRequestController extends Controller
                     ->update(['status' => 'converted', 'pr_generated_at' => now()]);
             }
 
-            // ═══ TRIGGER WA KE ADMIN ═══
             $this->notifyAdminsNewPr($procurementRequest);
-            // ═══════════════════════════
 
             DB::commit();
             return redirect()->route('procurement.show', $procurementRequest)->with('success', 'Procurement Request created successfully.');
@@ -171,7 +172,8 @@ class ProcurementRequestController extends Controller
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($fullNumber, $procurementRequest) {
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)->where('id', '!=', $procurementRequest->id)->exists();
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $fullNumber)->exists();
+                    // ═══ CEK KE TABEL COMPARISON ═══
+                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $fullNumber)->exists();
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
@@ -193,7 +195,7 @@ class ProcurementRequestController extends Controller
                 if ($procurementRequest->user_id !== $user->id) abort(403, 'You do not have access to this PR.');
             }
         }
-        $procurementRequest->load('items', 'vendors', 'winnerVendor');
+        $procurementRequest->load('items', 'vendors', 'winnerVendor', 'finalComparison');
         return view('procurement.show', compact('procurementRequest'));
     }
 
@@ -352,13 +354,14 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        $procurementRequest->load('vendors.items', 'winnerVendor');
+        
+        // ═══ LOAD RELASI FINAL ═══
+        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
 
         $procurement['vendors'] = $procurementRequest->vendors()->get()->toArray();
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
-        // ═══ WATERMARK & STAMP TTD ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
@@ -373,10 +376,11 @@ class ProcurementRequestController extends Controller
             ['role' => 'COO',      'name' => $procurementRequest->coo_name,         'approved' => (bool) $procurementRequest->is_coo_approved],
         ];
 
+        // ═══ AMBIL DATA DARI finalComparison ═══
         $procurement['bottom_signatures'] = [
-            ['role' => 'Accounting MGR', 'name' => $procurementRequest->accounting_mgr_name, 'approved' => (bool) $procurementRequest->is_accounting_approved],
-            ['role' => 'CFO',            'name' => $procurementRequest->cfo_name,            'approved' => (bool) $procurementRequest->is_cfo_approved],
-            ['role' => 'CEO',            'name' => $procurementRequest->ceo_name,            'approved' => (bool) $procurementRequest->is_ceo_approved],
+            ['role' => 'Accounting MGR', 'name' => $procurementRequest->finalComparison?->accounting_mgr_name, 'approved' => (bool) $procurementRequest->finalComparison?->is_accounting_approved],
+            ['role' => 'CFO',            'name' => $procurementRequest->finalComparison?->cfo_name,            'approved' => (bool) $procurementRequest->finalComparison?->is_cfo_approved],
+            ['role' => 'CEO',            'name' => $procurementRequest->finalComparison?->ceo_name,            'approved' => (bool) $procurementRequest->finalComparison?->is_ceo_approved],
         ];
 
         return view('procurement.print-final', compact('procurement', 'isDraft'));
@@ -421,7 +425,9 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        $procurementRequest->load('vendors.items', 'winnerVendor');
+        
+        // ═══ LOAD RELASI FINAL ═══
+        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
 
         $procurement['vendors'] = $procurementRequest->vendors()->orderBy('total_price')->get()->map(fn ($v) => [
             'vendor_name' => $v->vendor_name,
@@ -466,13 +472,14 @@ class ProcurementRequestController extends Controller
             'tax_note' => $winner->tax_note,
         ] : null;
 
-        $procurement['budget_type'] = $procurementRequest->budget_type;
-        $procurement['reason_choose_vendor'] = $procurementRequest->reason_choose_vendor;
-        $procurement['accounting_mgr_name'] = $procurementRequest->accounting_mgr_name;
-        $procurement['ceo_name'] = $procurementRequest->ceo_name;
-        $procurement['cfo_name'] = $procurementRequest->cfo_name;
+        // ═══ AMBIL DATA DARI finalComparison ═══
+        $procurement['budget_type'] = $procurementRequest->finalComparison?->budget_type;
+        $procurement['reason_choose_vendor'] = $procurementRequest->finalComparison?->reason_choose_vendor;
+        $procurement['accounting_mgr_name'] = $procurementRequest->finalComparison?->accounting_mgr_name;
+        $procurement['ceo_name'] = $procurementRequest->finalComparison?->ceo_name;
+        $procurement['cfo_name'] = $procurementRequest->finalComparison?->cfo_name;
+        $procurement['final_number'] = $procurementRequest->finalComparison?->final_number;
 
-        // ═══ WATERMARK & STAMP TTD ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
@@ -488,9 +495,9 @@ class ProcurementRequestController extends Controller
         ];
 
         $procurement['bottom_signatures'] = [
-            ['role' => 'Accounting MGR', 'name' => $procurementRequest->accounting_mgr_name, 'approved' => (bool) $procurementRequest->is_accounting_approved],
-            ['role' => 'CFO',            'name' => $procurementRequest->cfo_name,            'approved' => (bool) $procurementRequest->is_cfo_approved],
-            ['role' => 'CEO',            'name' => $procurementRequest->ceo_name,            'approved' => (bool) $procurementRequest->is_ceo_approved],
+            ['role' => 'Accounting MGR', 'name' => $procurementRequest->finalComparison?->accounting_mgr_name, 'approved' => (bool) $procurementRequest->finalComparison?->is_accounting_approved],
+            ['role' => 'CFO',            'name' => $procurementRequest->finalComparison?->cfo_name,            'approved' => (bool) $procurementRequest->finalComparison?->is_cfo_approved],
+            ['role' => 'CEO',            'name' => $procurementRequest->finalComparison?->ceo_name,            'approved' => (bool) $procurementRequest->finalComparison?->is_ceo_approved],
         ];
 
         $pdf = Pdf::loadView('procurement.pdf-final', compact('procurement', 'isDraft'))->setPaper('a4', 'portrait');
@@ -514,9 +521,7 @@ class ProcurementRequestController extends Controller
         if ($procurementRequest->status !== 'approved') return back()->with('error', 'Invalid PR status for validation. Current status: ' . $procurementRequest->status);
         $procurementRequest->update(['status' => 'processed']);
 
-        // ═══ TRIGGER WA ═══
         $this->sendWhatsAppNotification($procurementRequest, 'processed');
-        // ═════════════════
 
         return redirect()->route('procurement.comparisons.index', $procurementRequest)->with('success', 'PR Awal validation successful. You can now create PR Final.');
     }
@@ -527,7 +532,10 @@ class ProcurementRequestController extends Controller
             'final_number' => [
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($procurementRequest) {
-                    $existsInFinal = \App\Models\ProcurementRequest::where('final_number', $value)->where('id', '!=', $procurementRequest->id)->exists();
+                    // ═══ CEK KE TABEL COMPARISON ═══
+                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $value)
+                        ->where('procurement_request_id', '!=', $procurementRequest->id)
+                        ->exists();
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
                     if ($existsInFinal || $existsInNo) $fail('Nomor Final PR ini sudah digunakan.');
                 },
@@ -537,15 +545,19 @@ class ProcurementRequestController extends Controller
         if ($procurementRequest->status !== 'pending_final_sign') return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
         if (!$procurementRequest->winnerVendor) return back()->with('error', 'No winning vendor. Please select a vendor first.');
 
+        // 1. Update Status PR Induk
         $procurementRequest->update([
             'status' => 'final_approved',
-            'final_number' => $request->input('final_number'),
             'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
         ]);
 
-        // ═══ TRIGGER WA ═══
+        // 2. Simpan Nomor Final ke tabel ProcurementComparison
+        $comparison = $procurementRequest->finalComparison;
+        if ($comparison) {
+            $comparison->update(['final_number' => $request->input('final_number')]);
+        }
+
         $this->sendWhatsAppNotification($procurementRequest, 'final_approved');
-        // ═════════════════
 
         return redirect()->route('procurement.pdf.final', $procurementRequest)->with('success', 'PR Final validated with number: ' . $request->input('final_number'));
     }
@@ -600,9 +612,7 @@ class ProcurementRequestController extends Controller
 
         $procurementRequest->update(['status' => $validated['status'], 'review_notes' => $validated['review_notes'] ?? null]);
 
-        // ═══ TRIGGER WA ═══
         $this->sendWhatsAppNotification($procurementRequest, $validated['status']);
-        // ═════════════════
 
         $messages = [
             'approved' => 'Request has been approved.',
@@ -618,20 +628,16 @@ class ProcurementRequestController extends Controller
         return back()->with('success', $messages[$validated['status']] ?? 'Status updated successfully.');
     }
 
-    /**
-     * ═══ TRIGGER WA: Kirim notifikasi WhatsApp saat status PR berubah ═══
-     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
-     */
     private function sendWhatsAppNotification(ProcurementRequest $pr, string $newStatus): void
     {
         try {
-            $user = $pr->user; // Relasi ke User (pembuat PR)
+            $user = $pr->user;
             if (!$user || empty($user->phone_number)) {
                 return;
             }
 
             $wa   = new WhatsAppService();
-            $prNo = $pr->final_number ?? $pr->no;
+            $prNo = $pr->finalComparison?->final_number ?? $pr->no;
 
             $messages = [
                 'approved'       => "Halo {$user->name}, PR Anda ({$prNo}) telah *disetujui* oleh Admin. Silakan ambil dokumen fisik di Admin.",
@@ -652,10 +658,6 @@ class ProcurementRequestController extends Controller
         }
     }
 
-    /**
-     * ═══ TRIGGER WA: Notifikasi ke Admin saat ada PR Baru ═══
-     * Dibungkus try-catch agar kegagalan WA TIDAK merusak alur utama.
-     */
     private function notifyAdminsNewPr(ProcurementRequest $pr): void
     {
         try {
@@ -663,7 +665,6 @@ class ProcurementRequestController extends Controller
             $prNo = $pr->no;
             $pemohon = auth()->user()->name ?? 'Staff';
             
-            // Ambil semua user dengan role Super Admin atau Admin
             $admins = \App\Models\User::role(['Super Admin', 'Admin'])->get();
 
             foreach ($admins as $admin) {
@@ -685,7 +686,7 @@ class ProcurementRequestController extends Controller
 
     private function mapToPrintData(ProcurementRequest $model): array
     {
-        $model->loadMissing('items');
+        $model->loadMissing('items', 'finalComparison');
         $specBlocks = [];
         $itemCount = $model->items->count();
 
@@ -707,7 +708,7 @@ class ProcurementRequestController extends Controller
         $requiredSpec = !empty($model->required_spec) ? $model->required_spec : $autoSpec;
 
         return [
-            'no' => ltrim($model->final_number ?? $model->no ?? '', '/'),
+            'no' => ltrim($model->finalComparison?->final_number ?? $model->no ?? '', '/'),
             'date' => optional($model->date)->format('d F Y'),
             'request_by' => $model->request_by,
             'division' => $model->division,

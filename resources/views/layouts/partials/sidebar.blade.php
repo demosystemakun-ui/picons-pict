@@ -57,7 +57,7 @@
         </div>
 
         <p id="sidebarNoResult" class="hidden text-xs text-white-500 px-2 py-4 text-center">
-            Menu tidak ditemukan.
+           Menu not found. Try a different keyword.
         </p>
 
         {{-- ─── Dashboard ─── --}}

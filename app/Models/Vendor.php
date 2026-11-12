@@ -5,24 +5,177 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Vendor extends Model
+class ProcurementRequest extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_PROCESSED = 'processed';
+    public const STATUS_RECEIVED = 'received';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_REVISION = 'revision';
+    public const STATUS_REJECTED = 'rejected';
+
     protected $fillable = [
-        'code', 'name', 'vendor_type', 'address', 'phone', 'email', 'rating', 'is_active',
+        'no',
+        'date',
+        'request_date',
+        'department_id',
+        'request_by',
+        'division',
+        'prepared_by',
+        'description',
+        'source',
+
+        'is_new_order',
+        'is_repeat_order',
+        'is_goods',
+        'is_services',
+
+        'background',
+        'purpose',
+        'required_spec',
+        'vendor_suggestion',
+
+        'item_name',
+        'item_requirement_note',
+        'quantity',
+        'target_purchase',
+
+        'pic_name',
+        'ops_manager_name',
+        'fem_manager_name',
+        'coo_name',
+
+        'is_pic_approved',
+        'is_ops_approved',
+        'is_fem_approved',
+        'is_coo_approved',
+
+        'status',
+        'procurement_method',
+        'review_notes',
+
+        'user_id',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'date'              => 'datetime',
+        'request_date'      => 'date',
+        'is_new_order'      => 'boolean',
+        'is_repeat_order'   => 'boolean',
+        'is_goods'          => 'boolean',
+        'is_services'       => 'boolean',
+        'is_pic_approved'   => 'boolean',
+        'is_ops_approved'   => 'boolean',
+        'is_fem_approved'   => 'boolean',
+        'is_coo_approved'   => 'boolean',
+    ];
+
+    /* ═══════════════════════════════════════════════════════════════
+       RELATIONS
+    ═══════════════════════════════════════════════════════════════ */
+
+    public function items()
     {
-        return [
-            'is_active' => 'boolean',
-            'rating' => 'decimal:2',
-        ];
+        return $this->hasMany(ProcurementRequestItem::class);
     }
 
-    public function isMonotaro(): bool
+    public function vendors()
     {
-        return $this->vendor_type === 'monotaro';
+        return $this->hasMany(ProcurementVendor::class)->orderBy('total_price');
+    }
+
+    public function winnerVendor()
+    {
+        return $this->hasOne(ProcurementVendor::class)->where('is_winner', true);
+    }
+
+    /**
+     * Relasi ke Data Final (TTD Direksi, Nomor Final, Budget, dll)
+     * Disimpan di tabel procurement_comparisons
+     */
+    public function finalComparison()
+    {
+        return $this->hasOne(ProcurementComparison::class)
+                    ->whereNotNull('final_number');
+    }
+
+    public function user() 
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function documents()
+    {
+        return $this->morphMany(DocumentArchive::class, 'documentable');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BOOT
+    ═══════════════════════════════════════════════════════════════ */
+    protected static function booted()
+    {
+        static::saving(function ($model) {
+            $activeType = collect([
+                'is_new_order'    => $model->is_new_order,
+                'is_repeat_order' => $model->is_repeat_order,
+                'is_goods'        => $model->is_goods,
+                'is_services'     => $model->is_services,
+            ])->search(fn ($value) => $value === true || $value === 1 || $value === '1');
+
+            $model->is_new_order    = false;
+            $model->is_repeat_order = false;
+            $model->is_goods        = false;
+            $model->is_services     = false;
+
+            if ($activeType) {
+                $model->{$activeType} = true;
+            }
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HELPERS
+    ═══════════════════════════════════════════════════════════════ */
+
+    public static function generateNumber(string $division = 'OPS', string $prefix = 'PICT'): string
+    {
+        $romans = [
+            1  => 'I',   2  => 'II',  3  => 'III', 4  => 'IV',
+            5  => 'V',   6  => 'VI',  7  => 'VII', 8  => 'VIII',
+            9  => 'IX',  10 => 'X',   11 => 'XI',  12 => 'XII',
+        ];
+
+        $currentMonth = (int) now()->format('n');
+        $monthRoman   = $romans[$currentMonth] ?? 'I';
+        $year         = now()->format('Y');
+
+        return "/PR/{$division}/{$prefix}-{$monthRoman}-{$year}";
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCOPES
+    ═══════════════════════════════════════════════════════════════ */
+
+    public function scopePending($query)
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', self::STATUS_APPROVED);
+    }
+
+    public function scopeForDepartment($query, $departmentId)
+    {
+        return $query->where('department_id', $departmentId);
     }
 }
