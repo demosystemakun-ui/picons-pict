@@ -95,7 +95,6 @@
     </section>
 
     {{-- ═══ FORM FINAL PR ═══ --}}
-    {{-- PASTIKAN ROUTE SUDAH BENAR (cek di php artisan route:list) --}}
     <form action="{{ route('procurement.comparisons.final-pr.store', $procurement) }}" method="POST" class="space-y-6">
         @csrf
 
@@ -230,14 +229,15 @@
                     @endif
                 </div>
 
+                {{-- REASON CHOOSE VENDOR (OPSIONAL) --}}
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
-                        Reason Choose Vendor <span class="text-rose-500">*</span>
+                        Reason Choose Vendor (Optional)
                     </label>
                     <textarea name="reason_choose_vendor" rows="3" maxlength="2000"
-                              placeholder="Contoh: Vendor ini menawarkan harga terendah dengan spesifikasi sesuai kebutuhan."
-                              class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('reason_choose_vendor') border-rose-400 @enderror"
-                              required>{{ old('reason_choose_vendor') }}</textarea>
+                              placeholder="Biarkan kosong jika ingin sistem membuat alasan otomatis dalam bahasa Inggris."
+                              class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('reason_choose_vendor') border-rose-400 @enderror">{{ old('reason_choose_vendor') }}</textarea>
+                    <p class="mt-1 text-[11px] text-gray-500">Sistem akan otomatis membuat alasan pemilihan vendor jika kolom ini dikosongkan.</p>
                     @error('reason_choose_vendor')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 

@@ -153,7 +153,7 @@ class VendorComparisonController extends Controller
         $rules = [
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
-            'reason_choose_vendor' => 'required|string|max:2000',
+          'reason_choose_vendor' => 'nullable|string|max:2000',
             'request_date'         => 'required|date',
             'request_by'           => 'required|string|max:255',
             'division'             => 'required|string|max:255',
