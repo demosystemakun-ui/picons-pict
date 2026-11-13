@@ -186,10 +186,9 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update data PR Induk (Status tetap processed untuk PR 1)
+            // 1. Update data PR Induk (TANPA request_date)
             $procurement->update([
                 'description'          => $validated['final_description'],
-                'request_date'         => $validated['request_date'],
                 'request_by'           => $validated['request_by'],
                 'division'             => $validated['division'],
                 'prepared_by'          => $validated['prepared_by'],
@@ -203,6 +202,7 @@ class VendorComparisonController extends Controller
             ]);
 
             $finalData->fill([
+                'request_date'          => $validated['request_date'], // <--- PINDAH KE SINI
                 'total_price'           => $procurement->winnerVendor->total_price,
                 'budget_type'           => $validated['budget_type'],
                 'reason_choose_vendor'  => $validated['reason_choose_vendor'],
@@ -366,10 +366,9 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Nomor Final PR belum diisi. Silakan input nomor terlebih dahulu.');
         }
 
-        // Cek status dari relasi comparison
         if ($comparison->status === 'pending_review_final') {
             $comparison->update([
-                'status' => 'pending_final_sign', // Update status PR 2
+                'status' => 'pending_final_sign',
             ]);
 
             $this->notifyUserFormatApproved($procurementRequest, $comparison);
@@ -416,7 +415,6 @@ class VendorComparisonController extends Controller
             return back()->with('error', 'Status tidak valid untuk validasi TTD Final.');
         }
 
-        // Update status PR 2
         $comparison->update([
             'status' => 'final_approved',
         ]);
@@ -451,10 +449,6 @@ class VendorComparisonController extends Controller
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // FUNGSI SCAN GEMINI & VENDOR LAINNYA (Tetap Sama)
-    // ═══════════════════════════════════════════════════════════════════
-    
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
     {
         return $this->processScan($request, $procurement, 'monotaro');

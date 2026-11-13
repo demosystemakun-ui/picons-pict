@@ -539,7 +539,6 @@ class ProcurementRequestController extends Controller
 
         $comparison = $procurementRequest->finalComparison;
         
-        // Cek status dari tabel comparison
         if (!$comparison || $comparison->status !== 'pending_final_sign') {
             return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
         }
@@ -548,13 +547,11 @@ class ProcurementRequestController extends Controller
             return back()->with('error', 'No winning vendor. Please select a vendor first.');
         }
 
-        // 1. Update Status PR 2 (Final)
         $comparison->update([
             'status' => 'final_approved',
             'final_number' => $request->input('final_number'),
         ]);
 
-        // 2. Opsional: Simpan catatan di PR 1
         $procurementRequest->update([
             'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
         ]);
@@ -601,7 +598,6 @@ class ProcurementRequestController extends Controller
 
         $comparison = $procurementRequest->finalComparison;
 
-        // ═══ LOGIKA BARU: JIKA PR SUDAH MASUK TAHAP FINAL (PR 2) ═══
         if ($comparison) {
             $allowedTransitions = [
                 'pending_review_final' => ['pending_final_sign'],
@@ -618,9 +614,7 @@ class ProcurementRequestController extends Controller
 
             $comparison->update(['status' => $validated['status']]);
 
-        } 
-        // ═══ JIKA PR MASIH DI TAHAP AWAL (PR 1) ═══
-        else {
+        } else {
             $allowedTransitions = [
                 'pending' => ['approved', 'rejected', 'revision'],
                 'revision' => ['pending'],
@@ -734,9 +728,12 @@ class ProcurementRequestController extends Controller
         $autoSpec = !empty($specBlocks) ? implode("\n\n", $specBlocks) : '';
         $requiredSpec = !empty($model->required_spec) ? $model->required_spec : $autoSpec;
 
+        // ═══ AMBIL TANGGAL DARI FINAL COMPARISON JIKA ADA ═══
+        $printDate = $model->finalComparison?->request_date ?? $model->date;
+
         return [
             'no' => ltrim($model->finalComparison?->final_number ?? $model->no ?? '', '/'),
-            'date' => optional($model->date)->format('d F Y'),
+            'date' => optional($printDate)->format('d F Y'),
             'request_by' => $model->request_by,
             'division' => $model->division,
             'prepared_by' => $model->prepared_by,

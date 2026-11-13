@@ -10,6 +10,7 @@ class ProcurementComparison extends Model
         'procurement_request_id',
         'vendor_name',
         'company_name',
+        'request_date',
         'total_price',
         'tax_note',
         'sort_order',
@@ -34,6 +35,7 @@ class ProcurementComparison extends Model
     protected $casts = [
         'total_price' => 'decimal:2',
         'is_selected' => 'boolean',
+          'request_date' => 'date',
         'is_accounting_approved' => 'boolean',
         'is_cfo_approved' => 'boolean',
         'is_ceo_approved' => 'boolean',

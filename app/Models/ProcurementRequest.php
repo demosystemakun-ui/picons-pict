@@ -20,7 +20,6 @@ class ProcurementRequest extends Model
     protected $fillable = [
         'no',
         'date',
-        'request_date',
         'department_id',
         'request_by',
         'division',
