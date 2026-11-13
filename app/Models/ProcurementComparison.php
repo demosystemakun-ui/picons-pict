@@ -9,7 +9,6 @@ class ProcurementComparison extends Model
     protected $fillable = [
         'procurement_request_id',
         'vendor_name',
-        'company_name',
         'request_date',
         'total_price',
         'tax_note',
