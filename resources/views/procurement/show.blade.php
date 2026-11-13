@@ -146,22 +146,11 @@
                     </form>
                 @endif
 
-                {{-- 4. TOMBOL STATUS APPROVED --}}
-                @if($currStatus === 'approved')
-                    @if($isAllSigned)
-                        {{-- Jika TTD sudah lengkap, arahkan ke Vendor Comparison --}}
-                        <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
-                            <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Select Vendor & Comparison
-                        </a>
-                    @else
-                        {{-- Jika BELUM, tampilkan tombol Validasi Global --}}
-                        <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validate all Manager signatures?')">
-                            @csrf @method('PATCH')
-                            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                                <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve All Signatures
-                            </button>
-                        </form>
-                    @endif
+                {{-- 4. TOMBOL STATUS APPROVED (Hanya Tombol Select Vendor, Tombol Approve All Signatures ada di bawah) --}}
+                @if($currStatus === 'approved' && $isAllSigned)
+                    <a href="{{ route('procurement.comparisons.index', $procurementRequest) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+                        <i data-lucide="git-compare" class="w-3.5 h-3.5"></i> Select Vendor & Comparison
+                    </a>
                 @endif
 
                 {{-- 5. TOMBOL STATUS RECEIVED --}}
