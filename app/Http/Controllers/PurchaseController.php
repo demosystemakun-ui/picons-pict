@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
-    private const PO_ALLOWED_STATUSES = ['final_approved'];
+    // Status PR 2 yang diizinkan untuk membuat PO
+    private const PO_ALLOWED_STATUSES = ['final_approved', 'received', 'completed'];
     
     // Helper untuk cek role yang boleh membuat/manage PO
     private function isAdminOrDeptAdmin(): bool
@@ -78,10 +79,13 @@ class PurchaseController extends Controller
             abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
         }
 
-        if (!in_array($procurement->status, self::PO_ALLOWED_STATUSES, true)) {
+        // ═══ CEK STATUS DARI PR 2 (FINAL COMPARISON) ═══
+        $currentStatus = $procurement->finalComparison?->status;
+
+        if (!in_array($currentStatus, self::PO_ALLOWED_STATUSES, true)) {
             return redirect()
                 ->route('procurement.show', $procurement)
-                ->with('error', 'Purchase Order hanya dapat dibuat dari PR Final yang sudah divalidasi (Final Approved). Status saat ini: ' . $procurement->status . '.');
+                ->with('error', 'Purchase Order can only be created from a validated Final PR (Final Approved). Current status: ' . ($currentStatus ?? 'unknown') . '.');
         }
 
         // Cegah PO ganda
@@ -112,8 +116,11 @@ class PurchaseController extends Controller
             abort(403, 'Anda tidak memiliki akses untuk membuat PO dari PR departemen lain.');
         }
 
-        if (!in_array($procurement->status, self::PO_ALLOWED_STATUSES, true)) {
-            return back()->with('error', 'Gagal membuat PO: Status pengajuan tidak valid (' . $procurement->status . ').');
+        // ═══ CEK STATUS DARI PR 2 (FINAL COMPARISON) ═══
+        $currentStatus = $procurement->finalComparison?->status;
+
+        if (!in_array($currentStatus, self::PO_ALLOWED_STATUSES, true)) {
+            return back()->with('error', 'Failed to create PO: Invalid PR status (' . ($currentStatus ?? 'unknown') . ').');
         }
 
         $existingPo = Purchase::where('procurement_request_id', $procurement->id)->first();
@@ -282,8 +289,8 @@ class PurchaseController extends Controller
             ]);
 
             $procurementRequest = $purchase->procurementRequest;
-            if ($allReceived && $procurementRequest->status === 'final_approved') {
-                $procurementRequest->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
+            if ($allReceived && $procurementRequest->finalComparison?->status === 'final_approved') {
+                $procurementRequest->finalComparison->update(['status' => ProcurementRequest::STATUS_RECEIVED]);
             }
 
             DB::commit();
