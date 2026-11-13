@@ -30,13 +30,14 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tahap 1: Belum punya data final
+                // Tahap 1: Belum punya data final, status di tabel PR 1
                 $query->whereDoesntHave('finalComparison')
                       ->whereIn('status', ['pending', 'approved', 'revision', 'processed']);
             } elseif ($request->stage === 'final') {
-                // Tahap 2: Sudah punya data final
-                $query->whereHas('finalComparison')
-                      ->whereIn('status', ['processed', 'pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
+                // Tahap 2: Sudah punya data final, cek status di tabel comparison
+                $query->whereHas('finalComparison', function($q) {
+                    $q->whereIn('status', ['pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
+                });
             }
         }
 
@@ -172,7 +173,6 @@ class ProcurementRequestController extends Controller
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($fullNumber, $procurementRequest) {
                     $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)->where('id', '!=', $procurementRequest->id)->exists();
-                    // ═══ CEK KE TABEL COMPARISON ═══
                     $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $fullNumber)->exists();
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
@@ -355,19 +355,18 @@ class ProcurementRequestController extends Controller
 
         $procurement = $this->mapToPrintData($procurementRequest);
         
-        // ═══ LOAD RELASI FINAL ═══
         $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
 
         $procurement['vendors'] = $procurementRequest->vendors()->get()->toArray();
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
+        // ═══ WATERMARK & STAMP TTD (Cek Status PR 2) ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
-            $isDraft = $procurementRequest->status !== 'final_approved'
-                    && $procurementRequest->status !== 'received'
-                    && $procurementRequest->status !== 'completed';
+            $statusPR2 = $procurementRequest->finalComparison?->status;
+            $isDraft = !in_array($statusPR2, ['final_approved', 'received', 'completed']);
         }
 
         $procurement['signatures'] = [
@@ -376,7 +375,6 @@ class ProcurementRequestController extends Controller
             ['role' => 'COO',      'name' => $procurementRequest->coo_name,         'approved' => (bool) $procurementRequest->is_coo_approved],
         ];
 
-        // ═══ AMBIL DATA DARI finalComparison ═══
         $procurement['bottom_signatures'] = [
             ['role' => 'Accounting MGR', 'name' => $procurementRequest->finalComparison?->accounting_mgr_name, 'approved' => (bool) $procurementRequest->finalComparison?->is_accounting_approved],
             ['role' => 'CFO',            'name' => $procurementRequest->finalComparison?->cfo_name,            'approved' => (bool) $procurementRequest->finalComparison?->is_cfo_approved],
@@ -426,7 +424,6 @@ class ProcurementRequestController extends Controller
 
         $procurement = $this->mapToPrintData($procurementRequest);
         
-        // ═══ LOAD RELASI FINAL ═══
         $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
 
         $procurement['vendors'] = $procurementRequest->vendors()->orderBy('total_price')->get()->map(fn ($v) => [
@@ -472,7 +469,6 @@ class ProcurementRequestController extends Controller
             'tax_note' => $winner->tax_note,
         ] : null;
 
-        // ═══ AMBIL DATA DARI finalComparison ═══
         $procurement['budget_type'] = $procurementRequest->finalComparison?->budget_type;
         $procurement['reason_choose_vendor'] = $procurementRequest->finalComparison?->reason_choose_vendor;
         $procurement['accounting_mgr_name'] = $procurementRequest->finalComparison?->accounting_mgr_name;
@@ -480,12 +476,12 @@ class ProcurementRequestController extends Controller
         $procurement['cfo_name'] = $procurementRequest->finalComparison?->cfo_name;
         $procurement['final_number'] = $procurementRequest->finalComparison?->final_number;
 
+        // ═══ WATERMARK & STAMP TTD (Cek Status PR 2) ═══
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
-            $isDraft = $procurementRequest->status !== 'final_approved'
-                    && $procurementRequest->status !== 'received'
-                    && $procurementRequest->status !== 'completed';
+            $statusPR2 = $procurementRequest->finalComparison?->status;
+            $isDraft = !in_array($statusPR2, ['final_approved', 'received', 'completed']);
         }
 
         $procurement['signatures'] = [
@@ -532,7 +528,6 @@ class ProcurementRequestController extends Controller
             'final_number' => [
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($procurementRequest) {
-                    // ═══ CEK KE TABEL COMPARISON ═══
                     $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $value)
                         ->where('procurement_request_id', '!=', $procurementRequest->id)
                         ->exists();
@@ -542,20 +537,27 @@ class ProcurementRequestController extends Controller
             ],
         ]);
 
-        if ($procurementRequest->status !== 'pending_final_sign') return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
-        if (!$procurementRequest->winnerVendor) return back()->with('error', 'No winning vendor. Please select a vendor first.');
+        $comparison = $procurementRequest->finalComparison;
+        
+        // Cek status dari tabel comparison
+        if (!$comparison || $comparison->status !== 'pending_final_sign') {
+            return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
+        }
+        
+        if (!$procurementRequest->winnerVendor) {
+            return back()->with('error', 'No winning vendor. Please select a vendor first.');
+        }
 
-        // 1. Update Status PR Induk
-        $procurementRequest->update([
+        // 1. Update Status PR 2 (Final)
+        $comparison->update([
             'status' => 'final_approved',
-            'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
+            'final_number' => $request->input('final_number'),
         ]);
 
-        // 2. Simpan Nomor Final ke tabel ProcurementComparison
-        $comparison = $procurementRequest->finalComparison;
-        if ($comparison) {
-            $comparison->update(['final_number' => $request->input('final_number')]);
-        }
+        // 2. Opsional: Simpan catatan di PR 1
+        $procurementRequest->update([
+            'review_notes' => 'PR Final signed by Manager. Final Number: ' . $request->input('final_number'),
+        ]);
 
         $this->sendWhatsAppNotification($procurementRequest, 'final_approved');
 
@@ -597,20 +599,45 @@ class ProcurementRequestController extends Controller
             'review_notes' => 'nullable|string|max:1000',
         ]);
 
-        $allowedTransitions = [
-            'pending' => ['approved', 'rejected', 'revision'],
-            'revision' => ['pending'],
-            'approved' => ['processed'],
-            'processed' => ['final_approved'],
-            'final_approved' => ['received'],
-            'received' => ['completed'],
-        ];
+        $comparison = $procurementRequest->finalComparison;
 
-        if (!in_array($validated['status'], $allowedTransitions[$procurementRequest->status] ?? [], true)) {
-            return back()->with('error', "Status cannot be changed from {$procurementRequest->status} to {$validated['status']}.");
+        // ═══ LOGIKA BARU: JIKA PR SUDAH MASUK TAHAP FINAL (PR 2) ═══
+        if ($comparison) {
+            $allowedTransitions = [
+                'pending_review_final' => ['pending_final_sign'],
+                'pending_final_sign'   => ['final_approved'],
+                'final_approved'       => ['received'],
+                'received'             => ['completed'],
+            ];
+
+            $currentStatus = $comparison->status;
+
+            if (!in_array($validated['status'], $allowedTransitions[$currentStatus] ?? [], true)) {
+                return back()->with('error', "Status PR Final tidak bisa diubah dari {$currentStatus} ke {$validated['status']}.");
+            }
+
+            $comparison->update(['status' => $validated['status']]);
+
+        } 
+        // ═══ JIKA PR MASIH DI TAHAP AWAL (PR 1) ═══
+        else {
+            $allowedTransitions = [
+                'pending' => ['approved', 'rejected', 'revision'],
+                'revision' => ['pending'],
+                'approved' => ['processed'],
+            ];
+
+            $currentStatus = $procurementRequest->status;
+
+            if (!in_array($validated['status'], $allowedTransitions[$currentStatus] ?? [], true)) {
+                return back()->with('error', "Status PR Awal tidak bisa diubah dari {$currentStatus} ke {$validated['status']}.");
+            }
+
+            $procurementRequest->update([
+                'status' => $validated['status'], 
+                'review_notes' => $validated['review_notes'] ?? null
+            ]);
         }
-
-        $procurementRequest->update(['status' => $validated['status'], 'review_notes' => $validated['review_notes'] ?? null]);
 
         $this->sendWhatsAppNotification($procurementRequest, $validated['status']);
 
