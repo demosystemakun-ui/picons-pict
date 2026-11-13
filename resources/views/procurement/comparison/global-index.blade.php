@@ -43,16 +43,16 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-5 py-4">
                                 <div class="flex flex-col gap-1">
-                                    {{-- Nomor PR Awal (Referensi) --}}
+                                    {{-- Nomor PR Awal --}}
                                     <span class="font-mono font-semibold text-gray-900 dark:text-white">
                                         {{ $procurement->no }}
                                     </span>
                                     
-                                    {{-- Nomor PR Final (Hasil Inputan) --}}
-                                    @if($procurement->final_number)
+                                    {{-- Nomor PR Final (Ambil dari finalComparison) --}}
+                                    @if($procurement->finalComparison?->final_number)
                                         <span class="inline-flex items-center gap-1 text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded w-max">
                                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                                            {{ $procurement->final_number }}
+                                            {{ $procurement->finalComparison->final_number }}
                                         </span>
                                     @else
                                         <span class="text-[10px] text-gray-400 italic">No Final PR yet</span>
@@ -68,26 +68,33 @@
                             </td>
                             <td class="px-5 py-4 text-center">
                                 @php
+                                    // ═══ AMBIL STATUS DARI TABEL MASING-MASING ═══
+                                    $statusPR1 = $procurement->status;
+                                    $statusPR2 = $procurement->finalComparison?->status;
+                                    
+                                    // Prioritas tampilkan status PR 2 jika sudah ada
+                                    $currentStatus = $statusPR2 ?? $statusPR1;
+
                                     $statusColors = [
-                                        'approved'           => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                                        'processed'          => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                        'approved'            => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                        'processed'           => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
                                         'pending_review_final'=> 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                                        'pending_final_sign' => 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                                        'final_approved'     => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-                                        'received'           => 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-                                        'completed'          => 'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+                                        'pending_final_sign'  => 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                        'final_approved'      => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+                                        'received'            => 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                                        'completed'           => 'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
                                     ];
                                     $statusLabels = [
-                                        'approved'           => 'Approved',
-                                        'processed'          => 'PR Awal Validated',
+                                        'approved'            => 'Approved',
+                                        'processed'           => 'PR Awal Validated',
                                         'pending_review_final'=> 'Pending Review Final',
-                                        'pending_final_sign' => 'Pending Final Sign',
-                                        'final_approved'     => 'Final Approved',
-                                        'received'           => 'Received',
-                                        'completed'          => 'Completed',
+                                        'pending_final_sign'  => 'Pending Final Sign',
+                                        'final_approved'      => 'Final Approved',
+                                        'received'            => 'Received',
+                                        'completed'           => 'Completed',
                                     ];
-                                    $colorClass = $statusColors[$procurement->status] ?? 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-                                    $label = $statusLabels[$procurement->status] ?? ucfirst(str_replace('_', ' ', $procurement->status));
+                                    $colorClass = $statusColors[$currentStatus] ?? 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+                                    $label = $statusLabels[$currentStatus] ?? ucfirst(str_replace('_', ' ', $currentStatus));
                                 @endphp
                                 <span class="inline-flex items-center rounded-md {{ $colorClass }} px-2.5 py-1 text-xs font-semibold">
                                     {{ $label }}

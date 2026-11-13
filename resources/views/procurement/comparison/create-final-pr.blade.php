@@ -24,7 +24,7 @@
         </a>
     </div>
 
-    {{-- ═══ ALERTS ═══ --}}
+    {{-- ═══ ALERTS (Jika Ada Error Validasi) ═══ --}}
     @if(session('error'))
         <div class="rounded-xl bg-rose-50 border border-rose-200 px-5 py-4">
             <p class="text-sm font-medium text-rose-800">{{ session('error') }}</p>
@@ -32,6 +32,7 @@
     @endif
     @if($errors->any())
         <div class="rounded-xl bg-rose-50 border border-rose-200 px-5 py-4">
+            <p class="text-sm font-bold text-rose-800 mb-1">Ada kesalahan pengisian form:</p>
             <ul class="text-sm text-rose-700 space-y-0.5">
                 @foreach($errors->all() as $error)
                     <li>• {{ $error }}</li>
@@ -94,6 +95,7 @@
     </section>
 
     {{-- ═══ FORM FINAL PR ═══ --}}
+    {{-- PASTIKAN ROUTE SUDAH BENAR (cek di php artisan route:list) --}}
     <form action="{{ route('procurement.comparisons.final-pr.store', $procurement) }}" method="POST" class="space-y-6">
         @csrf
 
@@ -119,7 +121,7 @@
                             Date <span class="text-rose-500">*</span>
                         </label>
                         <input type="date" name="request_date"
-                               value="{{ old('request_date', $procurement->request_date ?? date('Y-m-d')) }}"
+                               value="{{ old('request_date', date('Y-m-d')) }}"
                                class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('request_date') border-rose-400 @enderror"
                                required>
                         @error('request_date')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
@@ -133,8 +135,8 @@
                                 class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('budget_type') border-rose-400 @enderror"
                                 required>
                             <option value="">-- Select --</option>
-                            <option value="Budgeted"     {{ old('budget_type', $procurement->budget_type) === 'Budgeted' ? 'selected' : '' }}>Budgeted</option>
-                            <option value="Non Budgeted" {{ old('budget_type', $procurement->budget_type) === 'Non Budgeted' ? 'selected' : '' }}>Non Budgeted</option>
+                            <option value="Budgeted"     {{ old('budget_type') === 'Budgeted' ? 'selected' : '' }}>Budgeted</option>
+                            <option value="Non Budgeted" {{ old('budget_type') === 'Non Budgeted' ? 'selected' : '' }}>Non Budgeted</option>
                         </select>
                         @error('budget_type')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                     </div>
@@ -204,7 +206,6 @@
                     </label>
                     
                     @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
-                        {{-- Form Input Khusus Admin --}}
                         <div class="flex items-center w-full rounded-lg border border-gray-300 bg-white focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 overflow-hidden @error('final_number') border-rose-400 @enderror">
                             <input type="text" id="final_number_prefix" 
                                    value="{{ old('final_number') ? substr(old('final_number'), 0, 2) : '01' }}"
@@ -222,7 +223,6 @@
                         <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
                         @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                     @else
-                        {{-- Tampilan Informasi untuk User Biasa --}}
                         <div class="flex items-center w-full rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
                             <svg class="w-4 h-4 text-amber-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <span class="text-sm text-amber-700 dark:text-amber-300">Nomor Final PR akan diisi oleh Admin saat proses review.</span>
@@ -237,7 +237,7 @@
                     <textarea name="reason_choose_vendor" rows="3" maxlength="2000"
                               placeholder="Contoh: Vendor ini menawarkan harga terendah dengan spesifikasi sesuai kebutuhan."
                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('reason_choose_vendor') border-rose-400 @enderror"
-                              required>{{ old('reason_choose_vendor', $procurement->reason_choose_vendor) }}</textarea>
+                              required>{{ old('reason_choose_vendor') }}</textarea>
                     @error('reason_choose_vendor')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 </div>
 
@@ -247,19 +247,19 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5">Accounting Manager</label>
                             <input type="text" name="accounting_mgr_name"
-                                   value="{{ old('accounting_mgr_name', $procurement->accounting_mgr_name) }}"
+                                   value="{{ old('accounting_mgr_name') }}"
                                    class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5">CFO</label>
                             <input type="text" name="cfo_name"
-                                   value="{{ old('cfo_name', $procurement->cfo_name) }}"
+                                   value="{{ old('cfo_name') }}"
                                    class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1.5">CEO</label>
                             <input type="text" name="ceo_name"
-                                   value="{{ old('ceo_name', $procurement->ceo_name) }}"
+                                   value="{{ old('ceo_name') }}"
                                    class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500">
                         </div>
                     </div>
@@ -360,7 +360,6 @@
         const hiddenInput = document.getElementById('final_number_full');
         const suffixText  = document.getElementById('final_number_suffix').innerText;
         
-        // Pastikan elemen ada (hanya ada untuk Admin)
         if (!prefixInput || !hiddenInput || !suffixText) return;
 
         let prefix = prefixInput.value.replace(/\D/g, '');
