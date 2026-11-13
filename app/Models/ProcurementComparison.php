@@ -14,7 +14,6 @@ class ProcurementComparison extends Model
         'tax_note',
         'sort_order',
         'is_selected',
-        'reason',
         
         // ═══ KOLOM UNTUK DATA PR FINAL & TTD DIREKSI ═══
         'final_number',

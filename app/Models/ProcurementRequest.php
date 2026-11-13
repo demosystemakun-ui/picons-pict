@@ -55,15 +55,6 @@ class ProcurementRequest extends Model
         'status',
         'procurement_method',
         'review_notes',
-
-        // 'budget_type',           // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'reason_choose_vendor',  // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'final_number',          // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'final_total_price',     // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'accounting_mgr_name',   // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'ceo_name',              // DIHAPUS (Sudah pindah ke finalComparison)
-        // 'cfo_name',              // DIHAPUS (Sudah pindah ke finalComparison)
-
         'user_id',
     ];
 
