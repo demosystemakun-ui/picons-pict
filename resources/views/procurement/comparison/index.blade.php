@@ -68,7 +68,6 @@
         </div>
     @endif
 
-    {{-- (KODE SCAN AI & MANUAL INPUT TETAP SAMA SEPERTI SEBELUMNYA) --}}
     {{-- ═══ AI SCAN SECTION ═══ --}}
     @if($canShowInputForms)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -188,7 +187,7 @@
             </table>
         </div>
 
-        {{-- ═══ FOOTER: Aksi Berdasarkan Status (Sudah Diperbaiki) ═══ --}}
+        {{-- ═══ FOOTER: Aksi Berdasarkan Status ═══ --}}
         @if($hasVendors && $procurement->winnerVendor)
             <footer class="px-6 py-5 border-t border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 dark:from-teal-900/10 dark:to-emerald-900/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -196,24 +195,22 @@
                         @if($isFinalApproved)
                             Final PR Validated
                         @elseif($isPendingFinalSign)
-                            Menunggu Validasi TTD Manajer
+                            Waiting for Final Signature
                         @elseif($isPendingFinalReview)
-                            Menunggu Review Format PR Final
-                        @elseif($isProcessed)
-                            Vendor Selected — Ready for Final PR
+                            Waiting for Format Review
                         @else
-                            Waiting for Configuration
+                            Vendor Selected — Ready for Final PR
                         @endif
                     </div>
                     <div class="text-xs text-gray-600 dark:text-gray-400">
                         @if($isFinalApproved)
                             You can now proceed to the PO/Cash Advance/Reimbursement process.
                         @elseif($isPendingFinalSign)
-                            Silakan cetak PDF, minta TTD basah Manajer, lalu klik tombol Validate.
+                            Please print the PDF, get the Manager's wet signature, then click Validate.
                         @elseif($isPendingFinalReview)
-                            Silakan periksa kembali data format PR Final, lalu klik Approve Format.
-                        @elseif($isProcessed)
-                            Silakan lanjut ke pembuatan Form Final PR.
+                            Please review the Final PR format, then click Approve Format.
+                        @else
+                            Please continue to create the Final PR Form.
                         @endif
                     </div>
                 </div>
@@ -257,7 +254,7 @@
 
                             <form action="{{ route('procurement.approve-final-format', $procurement) }}" method="POST">
                                 @csrf @method('PATCH')
-                                <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm" onclick="return confirm('Apakah Anda yakin format PR Final ini sudah benar?')">
+                                <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm" onclick="return confirm('Are you sure the Final PR format is correct?')">
                                     <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                     Approve Format
                                 </button>
@@ -267,7 +264,7 @@
                         @elseif(!$isAdmin)
                             <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-amber-200 dark:border-amber-800/50">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Menunggu Admin menginput nomor & me-review format.
+                                Waiting for Admin to input number & review format.
                             </div>
                         @endif
 
@@ -280,7 +277,7 @@
                         @if($isAdmin)
                             <form action="{{ route('procurement.validate-final-signature', $procurement) }}" method="POST">
                                 @csrf @method('PATCH')
-                                <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm" onclick="return confirm('Apakah TTD Manajer sudah dibubuhkan dan Anda yakin ingin memvalidasi?')">
+                                <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 shadow-sm" onclick="return confirm('Is the Manager signature affixed and are you sure you want to validate?')">
                                     Validate Final Signature
                                 </button>
                             </form>
@@ -310,7 +307,7 @@
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                Final PR telah divalidasi. Menunggu pembuatan PO oleh Admin.
+                                Final PR Validated. Waiting for Admin to create PO.
                             </div>
                         @endif
 
@@ -319,7 +316,7 @@
                         </a>
 
                     {{-- ═══ JIKA SUDAH PILIH VENDOR (PROCESSED / APPROVED) ═══ --}}
-                    @elseif($isProcessed)
+                    @else
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
