@@ -215,8 +215,8 @@
         </div>
     </div>
 
-    {{-- FORM EDIT NOMOR PR (HANYA ADMIN & STATUS PENDING) --}}
-    @if($isAdmin && $currStatus === 'pending')
+    {{-- FORM EDIT NOMOR PR (HANYA MUNCUL JIKA NOMOR MASIH DRAFT & STATUS PENDING) --}}
+    @if($isAdmin && $currStatus === 'pending' && $isDraftNumber)
         <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 rounded-lg">
             <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Input Official PR Number</h3>
             
@@ -655,5 +655,3 @@
 </script>
 @endpush
 @endsection
-
-<!-- baruuu -->
