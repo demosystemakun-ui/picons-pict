@@ -265,9 +265,8 @@
             @if(!empty($procurement['reason_choose_vendor']))
                 {{ $procurement['reason_choose_vendor'] }}
             @elseif($winner)
-                {{ $winner['vendor_name'] }} menawarkan harga total terendah
-                (Rp {{ number_format($winner['total_price'], 0, ',', '.') }})
-                dibandingkan vendor lain, sehingga dipilih sebagai supplier untuk pengadaan ini.
+                {{-- TEKS FALLBACK INI SUDAH DIGANTI KE BAHASA INGGRIS --}}
+                {{ $winner['vendor_name'] }} was selected because it offers the best value for money and meets all the required specifications for this procurement.
             @else
                 —
             @endif

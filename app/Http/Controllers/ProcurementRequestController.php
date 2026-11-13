@@ -30,11 +30,9 @@ class ProcurementRequestController extends Controller
 
         if ($request->filled('stage')) {
             if ($request->stage === 'tahap1') {
-                // Tahap 1: Belum punya data final, status di tabel PR 1
                 $query->whereDoesntHave('finalComparison')
                       ->whereIn('status', ['pending', 'approved', 'revision', 'processed']);
             } elseif ($request->stage === 'final') {
-                // Tahap 2: Sudah punya data final, cek status di tabel comparison
                 $query->whereHas('finalComparison', function($q) {
                     $q->whereIn('status', ['pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
                 });
@@ -361,7 +359,9 @@ class ProcurementRequestController extends Controller
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
 
-        // ═══ WATERMARK & STAMP TTD (Cek Status PR 2) ═══
+        // ═══ AMBIL REASON DARI DB ATAU AUTO-GENERATE ═══
+        $procurement['reason_choose_vendor'] = $this->generateReasonText($procurementRequest);
+
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
@@ -470,13 +470,14 @@ class ProcurementRequestController extends Controller
         ] : null;
 
         $procurement['budget_type'] = $procurementRequest->finalComparison?->budget_type;
-        $procurement['reason_choose_vendor'] = $procurementRequest->finalComparison?->reason_choose_vendor;
         $procurement['accounting_mgr_name'] = $procurementRequest->finalComparison?->accounting_mgr_name;
         $procurement['ceo_name'] = $procurementRequest->finalComparison?->ceo_name;
         $procurement['cfo_name'] = $procurementRequest->finalComparison?->cfo_name;
         $procurement['final_number'] = $procurementRequest->finalComparison?->final_number;
 
-        // ═══ WATERMARK & STAMP TTD (Cek Status PR 2) ═══
+        // ═══ AMBIL REASON DARI DB ATAU AUTO-GENERATE ═══
+        $procurement['reason_choose_vendor'] = $this->generateReasonText($procurementRequest);
+
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
             $isDraft = true;
         } else {
@@ -703,6 +704,37 @@ class ProcurementRequestController extends Controller
         } catch (\Throwable $e) {
             Log::warning('WhatsApp notify admins (New PR) failed for PR #' . $pr->id . ': ' . $e->getMessage());
         }
+    }
+
+    /**
+     * ═══ AUTO-GENERATE REASON (English) ═══
+     */
+    private function generateReasonText(ProcurementRequest $procurementRequest): string
+    {
+        // 1. Jika Admin sudah mengisi reason di form, gunakan itu.
+        if (!empty($procurementRequest->finalComparison?->reason_choose_vendor)) {
+            return $procurementRequest->finalComparison->reason_choose_vendor;
+        }
+
+        // 2. Jika kosong, buat teks otomatis dalam Bahasa Inggris.
+        $winner = $procurementRequest->winnerVendor;
+        if (!$winner) {
+            return '—';
+        }
+
+        $allVendors = $procurementRequest->vendors()->orderBy('total_price')->get();
+        $winnerPrice = $winner->total_price;
+        
+        if ($allVendors->count() > 1) {
+            $maxPrice = $allVendors->max('total_price');
+            $diff = $maxPrice - $winnerPrice;
+
+            if ($diff > 0) {
+                return "{$winner->vendor_name} was selected because it offers the most competitive price (Rp " . number_format($winnerPrice, 0, ',', '.') . "), saving Rp " . number_format($diff, 0, ',', '.') . " compared to the highest offer. It also meets all the required specifications.";
+            }
+        }
+
+        return "{$winner->vendor_name} was selected because it offers the best value for money and meets all the required specifications for this procurement.";
     }
 
     private function mapToPrintData(ProcurementRequest $model): array
