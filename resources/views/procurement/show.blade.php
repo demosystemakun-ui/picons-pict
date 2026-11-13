@@ -55,6 +55,9 @@
 
     // Status yang sudah masuk tahap final (Print/PDF memakai versi final)
     $isFinalStage = in_array($currStatus, ['processed', 'final_approved', 'received', 'completed']);
+
+    // ═══ CEK APAKAH NOMOR PR MASIH DRAFT ═══
+    $isDraftNumber = str_starts_with($procurementRequest->no, 'DRAFT-');
 @endphp
 
 @section('content')
@@ -70,16 +73,16 @@
             <div class="min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-gray-900 dark:text-white font-mono">
-                        {{ $procurementRequest->final_number ?? $procurementRequest->no }}
+                        {{ $procurementRequest->finalComparison?->final_number ?? $procurementRequest->no }}
                     </h1>
                     <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-700">
                         <span class="h-1.5 w-1.5 rounded-full {{ $meta['color'] }} {{ $currStatus === 'pending' ? 'animate-pulse' : '' }}"></span>
                         {{ $meta['label'] }}
                     </span>
                 </div>
-                @if($procurementRequest->final_number)
+                @if($procurementRequest->finalComparison?->final_number)
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        PR Awal: <span class="font-mono">{{ $procurementRequest->no }}</span>
+                        Initial PR: <span class="font-mono">{{ $procurementRequest->no }}</span>
                     </p>
                 @endif
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -91,8 +94,8 @@
         {{-- Action Buttons --}}
         <div class="flex flex-wrap items-center gap-2">
 
-            {{-- 1. TOMBOL PREVIEW DRAFT (Hanya untuk Admin saat pending) --}}
-            @if($currStatus === 'pending' && $isAdmin)
+            {{-- 1. TOMBOL PREVIEW DRAFT (Hanya untuk Admin saat pending & nomor bukan draft) --}}
+            @if($currStatus === 'pending' && $isAdmin && !$isDraftNumber)
                 <a href="{{ route('procurement.pdf', $procurementRequest) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Preview PDF (Draft)
                 </a>
@@ -106,20 +109,29 @@
                 
                 {{-- 2. TOMBOL STATUS PENDING --}}
                 @if($currStatus === 'pending')
-                    <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin memvalidasi format PR ini?')" class="inline">
-                        @csrf
-                        @method('PATCH')
-                        <input type="hidden" name="status" value="approved">
-                        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
-                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve Format
+                    
+                    {{-- Hanya tampilkan Approve/Reject/Revision JIKA NOMOR PR SUDAH DIISI --}}
+                    @if(!$isDraftNumber)
+                        <form action="{{ route('procurement.status', $procurementRequest) }}" method="POST" onsubmit="return confirm('Are you sure you want to approve this PR format?')" class="inline">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="status" value="approved">
+                            <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Approve Format
+                            </button>
+                        </form>
+                        <button type="button" onclick="openActionModal('revision')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Revision
                         </button>
-                    </form>
-                    <button type="button" onclick="openActionModal('revision')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Revision
-                    </button>
-                    <button type="button" onclick="openActionModal('rejected')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition">
-                        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Reject
-                    </button>
+                        <button type="button" onclick="openActionModal('rejected')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition">
+                            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Reject
+                        </button>
+                    @else
+                        {{-- Pesan peringatan jika nomor belum diisi --}}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Save PR Number First
+                        </span>
+                    @endif
                 @endif
 
                 {{-- 3. TOMBOL STATUS REVISION --}}
@@ -143,7 +155,7 @@
                         </a>
                     @else
                         {{-- Jika BELUM, tampilkan tombol Validasi Global --}}
-                        <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua TTD Manajer?')">
+                        <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validate all Manager signatures?')">
                             @csrf @method('PATCH')
                             <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
                                 <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Approve All Signatures
@@ -189,8 +201,8 @@
                 </a>
             @endif
 
-            {{-- 8. Tombol Print & PDF (HANYA ADMIN) --}}
-            @if($currStatus !== 'pending' && $isAdmin)
+            {{-- 8. Tombol Print & PDF (HANYA ADMIN & NOMOR BUKAN DRAFT) --}}
+            @if($currStatus !== 'pending' && $isAdmin && !$isDraftNumber)
                 <span class="hidden sm:inline-block w-px h-5 bg-gray-300 dark:bg-gray-700 mx-1"></span>
 
                 <a href="{{ $isFinalStage ? route('procurement.print.final', $procurementRequest) : route('procurement.print', $procurementRequest) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -206,7 +218,7 @@
     {{-- FORM EDIT NOMOR PR (HANYA ADMIN & STATUS PENDING) --}}
     @if($isAdmin && $currStatus === 'pending')
         <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 rounded-lg">
-            <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Input Nomor PR Resmi</h3>
+            <h3 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Input Official PR Number</h3>
             
             @php
                 // Ambil suffix (bagian setelah nomor urut)
@@ -229,7 +241,7 @@
                     <input type="text" name="no_prefix" 
                            value="{{ old('no_prefix', $prefix) }}"
                            required
-                           placeholder="Contoh: 15"
+                           placeholder="e.g. 15"
                            class="w-20 text-center border-none text-sm px-3 py-2 font-mono focus:ring-0 focus:outline-none">
                     
                     <span class="text-sm font-mono text-gray-500 bg-gray-50 dark:bg-gray-800 px-3 py-2 border-l border-gray-200 dark:border-gray-700 w-full">
@@ -240,10 +252,10 @@
                 <input type="hidden" name="no_suffix" value="{{ $suffix }}">
 
                 <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition shadow-sm whitespace-nowrap">
-                    Simpan Nomor
+                    Save Number
                 </button>
             </form>
-            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">Cukup isi nomor urut di depan (misal: 15). Sisa format otomatis mengikuti sistem.</p>
+            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1.5">Enter the sequence number only (e.g. 15). The rest of the format follows automatically.</p>
         </div>
     @endif
 
@@ -338,7 +350,7 @@
                 @if($procurementRequest->vendor_suggestion)
                     <div class="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60">
                         <span class="flex items-center gap-1.5 text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1.5">
-                            <i data-lucide="lightbulb" class="w-4 h-4"></i> Usulan Vendor / Referensi dari User
+                            <i data-lucide="lightbulb" class="w-4 h-4"></i> Vendor Suggestion / User Reference
                         </span>
                         <p class="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-line leading-relaxed">{{ $procurementRequest->vendor_suggestion }}</p>
                     </div>
@@ -449,7 +461,7 @@
 
                 {{-- TOMBOL VALIDASI GLOBAL --}}
                 @if($isAdmin && !$isAllSigned && in_array($currStatus, ['approved', 'processed']))
-                    <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validasi semua tanda tangan (PR Awal & PR Final)?')">
+                    <form action="{{ route('procurement.approve-all-signatures', $procurementRequest) }}" method="POST" onsubmit="return confirm('Validate all signatures (Initial PR & Final PR)?')">
                         @csrf @method('PATCH')
                         <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
                             <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
@@ -503,7 +515,7 @@
             </div>
 
             <p class="text-[11px] text-gray-500 mt-4 text-center">
-                *Silakan validasi setiap kolom setelah tanda tangan basah dibubuhkan pada dokumen cetak.
+                *Please validate each column after the wet signature is affixed to the printed document.
             </p>
         </section>
 
@@ -602,7 +614,7 @@
 
     // Fungsi untuk validasi TTD
     window.validateSignature = function(field, btnElement) {
-        if (!confirm('Apakah Anda yakin ingin memvalidasi tanda tangan pada kolom ini?')) return;
+        if (!confirm('Are you sure you want to validate the signature in this column?')) return;
 
         const originalText = btnElement.innerHTML;
         btnElement.disabled = true;
@@ -628,7 +640,7 @@
             if(data.success) {
                 window.location.reload();
             } else {
-                alert('Gagal: ' + (data.error || 'Terjadi kesalahan.'));
+                alert('Failed: ' + (data.error || 'An error occurred.'));
                 btnElement.disabled = false;
                 btnElement.innerHTML = originalText;
             }
