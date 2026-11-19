@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,98 +18,127 @@
         }
 
         body {
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 48%, #f1f5f9 100%);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(251, 113, 133, 0.14), transparent 40%),
+                radial-gradient(circle at 88% 82%, rgba(99, 102, 241, 0.16), transparent 42%),
+                linear-gradient(135deg, #f8fafc 0%, #eef2ff 52%, #fff1f2 100%);
             min-height: 100vh;
         }
 
         .split-shell {
-            box-shadow: 0 25px 60px -15px rgba(30, 58, 138, 0.16);
+            box-shadow:
+                0 28px 65px -18px rgba(15, 23, 42, 0.14),
+                0 0 0 1px rgba(255, 255, 255, 0.9);
         }
 
         .btn-coral {
             background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .btn-coral:hover:not(:disabled) {
             background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
             transform: translateY(-1px);
-            box-shadow: 0 10px 20px -6px rgba(244, 63, 94, 0.45);
+            box-shadow: 0 12px 22px -6px rgba(244, 63, 94, 0.42);
         }
 
         .btn-coral:active:not(:disabled) {
             transform: translateY(0);
         }
+
+        .input-modern {
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+
+        .input-modern:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12);
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-4 sm:p-6 md:p-8 text-slate-800 antialiased">
 
-    <main class="split-shell w-full max-w-4xl bg-white rounded-3xl p-3 sm:p-4 md:p-5 border border-white/80">
+    <main class="split-shell w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-3xl p-3 sm:p-4">
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-0 items-stretch">
 
-            <!-- Kolom Kiri: Panel Brand & Ilustrasi -->
-            <div class="md:col-span-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-blue-100/60 rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[260px] md:min-h-[520px]">
-                <!-- Brand di pojok kiri atas -->
-                <div class="relative z-10 flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-white shadow-sm border border-blue-100 flex items-center justify-center overflow-hidden p-1">
-                        <img src="{{ asset('logo/pict.png') }}" alt="Logo PICONS" class="w-full h-full object-contain">
+            <!-- Left Panel: Brand & Visual Preview -->
+            <div class="md:col-span-6 bg-gradient-to-br from-rose-50/90 via-indigo-50/75 to-blue-50/80 rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[280px] md:min-h-[540px] border border-rose-100/60">
+
+                <!-- Top Brand Header -->
+                <div class="relative z-10 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-200/70 flex items-center justify-center overflow-hidden p-1.5">
+                            <img src="{{ asset('logo/pict.png') }}" alt="PICONS Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div class="leading-tight">
+                            <span class="block text-sm font-bold text-slate-900 tracking-tight">PICONS</span>
+                            <span class="block text-[11px] font-medium text-rose-500">Consumable Management</span>
+                        </div>
                     </div>
-                    <div class="leading-tight">
-                        <span class="block text-sm font-bold text-slate-900 tracking-tight">PICONS</span>
-                        <span class="block text-[11px] font-medium text-blue-600">Consumable Management</span>
+                    <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 bg-white/80 px-2.5 py-1 rounded-full border border-white">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        System Ready
+                    </span>
+                </div>
+
+                <!-- Floating UI Cards -->
+                <div class="relative z-10 my-auto py-5 space-y-3">
+                    <!-- Mini Analytics Card -->
+                    <div class="ml-auto mr-1 sm:mr-4 w-48 sm:w-52 bg-white/95 rounded-2xl p-3.5 shadow-lg shadow-slate-900/5 border border-white rotate-2">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <span class="text-[11px] font-semibold text-slate-700">Stock Movement</span>
+                            <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">+14.2%</span>
+                        </div>
+                        <div class="flex items-end justify-between gap-2 h-16 px-1 pt-1">
+                            <div class="flex-1 bg-rose-100 rounded-t-md h-7"></div>
+                            <div class="flex-1 bg-rose-200 rounded-t-md h-11"></div>
+                            <div class="flex-1 bg-indigo-200 rounded-t-md h-9"></div>
+                            <div class="flex-1 bg-rose-400 rounded-t-md h-14"></div>
+                            <div class="flex-1 bg-rose-500 rounded-t-md h-12"></div>
+                        </div>
+                    </div>
+
+                    <!-- Mini Status Pill -->
+                    <div class="mr-auto ml-1 sm:ml-3 w-44 bg-white/90 rounded-xl px-3 py-2.5 shadow-md shadow-slate-900/5 border border-white -rotate-2 flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-500 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                        <div class="leading-tight">
+                            <p class="text-[11px] font-semibold text-slate-800">Inventory Sync</p>
+                            <p class="text-[10px] text-slate-400">Real-time tracking</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Dekorasi Kartu Grafik & Elemen Visual -->
-                <div class="relative z-10 my-auto py-4">
-                    <!-- Kartu mini statistik -->
-                    <div class="ml-auto mr-2 sm:mr-6 w-40 sm:w-44 bg-white/95 backdrop-blur rounded-xl p-3 shadow-md border border-blue-100/80 rotate-3">
-                        <div class="flex items-end justify-between gap-1.5 h-16 px-1">
-                            <span class="w-3 h-7 rounded-t bg-blue-200"></span>
-                            <span class="w-3 h-12 rounded-t bg-blue-400"></span>
-                            <span class="w-3 h-9 rounded-t bg-indigo-300"></span>
-                            <span class="w-3 h-15 rounded-t bg-blue-600"></span>
-                            <span class="w-3 h-11 rounded-t bg-blue-300"></span>
-                        </div>
-                        <div class="mt-2.5 space-y-1.5">
-                            <div class="h-1.5 w-3/4 rounded bg-slate-200"></div>
-                            <div class="h-1.5 w-1/2 rounded bg-slate-100"></div>
-                        </div>
-                    </div>
-
-                    <!-- Aksen bentuk geometris -->
-                    <div class="mt-3 flex items-center gap-3 pl-2">
-                        <div class="flex flex-col gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-300 border border-indigo-400/40"></span>
-                            <span class="w-2.5 h-2.5 rounded-full bg-blue-300 border border-blue-400/40"></span>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <span class="w-12 h-2 rounded-full bg-indigo-200"></span>
-                            <span class="w-16 h-2 rounded-full bg-blue-200"></span>
-                        </div>
-                    </div>
+                <!-- Bottom Value Proposition -->
+                <div class="relative z-10 bg-white/85 backdrop-blur-md rounded-2xl px-4 py-3.5 border border-white shadow-sm">
+                    <p class="text-xs font-semibold text-slate-900">Streamline Consumable Operations</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Monitor stock levels, track requests, and keep terminal supplies organized in one place.
+                    </p>
                 </div>
 
-                <!-- Caption bawah panel kiri -->
-                <div class="relative z-10 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white">
-                    <p class="text-xs font-semibold text-slate-800">Pantau Stok &amp; Permintaan Barang</p>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Kelola consumable operasional lebih cepat dan terstruktur.</p>
-                </div>
-
-                <!-- Blob dekorasi latar -->
-                <div class="w-48 h-48 rounded-full bg-blue-300/25 blur-2xl absolute -bottom-12 -left-12 pointer-events-none"></div>
-                <div class="w-40 h-40 rounded-full bg-indigo-300/25 blur-2xl absolute top-10 -right-10 pointer-events-none"></div>
+                <!-- Soft Ambient Accents -->
+                <div class="w-52 h-52 rounded-full bg-rose-200/35 blur-3xl absolute -bottom-14 -left-14 pointer-events-none"></div>
+                <div class="w-44 h-44 rounded-full bg-indigo-200/40 blur-3xl absolute top-12 -right-12 pointer-events-none"></div>
             </div>
 
-            <!-- Kolom Kanan: Form Login -->
-            <div class="md:col-span-6 flex flex-col justify-center px-4 sm:px-8 md:px-10 py-6 md:py-8 relative">
+            <!-- Right Panel: Login Form -->
+            <div class="md:col-span-6 flex flex-col justify-center px-5 sm:px-9 md:px-11 py-7 md:py-9">
                 <div class="w-full max-w-sm mx-auto">
-                    <h1 class="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight mb-6">
-                        Login
-                    </h1>
+                    <div class="mb-6">
+                        <h1 class="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
+                            Welcome back
+                        </h1>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                            Sign in to access your consumable dashboard.
+                        </p>
+                    </div>
 
                     @if ($errors->any())
-                        <div role="alert" class="mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm px-3.5 py-2.5 flex items-start gap-2">
+                        <div role="alert" class="mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm px-3.5 py-2.5 flex items-start gap-2.5">
                             <svg class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
@@ -120,13 +149,13 @@
                     <form id="loginForm" method="POST" action="{{ route('login') }}" class="space-y-4">
                         @csrf
 
-                        <!-- Email -->
+                        <!-- Email Field -->
                         <div>
                             <label for="email" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                                Email
+                                Email Address
                             </label>
                             <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                     </svg>
@@ -139,44 +168,49 @@
                                     required
                                     autofocus
                                     autocomplete="email"
-                                    placeholder="nama@perusahaan.com"
-                                    class="w-full rounded-lg border border-slate-200 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/15 text-sm text-slate-800 placeholder-slate-400 pl-9 pr-3.5 py-2.5 outline-none transition"
+                                    placeholder="name@company.com"
+                                    class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-rose-400 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-3.5 py-2.5 outline-none"
                                 >
                             </div>
                         </div>
 
-                        <!-- Password -->
+                        <!-- Password Field -->
                         <div>
                             <label for="password" class="block text-xs font-semibold text-slate-700 mb-1.5">
                                 Password
                             </label>
                             <div class="relative">
-                                <button
-                                    type="button"
-                                    id="togglePasswordBtn"
-                                    onclick="togglePassword()"
-                                    aria-label="Tampilkan atau sembunyikan password"
-                                    aria-pressed="false"
-                                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
-                                >
-                                    <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                     </svg>
-                                </button>
+                                </div>
                                 <input
                                     id="password"
                                     type="password"
                                     name="password"
                                     required
                                     autocomplete="current-password"
-                                    placeholder="••••••••"
-                                    class="w-full rounded-lg border border-slate-200 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/15 text-sm text-slate-800 placeholder-slate-400 pl-9 pr-3.5 py-2.5 outline-none transition"
+                                    placeholder="Enter your password"
+                                    class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-rose-400 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-10 py-2.5 outline-none"
                                 >
+                                <button
+                                    type="button"
+                                    id="togglePasswordBtn"
+                                    onclick="togglePassword()"
+                                    aria-label="Toggle password visibility"
+                                    aria-pressed="false"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer transition-colors"
+                                >
+                                    <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Remember & Forgot Password -->
+                        <!-- Remember Me & Forgot Password -->
                         <div class="flex items-center justify-between pt-0.5">
                             <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
                                 <input
@@ -185,31 +219,31 @@
                                     {{ old('remember') ? 'checked' : '' }}
                                     class="w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500/20 cursor-pointer"
                                 >
-                                <span>Ingat saya</span>
+                                <span>Remember me</span>
                             </label>
 
                             @if (Route::has('password.request'))
-                                <a href="{{ route('password.request') }}" class="text-xs font-medium text-slate-500 hover:text-slate-800 underline underline-offset-4 transition">
-                                    Lupa password?
+                                <a href="{{ route('password.request') }}" class="text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors">
+                                    Forgot password?
                                 </a>
                             @else
-                                <a href="#" class="text-xs font-medium text-slate-500 hover:text-slate-800 underline underline-offset-4 transition">
-                                    Lupa password?
+                                <a href="#" class="text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors">
+                                    Forgot password?
                                 </a>
                             @endif
                         </div>
 
-                        <!-- Tombol Login -->
+                        <!-- Submit Button -->
                         <button
                             id="submitBtn"
                             type="submit"
-                            class="btn-coral w-full text-white font-semibold py-2.5 rounded-lg text-sm shadow-md shadow-rose-500/25 mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                            class="btn-coral w-full text-white font-semibold py-2.5 rounded-xl text-sm shadow-md shadow-rose-500/25 mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             <span id="submitText">Log In</span>
                         </button>
                     </form>
 
-                    <!-- Footer kecil -->
+                    <!-- Footer -->
                     <p class="text-center text-[11px] text-slate-400 mt-7">
                         &copy; {{ date('Y') }} PICONS System &middot; Consumable Management
                     </p>
@@ -240,7 +274,7 @@
             const btn = document.getElementById('submitBtn');
             const text = document.getElementById('submitText');
             btn.disabled = true;
-            text.textContent = 'Memproses...';
+            text.textContent = 'Signing in...';
         });
     </script>
 </body>
