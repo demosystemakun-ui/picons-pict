@@ -1,8 +1,7 @@
 {{-- resources/views/signers/edit.blade.php --}}
 @php
     $signerName     = old('name', $signer->name ?? $signer->nama ?? '');
-    $signerRole     = old('role', $signer->role ?? $signer->jabatan ?? $signer->position ?? '');
-    $signerDivision = old('division', $signer->division ?? $signer->department ?? '');
+$signerRole = old('role', $signer->role ?? $signer->jabatan ?? $signer->position ?? $signer->signer_role ?? $signer->title ?? '');    $signerDivision = old('division', $signer->division ?? $signer->department ?? '');
     $signerEmail    = old('email', $signer->email ?? '');
     $signerPhone    = old('phone_number', $signer->phone_number ?? $signer->phone ?? '');
     $signerActive   = old('is_active', isset($signer->is_active) ? (int) $signer->is_active : (isset($signer->status) ? ($signer->status === 'active' || $signer->status == 1 ? 1 : 0) : 1));
