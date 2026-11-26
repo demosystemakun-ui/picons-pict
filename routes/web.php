@@ -161,7 +161,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('procurement')->name('procurement.')->group(function () {
 
         Route::get('/', [ProcurementRequestController::class, 'index'])->name('index');
-        
+
         Route::get('/comparisons-list', [VendorComparisonController::class, 'globalIndex'])
             ->name('comparisons.global')
             ->middleware('role:Super Admin|Admin');
@@ -178,6 +178,7 @@ Route::middleware(['auth'])->group(function () {
             ->group(function () {
 
             Route::get('/',  [VendorComparisonController::class, 'index'])->name('index');
+            Route::get('/print-evidence', [VendorComparisonController::class, 'printEvidence'])->name('print-evidence');
             Route::post('/', [VendorComparisonController::class, 'store'])->name('store');
 
             Route::post('/scan',          [VendorComparisonController::class, 'scanImage'])->name('scan');
@@ -282,9 +283,9 @@ if (app()->environment('local', 'staging')) {
             $wa = new \App\Services\WhatsAppService();
             $nomorSaya = '6283894100924';
             $pesan = 'Halo! Ini pesan tes dari sistem PAMASESA pada ' . now()->format('d-m-Y H:i:s');
-            
+
             $sukses = $wa->send($nomorSaya, $pesan);
-            
+
             if ($sukses) {
                 return 'Pesan sudah dikirim ke Fonnte. Cek HP Anda!';
             } else {
