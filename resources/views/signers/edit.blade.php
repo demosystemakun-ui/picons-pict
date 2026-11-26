@@ -1,10 +1,14 @@
 {{-- resources/views/signers/edit.blade.php --}}
 @php
-    $signerName     = old('name', $signer->name ?? $signer->nama ?? '');
-$signerRole = old('role', $signer->role ?? $signer->jabatan ?? $signer->position ?? $signer->signer_role ?? $signer->title ?? '');    $signerDivision = old('division', $signer->division ?? $signer->department ?? '');
-    $signerEmail    = old('email', $signer->email ?? '');
-    $signerPhone    = old('phone_number', $signer->phone_number ?? $signer->phone ?? '');
-    $signerActive   = old('is_active', isset($signer->is_active) ? (int) $signer->is_active : (isset($signer->status) ? ($signer->status === 'active' || $signer->status == 1 ? 1 : 0) : 1));
+    $signerName   = old('name', $signer->name ?? $signer->nama ?? '');
+    $signerTitle  = old('title', $signer->title ?? $signer->role ?? $signer->jabatan ?? '');
+    $signerSlot   = old('slot', $signer->slot ?? $signer->position ?? $signer->form_position ?? 'Checked');
+    $signerActive = old('is_active', isset($signer->is_active) ? (int) $signer->is_active : (isset($signer->status) ? ($signer->status === 'active' || $signer->status == 1 ? 1 : 0) : 1));
+
+    $slotOptions = ['Checked', 'Verified', 'Approved', 'Acknowledge'];
+    if ($signerSlot && !in_array($signerSlot, $slotOptions, true)) {
+        $slotOptions[] = $signerSlot;
+    }
 @endphp
 
 @extends('layouts.app')
@@ -43,7 +47,7 @@ $signerRole = old('role', $signer->role ?? $signer->jabatan ?? $signer->position
 
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
-                        Signer Name <span class="text-red-500">*</span>
+                        Name <span class="text-red-500">*</span>
                     </label>
                     <input type="text"
                            id="name"
@@ -55,53 +59,30 @@ $signerRole = old('role', $signer->role ?? $signer->jabatan ?? $signer->position
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="role" class="block text-sm font-medium text-gray-700 mb-1">
-                            Role / Title <span class="text-red-500">*</span>
+                        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
+                            Title <span class="text-red-500">*</span>
                         </label>
                         <input type="text"
-                               id="role"
-                               name="role"
-                               value="{{ $signerRole }}"
-                               placeholder="e.g. Ops. MGR / FEM. MGR / COO / CFO / CEO"
+                               id="title"
+                               name="title"
+                               value="{{ $signerTitle }}"
+                               placeholder="e.g. CFO, Accounting MGR, COO"
                                required
                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm">
                     </div>
 
                     <div>
-                        <label for="division" class="block text-sm font-medium text-gray-700 mb-1">
-                            Division / Department
+                        <label for="slot" class="block text-sm font-medium text-gray-700 mb-1">
+                            Form Position <span class="text-red-500">*</span>
                         </label>
-                        <input type="text"
-                               id="division"
-                               name="division"
-                               value="{{ $signerDivision }}"
-                               placeholder="e.g. Operations / Finance"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                            Email
-                        </label>
-                        <input type="email"
-                               id="email"
-                               name="email"
-                               value="{{ $signerEmail }}"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm">
-                    </div>
-
-                    <div>
-                        <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">
-                            WhatsApp / Phone Number
-                        </label>
-                        <input type="text"
-                               id="phone_number"
-                               name="phone_number"
-                               value="{{ $signerPhone }}"
-                               placeholder="e.g. 6281234567890"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm">
+                        <select id="slot"
+                                name="slot"
+                                required
+                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm">
+                            @foreach ($slotOptions as $opt)
+                                <option value="{{ $opt }}" @selected($signerSlot === $opt)>{{ $opt }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
