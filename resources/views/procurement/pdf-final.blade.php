@@ -16,38 +16,83 @@
 
     if (! function_exists('pr_evidence_img_src')) {
         function pr_evidence_img_src(array $att): ?string {
-            $disk = $att['disk'] ?? 'public';
-            $path = $att['file_path'] ?? '';
-            if (empty($path)) {
+            $disk = $att['disk'] ?? 'supabase-procurement_request';
+            $path = ltrim($att['file_path'] ?? '', '/');
+
+            if ($path === '') {
                 return null;
             }
 
-            if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
-                $url = $path;
-            } elseif ($disk === 'supabase-procurement_request') {
-                $projectId = 'thlvvgolwryzhdxjgyvz';
-                $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
-                $url = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
-            } else {
-                $url = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
-            }
+            $projectId = 'thlvvgolwryzhdxjgyvz';
+            $bucket    = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+
+            $publicUrl = \Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])
+                ? $path
+                : "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$path}";
+
+            $raw = null;
 
             try {
-                $ctx = stream_context_create([
-                    'http' => ['timeout' => 5],
-                    'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
-                ]);
-                $raw = @file_get_contents($url, false, $ctx);
-                if ($raw !== false) {
-                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                    $mime  = $finfo->buffer($raw) ?: 'image/jpeg';
-                    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+                if (!\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
+                    $availableDisks = array_unique(array_filter([
+                        $disk,
+                        'supabase-procurement_request',
+                        'public',
+                        'local',
+                    ]));
+
+                    foreach ($availableDisks as $d) {
+                        try {
+                            if (\Illuminate\Support\Facades\Storage::disk($d)->exists($path)) {
+                                $raw = \Illuminate\Support\Facades\Storage::disk($d)->get($path);
+                                if ($raw !== false && $raw !== '') {
+                                    break;
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            // Lanjut ke disk berikutnya
+                        }
+                    }
                 }
             } catch (\Throwable $e) {
-                // Fallback ke URL langsung bila fetch gagal
+                // Abaikan
             }
 
-            return $url;
+            if (empty($raw)) {
+                try {
+                    $ctx = stream_context_create([
+                        'http' => ['timeout' => 8, 'follow_location' => true],
+                        'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
+                    ]);
+                    $fetched = @file_get_contents($publicUrl, false, $ctx);
+                    if ($fetched !== false && $fetched !== '') {
+                        $raw = $fetched;
+                    }
+                } catch (\Throwable $e) {
+                    // Abaikan
+                }
+            }
+
+            if (!empty($raw)) {
+                $ext = strtolower(pathinfo(parse_url($publicUrl, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
+                $mimeMap = [
+                    'png'  => 'image/png',
+                    'jpg'  => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'webp' => 'image/webp',
+                    'gif'  => 'image/gif',
+                ];
+                $mime = $mimeMap[$ext] ?? null;
+
+                if (!$mime && class_exists('\finfo')) {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime  = $finfo->buffer($raw) ?: 'image/jpeg';
+                }
+
+                return 'data:' . ($mime ?: 'image/jpeg') . ';base64,' . base64_encode($raw);
+            }
+
+            return $publicUrl;
         }
     }
 @endphp
