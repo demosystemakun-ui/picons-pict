@@ -440,7 +440,7 @@ class ProcurementRequestController extends Controller
 
         $procurement = $this->mapToPrintData($procurementRequest);
 
-        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison', 'attachments');
+        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison', 'attachments.vendor');
 
         $procurement['vendors'] = $procurementRequest->vendors()->orderBy('total_price')->get()->map(fn ($v) => [
             'vendor_name' => $v->vendor_name,

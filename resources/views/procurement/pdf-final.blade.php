@@ -3,6 +3,7 @@
     $vendors     = $procurement['vendors'] ?? [];
     $winner      = $procurement['winner']  ?? null;
     $budgetType  = $procurement['budget_type'] ?? null;
+    $attachments = $procurement['attachments'] ?? [];
 
     if (! function_exists('pr_pdf_check')) {
         function pr_pdf_check(bool $checked, int $size = 11): string {
@@ -115,6 +116,62 @@
     .sign-box { border: 1px solid #000; height: 45px; margin-bottom: 4px; position: relative; }
     .sign-lbl { text-align: center; font-size: 10px; font-weight: bold; padding-top: 2px; }
     .approved-stamp { font-size: 8px; color: #15803d; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px; }
+
+    /* ═══ LAMPIRAN BUKTI SCREENSHOT HARGA ═══ */
+    .evidence-page {
+        page-break-before: always;
+        break-before: page;
+        padding-top: 4px;
+    }
+    .evidence-header {
+        border-bottom: 2px solid #000;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+    }
+    .evidence-title {
+        font-size: 15px;
+        font-weight: bold;
+        margin: 0 0 4px;
+    }
+    .evidence-sub {
+        font-size: 10px;
+        color: #374151;
+    }
+    .evidence-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 10px;
+    }
+    .evidence-card {
+        border: 1px solid #000;
+        padding: 8px;
+        vertical-align: top;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .evidence-img-wrap {
+        height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        padding: 4px;
+        overflow: hidden;
+    }
+    .evidence-img-wrap img {
+        max-width: 100%;
+        max-height: 240px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+    }
+    .evidence-meta {
+        margin-top: 6px;
+        font-size: 9.5px;
+        line-height: 1.45;
+    }
 </style>
 </head>
 <body>
@@ -332,6 +389,67 @@
     </tr>
 
 </table>
+
+{{-- ═══ LAMPIRAN BUKTI SCREENSHOT HARGA (HALAMAN BERIKUTNYA) ═══ --}}
+@if(!empty($attachments) && count($attachments) > 0)
+    <div class="evidence-page">
+        <div class="evidence-header">
+            <h2 class="evidence-title">LAMPIRAN BUKTI SCREENSHOT HARGA VENDOR</h2>
+            <div class="evidence-sub">
+                No. PR: <strong>{{ $procurement['no'] }}</strong>
+                @if(!empty($procurement['description']))
+                    — {{ $procurement['description'] }}
+                @endif
+                | Total Lampiran: <strong>{{ count($attachments) }}</strong> gambar
+            </div>
+        </div>
+
+        <table class="evidence-table">
+            @foreach(array_chunk($attachments, 2) as $rowIndex => $rowChunk)
+                <tr>
+                    @foreach($rowChunk as $colIndex => $att)
+                        @php
+                            $disk = $att['disk'] ?? 'public';
+                            $path = $att['file_path'] ?? '';
+                            $imgSrc = null;
+
+                            if ($path) {
+                                if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
+                                    $imgSrc = $path;
+                                } elseif ($disk === 'supabase-procurement_request') {
+                                    $projectId = 'thlvvgolwryzhdxjgyvz';
+                                    $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+                                    $imgSrc = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
+                                } else {
+                                    $imgSrc = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
+                                }
+                            }
+                            $number = ($rowIndex * 2) + $colIndex + 1;
+                        @endphp
+                        <td class="evidence-card" style="width: 50%;">
+                            @if($imgSrc)
+                                <div class="evidence-img-wrap">
+                                    <img src="{{ $imgSrc }}" alt="{{ $att['original_name'] ?? 'Bukti #' . $number }}">
+                                </div>
+                            @endif
+                            <div class="evidence-meta">
+                                <div>
+                                    <strong>Lampiran #{{ $number }}</strong>
+                                    — Vendor: <strong>{{ $att['vendor']['vendor_name'] ?? strtoupper($att['mode'] ?? 'Vendor') }}</strong>
+                                </div>
+                                <div>File: {{ $att['original_name'] ?? basename($path) }}</div>
+                            </div>
+                        </td>
+                    @endforeach
+
+                    @if(count($rowChunk) === 1)
+                        <td style="width: 50%; border: none;"></td>
+                    @endif
+                </tr>
+            @endforeach
+        </table>
+    </div>
+@endif
 
 {{-- AUTO PRINT --}}
 <script>
