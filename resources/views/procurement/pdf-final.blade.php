@@ -1,4 +1,4 @@
-{{-- resources/views/procurement/print-final.blade.php --}}
+{{-- resources/views/procurement/pdf-final.blade.php --}}
 @php
     $vendors     = $procurement['vendors'] ?? [];
     $winner      = $procurement['winner']  ?? null;
@@ -11,6 +11,43 @@
                 return '<span style="display:inline-block;width:'.$size.'px;height:'.$size.'px;border:1.2px solid #000;background:#000;text-align:center;line-height:'.($size - 3).'px;color:#fff;font-size:'.($size - 2).'px;font-weight:bold;margin-right:4px;vertical-align:middle;">v</span>';
             }
             return '<span style="display:inline-block;width:'.$size.'px;height:'.$size.'px;border:1.2px solid #000;background:#fff;margin-right:4px;vertical-align:middle;"></span>';
+        }
+    }
+
+    if (! function_exists('pr_evidence_img_src')) {
+        function pr_evidence_img_src(array $att): ?string {
+            $disk = $att['disk'] ?? 'public';
+            $path = $att['file_path'] ?? '';
+            if (empty($path)) {
+                return null;
+            }
+
+            if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
+                $url = $path;
+            } elseif ($disk === 'supabase-procurement_request') {
+                $projectId = 'thlvvgolwryzhdxjgyvz';
+                $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+                $url = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
+            } else {
+                $url = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
+            }
+
+            try {
+                $ctx = stream_context_create([
+                    'http' => ['timeout' => 5],
+                    'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
+                ]);
+                $raw = @file_get_contents($url, false, $ctx);
+                if ($raw !== false) {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime  = $finfo->buffer($raw) ?: 'image/jpeg';
+                    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+                }
+            } catch (\Throwable $e) {
+                // Fallback ke URL langsung bila fetch gagal
+            }
+
+            return $url;
         }
     }
 @endphp
@@ -115,62 +152,55 @@
     .decision-table td { border: 1px solid #000; padding: 6px; text-align: center; }
     .sign-box { border: 1px solid #000; height: 45px; margin-bottom: 4px; position: relative; }
     .sign-lbl { text-align: center; font-size: 10px; font-weight: bold; padding-top: 2px; }
-    .approved-stamp { font-size: 8px; color: #15803d; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px; }
 
-    /* ═══ LAMPIRAN BUKTI SCREENSHOT HARGA ═══ */
+    /* ═══ LAMPIRAN BUKTI SCREENSHOT HARGA (HALAMAN BERIKUTNYA) ═══ */
     .evidence-page {
         page-break-before: always;
         break-before: page;
-        padding-top: 4px;
     }
     .evidence-header {
         border-bottom: 2px solid #000;
-        padding-bottom: 8px;
-        margin-bottom: 14px;
+        padding-bottom: 6px;
+        margin-bottom: 10px;
     }
     .evidence-title {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: bold;
-        margin: 0 0 4px;
+        margin: 0 0 3px;
     }
     .evidence-sub {
         font-size: 10px;
         color: #374151;
     }
-    .evidence-table {
+    .evidence-grid {
         width: 100%;
         table-layout: fixed;
         border-collapse: separate;
-        border-spacing: 10px;
+        border-spacing: 8px;
     }
     .evidence-card {
         border: 1px solid #000;
-        padding: 8px;
+        padding: 6px;
         vertical-align: top;
         page-break-inside: avoid;
-        break-inside: avoid;
     }
-    .evidence-img-wrap {
-        height: 250px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .evidence-img-box {
+        text-align: center;
         background: #f9fafb;
         border: 1px solid #e5e7eb;
         padding: 4px;
-        overflow: hidden;
+        height: 220px;
     }
-    .evidence-img-wrap img {
+    .evidence-img-box img {
         max-width: 100%;
-        max-height: 240px;
+        max-height: 210px;
         width: auto;
         height: auto;
-        object-fit: contain;
     }
     .evidence-meta {
-        margin-top: 6px;
-        font-size: 9.5px;
-        line-height: 1.45;
+        margin-top: 5px;
+        font-size: 9px;
+        line-height: 1.4;
     }
 </style>
 </head>
@@ -259,8 +289,8 @@
     {{-- ═══ NOTES ═══ --}}
     <tr>
         <td colspan="5" class="notes">
-            ? The contents of quotation should be attached (at least 3 or more)<br>
-            ? If the supplier recommend similar products instead of our request, please indicate the reason
+            ※ The contents of quotation should be attached (at least 3 or more)<br>
+            ※ If the supplier recommend similar products instead of our request, please indicate the reason
         </td>
     </tr>
 
@@ -322,7 +352,6 @@
             @if(!empty($procurement['reason_choose_vendor']))
                 {{ $procurement['reason_choose_vendor'] }}
             @elseif($winner)
-                {{-- TEKS FALLBACK INI SUDAH DIGANTI KE BAHASA INGGRIS --}}
                 {{ $winner['vendor_name'] }} was selected because it offers the best value for money and meets all the required specifications for this procurement.
             @else
                 —
@@ -404,31 +433,17 @@
             </div>
         </div>
 
-        <table class="evidence-table">
+        <table class="evidence-grid">
             @foreach(array_chunk($attachments, 2) as $rowIndex => $rowChunk)
                 <tr>
                     @foreach($rowChunk as $colIndex => $att)
                         @php
-                            $disk = $att['disk'] ?? 'public';
-                            $path = $att['file_path'] ?? '';
-                            $imgSrc = null;
-
-                            if ($path) {
-                                if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) {
-                                    $imgSrc = $path;
-                                } elseif ($disk === 'supabase-procurement_request') {
-                                    $projectId = 'thlvvgolwryzhdxjgyvz';
-                                    $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
-                                    $imgSrc = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
-                                } else {
-                                    $imgSrc = \Illuminate\Support\Facades\Storage::disk($disk)->url($path);
-                                }
-                            }
+                            $imgSrc = pr_evidence_img_src($att);
                             $number = ($rowIndex * 2) + $colIndex + 1;
                         @endphp
                         <td class="evidence-card" style="width: 50%;">
                             @if($imgSrc)
-                                <div class="evidence-img-wrap">
+                                <div class="evidence-img-box">
                                     <img src="{{ $imgSrc }}" alt="{{ $att['original_name'] ?? 'Bukti #' . $number }}">
                                 </div>
                             @endif
@@ -437,7 +452,7 @@
                                     <strong>Lampiran #{{ $number }}</strong>
                                     — Vendor: <strong>{{ $att['vendor']['vendor_name'] ?? strtoupper($att['mode'] ?? 'Vendor') }}</strong>
                                 </div>
-                                <div>File: {{ $att['original_name'] ?? basename($path) }}</div>
+                                <div>File: {{ $att['original_name'] ?? basename($att['file_path'] ?? '') }}</div>
                             </div>
                         </td>
                     @endforeach
@@ -450,29 +465,6 @@
         </table>
     </div>
 @endif
-
-{{-- AUTO PRINT --}}
-<script>
-    (function () {
-        const returnUrl = document.referrer || null;
-
-        window.addEventListener('load', function () {
-            setTimeout(function () {
-                window.print();
-            }, 300);
-        });
-
-        window.addEventListener('afterprint', function () {
-            setTimeout(function () {
-                if (returnUrl) {
-                    window.location.href = returnUrl;
-                } else if (window.history.length > 1) {
-                    window.history.back();
-                }
-            }, 100);
-        });
-    })();
-</script>
 
 </body>
 </html>
