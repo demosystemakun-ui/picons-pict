@@ -60,7 +60,7 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900">Scan Screenshot Vendor dengan AI</h2>
-                    <p class="text-xs text-gray-500">Upload screenshot Shopee / Tokopedia / Monotaro — AI ekstrak otomatis</p>
+                    <p class="text-xs text-gray-500">Upload screenshot Shopee / Tokopedia / Monotaro — hasil dapat dikoreksi sebelum disimpan</p>
                 </div>
             </div>
         </header>
@@ -80,14 +80,14 @@
                     </div>
                     <div>
                         <p id="fileCountInfo" class="text-sm font-semibold text-gray-900">Klik untuk memilih screenshot</p>
-                        <p class="mt-1 text-xs text-gray-500">Bisa pilih beberapa file sekaligus</p>
+                        <p class="mt-1 text-xs text-gray-500">Bisa pilih beberapa file sekaligus (JPG, PNG, WEBP)</p>
                     </div>
                     <input type="file" name="screenshots[]" id="multiScreenshotInput"
-                           accept="image/*" multiple required class="sr-only">
+                           accept="image/jpeg,image/png,image/webp" multiple required class="sr-only">
                 </label>
 
                 <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-gray-400">Mendukung JPG, PNG, WEBP.</p>
+                    <p class="text-xs text-gray-400">Mendukung JPG, PNG, WEBP (maks. 5 MB/file).</p>
                     <button type="submit" id="scanBtn"
                             class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 transition disabled:opacity-70 disabled:cursor-not-allowed">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -107,8 +107,8 @@
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Data Vendor / Keranjang</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Sistem otomatis hitung total & pilih termurah.</p>
+                    <h2 class="text-sm font-semibold text-gray-900">Data Vendor / Keranjang &amp; Verifikasi Kriteria</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Periksa &amp; koreksi data vendor/item, lalu simpan untuk evaluasi metode SAW.</p>
                 </div>
                 <button type="button" @click="addVendor()"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">
@@ -120,8 +120,8 @@
             </header>
 
             <div class="p-6 space-y-6">
-                {{-- TIPE BUDGET (Dipindah ke atas, sebelum daftar vendor) --}}
-                <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex items-center justify-between">
+                {{-- TIPE BUDGET --}}
+                <div class="bg-teal-50/50 p-4 rounded-xl border border-teal-100 flex items-center justify-between flex-wrap gap-3">
                     <div>
                         <label class="block text-sm font-semibold text-gray-800">Tipe Budget Pengadaan</label>
                         <p class="text-xs text-gray-500">Pilih apakah pengadaan ini masuk dalam anggaran (Budgeted) atau di luar anggaran (Non Budgeted).</p>
@@ -147,7 +147,7 @@
 
                 <template x-for="(v, idx) in vendors" :key="v.uid">
                     <div class="rounded-xl border-2 p-4 transition"
-                         :class="isWinner(idx) ? 'border-emerald-500 bg-emerald-50/40' : 'border-gray-200 bg-gray-50/50'">
+                         :class="v.is_winner ? 'border-emerald-500 bg-emerald-50/40' : 'border-gray-200 bg-gray-50/50'">
 
                         {{-- Header --}}
                         <div class="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-gray-200">
@@ -159,15 +159,16 @@
                                         <span class="inline-flex items-center rounded-md bg-orange-100 text-orange-700 px-2 py-0.5 text-[10px] font-bold uppercase"
                                               x-text="v.marketplace"></span>
                                     </template>
-                                    <template x-if="isWinner(idx)">
+                                    <span class="inline-flex items-center rounded-md bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-semibold"
+                                          x-text="'Rating SAW: ' + Number(v.saw_rating || 4).toFixed(1)"></span>
+                                    <template x-if="v.is_winner">
                                         <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-                                            ✓ Termurah
+                                            ✓ Rekomendasi SAW
                                         </span>
                                     </template>
                                 </div>
                                 <h3 class="font-bold text-gray-900 text-base mt-1 truncate"
                                     x-text="v.vendor_name || 'Vendor tanpa nama'"></h3>
-                                <!-- Menampilkan Total Harga Otomatis -->
                                 <p class="text-sm font-bold text-teal-700 mt-1" x-text="'Rp ' + (calculateTotal(v) || 0).toLocaleString('id-ID')"></p>
                             </div>
                             <button type="button" @click="removeVendor(idx)"
@@ -187,7 +188,6 @@
                                        placeholder="Shopee / Tokopedia / Monotaro"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
                             </div>
-                            <!-- Input Total Harga dibuat Readonly, dihitung otomatis -->
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Total Harga Akhir (Otomatis)</label>
                                 <input type="number" :name="`vendors[${idx}][total_price]`" :value="calculateTotal(v)"
@@ -210,18 +210,17 @@
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                                 <div>
                                     <span class="block text-gray-500 mb-0.5">Subtotal Produk</span>
-                                    <!-- Subtotal otomatis dari items -->
                                     <input type="number" :name="`vendors[${idx}][subtotal]`" :value="calculateSubtotal(v)"
                                            readonly
                                            class="w-full rounded-md border-gray-200 bg-gray-100 text-xs text-gray-700 cursor-not-allowed">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Ongkir</span>
+                                    <span class="block text-gray-500 mb-0.5">Ongkir (C2)</span>
                                     <input type="number" :name="`vendors[${idx}][shipping_cost]`" x-model.number="v.shipping_cost"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500">
                                 </div>
                                 <div>
-                                    <span class="block text-gray-500 mb-0.5">Diskon</span>
+                                    <span class="block text-gray-500 mb-0.5">Diskon (C3)</span>
                                     <input type="number" :name="`vendors[${idx}][discount_voucher]`" x-model.number="v.discount_voucher"
                                            class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500">
                                 </div>
@@ -232,7 +231,6 @@
                                 </div>
                                 <div>
                                     <span class="block text-gray-500 mb-0.5">Total Sebelum Pajak</span>
-                                    <!-- Total before tax otomatis -->
                                     <input type="number" :name="`vendors[${idx}][total_before_tax]`" :value="calculateTotalBeforeTax(v)"
                                            readonly
                                            class="w-full rounded-md border-gray-200 bg-gray-100 text-xs text-gray-700 cursor-not-allowed">
@@ -240,8 +238,8 @@
                             </div>
                         </div>
 
-                        {{-- Metode & pengiriman --}}
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {{-- Metode, pengiriman & catatan rating --}}
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Metode Pembayaran</label>
                                 <input type="text" :name="`vendors[${idx}][payment_method]`" x-model="v.payment_method"
@@ -255,9 +253,15 @@
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Estimasi Pengiriman</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Estimasi Pengiriman (C4)</label>
                                 <input type="text" :name="`vendors[${idx}][estimated_delivery]`" x-model="v.estimated_delivery"
-                                       placeholder="4-5 Sep"
+                                       placeholder="3 hari / 4-5 Sep"
+                                       class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Catatan / Rating</label>
+                                <input type="text" :name="`vendors[${idx}][notes]`" x-model="v.notes"
+                                       placeholder="Contoh: rating: 4.5"
                                        class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
                             </div>
                         </div>
@@ -285,12 +289,12 @@
                                             </div>
                                             <div class="col-span-2">
                                                 <input type="number" :name="`vendors[${idx}][items][${itemIdx}][quantity]`"
-                                                       x-model.number="item.quantity" placeholder="Qty"
+                                                       x-model.number="item.quantity" placeholder="Qty" min="0" step="any"
                                                        class="w-full rounded-md border-gray-300 text-xs text-center focus:border-teal-500 focus:ring-teal-500">
                                             </div>
                                             <div class="col-span-3">
                                                 <input type="number" :name="`vendors[${idx}][items][${itemIdx}][unit_price]`"
-                                                       x-model.number="item.unit_price" placeholder="Harga satuan"
+                                                       x-model.number="item.unit_price" placeholder="Harga satuan" min="0" step="any"
                                                        class="w-full rounded-md border-gray-300 text-xs focus:border-teal-500 focus:ring-teal-500">
                                             </div>
                                             <div class="col-span-2 text-right font-semibold text-gray-700"
@@ -317,7 +321,7 @@
 
             <footer class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <p class="text-xs text-gray-500 order-2 sm:order-1">
-                    Sistem otomatis set vendor dengan total <strong>terkecil</strong> sebagai pemenang.
+                    Sistem menghitung rekomendasi pemenang otomatis menggunakan metode <strong>SAW</strong> saat data disimpan.
                 </p>
                 <div class="flex items-center gap-2 order-1 sm:order-2">
                     @if($hasVendors && $procurement->winnerVendor)
@@ -329,7 +333,7 @@
                             Cetak PR Final
                         </a>
                     @endif
-                    
+
                     <button type="submit"
                             class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -349,9 +353,7 @@
 <script>
     function vendorForm() {
         return {
-            // TAMBAHAN: Inisialisasi Tipe Budget
-            budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}', 
-            
+            budgetType: '{{ $procurement->budget_type ?? "Budgeted" }}',
             vendors: [],
 
             init() {
@@ -375,11 +377,13 @@
                         total_before_tax: parseFloat(v.total_before_tax) || 0,
                         total_price: parseFloat(v.total_price) || 0,
                         tax_note: v.tax_note || 'Include Tax',
+                        is_winner: Boolean(v.is_winner),
+                        saw_rating: parseFloat(v.saw_rating) || 4.0,
                         items: (v.items || []).map(it => ({
                             product_name: it.product_name || '',
                             variant: it.variant || '',
                             sku: it.sku || '',
-                            quantity: parseInt(it.quantity) || 1,
+                            quantity: parseFloat(it.quantity) || 1,
                             unit_price: parseFloat(it.unit_price) || 0,
                             subtotal: parseFloat(it.subtotal) || 0,
                             stock_status: it.stock_status || '',
@@ -413,6 +417,8 @@
                     total_before_tax: 0,
                     total_price: 0,
                     tax_note: 'Include Tax',
+                    is_winner: false,
+                    saw_rating: 4.0,
                     items: [],
                 });
             },
@@ -438,37 +444,20 @@
                 this.vendors[vendorIdx].items.splice(itemIdx, 1);
             },
 
-            // --- LOGIKA PERHITUNGAN OTOMATIS ---
-            
-            // 1. Hitung Subtotal dari semua item di vendor ini
             calculateSubtotal(v) {
                 return (v.items || []).reduce((sum, item) => {
-                    return sum + ((item.quantity || 0) * (item.unit_price || 0));
+                    return sum + ((Number(item.quantity) || 0) * (Number(item.unit_price) || 0));
                 }, 0);
             },
 
-            // 2. Hitung Total Sebelum Pajak (Subtotal + Ongkir - Diskon)
             calculateTotalBeforeTax(v) {
                 const subtotal = this.calculateSubtotal(v);
-                return subtotal + (v.shipping_cost || 0) - (v.discount_voucher || 0);
+                return subtotal + (Number(v.shipping_cost) || 0) - (Number(v.discount_voucher) || 0);
             },
 
-            // 3. Hitung Total Akhir (Sebelum Pajak + PPN)
             calculateTotal(v) {
                 const totalBeforeTax = this.calculateTotalBeforeTax(v);
-                return totalBeforeTax + (v.tax_ppn || 0);
-            },
-
-            // 4. Cek Pemenang berdasarkan Total Akhir
-            isWinner(idx) {
-                const prices = this.vendors
-                    .map((v, i) => ({ i, price: this.calculateTotal(v) }))
-                    .filter(x => x.price > 0);
-                
-                if (prices.length === 0) return false;
-                
-                const minPrice = Math.min(...prices.map(x => x.price));
-                return this.calculateTotal(this.vendors[idx]) === minPrice;
+                return totalBeforeTax + (Number(v.tax_ppn) || 0);
             },
         };
     }
@@ -476,15 +465,17 @@
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('multiScreenshotInput');
         if (!input) return;
-        const buffer = new DataTransfer();
         input.addEventListener('change', () => {
+            const buffer = new DataTransfer();
             for (let i = 0; i < input.files.length; i++) buffer.items.add(input.files[i]);
             input.files = buffer.files;
             const count = input.files.length;
             const label = document.getElementById('fileCountInfo');
-            if (label && count > 0) {
-                label.innerText = `${count} file terkumpul (siap diproses)`;
-                label.classList.add('text-teal-600');
+            if (label) {
+                label.innerText = count > 0
+                    ? `${count} file terkumpul (siap diproses)`
+                    : 'Klik untuk memilih screenshot';
+                label.classList.toggle('text-teal-600', count > 0);
             }
         });
     });

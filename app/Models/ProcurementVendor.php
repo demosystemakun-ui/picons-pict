@@ -57,6 +57,61 @@ class ProcurementVendor extends Model
     }
 
     /* ═══════════════════════════════════════════════════════════════
+       MASTER VENDOR & SAW HELPERS
+    ═══════════════════════════════════════════════════════════════ */
+
+    public function matchedMasterVendor(): ?Vendor
+    {
+        $names = array_filter([
+            strtolower(trim((string) $this->vendor_name)),
+            strtolower(trim((string) $this->marketplace)),
+        ]);
+
+        if (empty($names)) {
+            return null;
+        }
+
+        $exactMatch = Vendor::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($names) {
+                foreach ($names as $name) {
+                    $q->orWhereRaw('LOWER(name) = ?', [$name])
+                      ->orWhereRaw('LOWER(vendor_type) = ?', [$name]);
+                }
+            })
+            ->first();
+
+        if ($exactMatch) {
+            return $exactMatch;
+        }
+
+        $primaryName = $names[0];
+
+        return Vendor::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($primaryName) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%' . $primaryName . '%'])
+                  ->orWhereRaw('LOWER(vendor_type) LIKE ?', ['%' . $primaryName . '%']);
+            })
+            ->first();
+    }
+
+    public function getSawRatingAttribute(): float
+    {
+        $master = $this->matchedMasterVendor();
+
+        if ($master && is_numeric($master->rating) && (float) $master->rating > 0) {
+            return min(max((float) $master->rating, 0.0), 5.0);
+        }
+
+        if (!empty($this->notes) && preg_match('/rating[:\s]*(\d+(?:[.,]\d+)?)/i', $this->notes, $matches)) {
+            return min(max((float) str_replace(',', '.', $matches[1]), 0.0), 5.0);
+        }
+
+        return 4.0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
        SCOPES
     ═══════════════════════════════════════════════════════════════ */
 

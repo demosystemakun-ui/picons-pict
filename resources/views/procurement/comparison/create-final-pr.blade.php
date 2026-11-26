@@ -51,7 +51,7 @@
             </div>
             <div>
                 <h2 class="text-sm font-semibold text-gray-900">Procurement Request Info</h2>
-                <p class="text-xs text-gray-500">Data dari PR Awal &amp; vendor winner</p>
+                <p class="text-xs text-gray-500">Data dari PR Awal &amp; vendor pemenang (SAW)</p>
             </div>
         </header>
         <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
@@ -76,7 +76,10 @@
             <dl class="space-y-2.5">
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Winner Vendor</dt>
-                    <dd class="font-semibold text-emerald-600">{{ $procurement->winnerVendor->vendor_name }}</dd>
+                    <dd class="font-semibold text-emerald-600">
+                        {{ $procurement->winnerVendor->vendor_name }}
+                        <span class="ml-1 text-xs font-medium text-amber-600">· ★ {{ number_format($procurement->winnerVendor->saw_rating, 1) }}</span>
+                    </dd>
                 </div>
                 <div class="flex justify-between gap-4">
                     <dt class="text-gray-500">Marketplace</dt>
@@ -112,7 +115,7 @@
             </header>
 
             <div class="p-6 space-y-4">
-                
+
                 {{-- BARIS 1: DATE & BUDGET TYPE --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -196,6 +199,12 @@
                 </div>
 
                 {{-- BARIS 4: FINAL PR NUMBER --}}
+                @php
+                    $defaultFinalNumber = old('final_number')
+                        ?? ($suggestedFinalNumber ?? ('01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no)));
+                    $defaultPrefix = substr($defaultFinalNumber, 0, 2);
+                    $suffixPart = preg_replace('/^[0-9]+\/PR\//', '', $defaultFinalNumber);
+                @endphp
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1.5">
                         Final PR Number
@@ -203,23 +212,21 @@
                             <span class="text-rose-500">*</span>
                         @endif
                     </label>
-                    
+
                     @if(auth()->user()->hasAnyRole(['Super Admin', 'Admin']))
                         <div class="flex items-center w-full rounded-lg border border-gray-300 bg-white focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 overflow-hidden @error('final_number') border-rose-400 @enderror">
-                            <input type="text" id="final_number_prefix" 
-                                   value="{{ old('final_number') ? substr(old('final_number'), 0, 2) : '01' }}"
+                            <input type="text" id="final_number_prefix"
+                                   value="{{ $defaultPrefix }}"
                                    maxlength="2"
                                    class="w-16 text-center border-none text-sm px-2 py-2 font-mono focus:ring-0 focus:outline-none"
                                    oninput="updateFinalNumber()">
-                            
-                            <span class="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-2 border-l border-gray-200 w-full" id="final_number_suffix">
-                                /PR/{{ preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}
-                            </span>
+
+                            <span class="text-sm font-mono text-gray-500 bg-gray-50 px-3 py-2 border-l border-gray-200 w-full" id="final_number_suffix">/PR/{{ $suffixPart }}</span>
                         </div>
-        
-                        <input type="hidden" name="final_number" id="final_number_full" value="{{ old('final_number') ?: '01/PR/' . preg_replace('/^[0-9]+\/PR\//', '', $procurement->no) }}">
-        
-                        <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Bulan dan tahun sudah otomatis.</p>
+
+                        <input type="hidden" name="final_number" id="final_number_full" value="{{ $defaultFinalNumber }}">
+
+                        <p class="mt-1.5 text-xs text-gray-500">Isi 2 digit nomor urut di depan. Format bulan Romawi dan tahun otomatis mengikuti saran sistem.</p>
                         @error('final_number')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                     @else
                         <div class="flex items-center w-full rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
@@ -235,7 +242,7 @@
                         Reason Choose Vendor (Optional)
                     </label>
                     <textarea name="reason_choose_vendor" rows="3" maxlength="2000"
-                              placeholder="Biarkan kosong jika ingin sistem membuat alasan otomatis dalam bahasa Inggris."
+                              placeholder="Biarkan kosong jika ingin sistem membuat alasan otomatis."
                               class="w-full rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-teal-500 focus:ring-teal-500 @error('reason_choose_vendor') border-rose-400 @enderror">{{ old('reason_choose_vendor') }}</textarea>
                     <p class="mt-1 text-[11px] text-gray-500">Sistem akan otomatis membuat alasan pemilihan vendor jika kolom ini dikosongkan.</p>
                     @error('reason_choose_vendor')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
@@ -271,7 +278,7 @@
         <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <header class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                 <h2 class="text-sm font-semibold text-gray-900">Winner Items</h2>
-                <p class="text-xs text-gray-500">{{ $procurement->winnerVendor->items->count() }} item(s) — auto dari vendor winner</p>
+                <p class="text-xs text-gray-500">{{ $procurement->winnerVendor->items->count() }} item(s) — otomatis dari vendor pemenang</p>
             </header>
 
             <div class="overflow-x-auto">
@@ -358,14 +365,15 @@
     function updateFinalNumber() {
         const prefixInput = document.getElementById('final_number_prefix');
         const hiddenInput = document.getElementById('final_number_full');
-        const suffixText  = document.getElementById('final_number_suffix').innerText;
-        
-        if (!prefixInput || !hiddenInput || !suffixText) return;
+        const suffixEl    = document.getElementById('final_number_suffix');
+
+        if (!prefixInput || !hiddenInput || !suffixEl) return;
 
         let prefix = prefixInput.value.replace(/\D/g, '');
         if (prefix.length > 2) prefix = prefix.slice(0, 2);
         prefixInput.value = prefix;
 
+        const suffixText = suffixEl.innerText.trim();
         hiddenInput.value = prefix + suffixText;
     }
 

@@ -25,7 +25,6 @@ class VendorComparisonController extends Controller
     {
         $user = auth()->user();
 
-        // Cek status menggunakan status dari relasi finalComparison jika ada
         $currentStatus = $procurement->finalComparison?->status ?? $procurement->status;
 
         if (!in_array($currentStatus, ['approved', 'processed', 'pending_review_final', 'pending_final_sign', 'final_approved'])) {
@@ -92,7 +91,6 @@ class VendorComparisonController extends Controller
                 ->with('error', 'Please select a winning vendor first.');
         }
 
-        // Cek dari relasi finalComparison
         if ($procurement->finalComparison?->status === 'final_approved' && $procurement->finalComparison?->final_number) {
             return redirect()
                 ->route('procurement.pdf.final', ['procurementRequest' => $procurement->id])
@@ -153,7 +151,7 @@ class VendorComparisonController extends Controller
         $rules = [
             'budget_type'          => 'required|in:Budgeted,Non Budgeted',
             'final_description'    => 'required|string|max:255',
-          'reason_choose_vendor' => 'nullable|string|max:2000',
+            'reason_choose_vendor' => 'nullable|string|max:2000',
             'request_date'         => 'required|date',
             'request_by'           => 'required|string|max:255',
             'division'             => 'required|string|max:255',
@@ -172,7 +170,7 @@ class VendorComparisonController extends Controller
                     $existsInFinal = ProcurementComparison::where('final_number', $value)
                         ->where('procurement_request_id', '!=', $procurement->id)
                         ->exists();
-                    
+
                     $existsInNo = ProcurementRequest::where('no', $value)->exists();
 
                     if ($existsInFinal || $existsInNo) {
@@ -186,31 +184,29 @@ class VendorComparisonController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Update data PR Induk (TANPA request_date)
             $procurement->update([
-                'description'          => $validated['final_description'],
-                'request_by'           => $validated['request_by'],
-                'division'             => $validated['division'],
-                'prepared_by'          => $validated['prepared_by'],
-                'status'               => 'processed', // PR 1 Selesai
+                'description' => $validated['final_description'],
+                'request_by'  => $validated['request_by'],
+                'division'    => $validated['division'],
+                'prepared_by' => $validated['prepared_by'],
+                'status'      => 'processed',
             ]);
 
-            // 2. Simpan data final ke tabel procurement_comparisons
             $finalData = ProcurementComparison::firstOrNew([
                 'procurement_request_id' => $procurement->id,
                 'vendor_name'            => $procurement->winnerVendor->vendor_name,
             ]);
 
             $finalData->fill([
-                'request_date'          => $validated['request_date'], // <--- PINDAH KE SINI
-                'total_price'           => $procurement->winnerVendor->total_price,
-                'budget_type'           => $validated['budget_type'],
-                'reason_choose_vendor'  => $validated['reason_choose_vendor'],
-                'accounting_mgr_name'   => $validated['accounting_mgr_name'] ?? null,
-                'cfo_name'              => $validated['cfo_name'] ?? null,
-                'ceo_name'              => $validated['ceo_name'] ?? null,
-                'is_selected'           => 1, // Tandai sebagai pemenang
-                'status'                => 'pending_review_final', // PR 2 Mulai
+                'request_date'         => $validated['request_date'],
+                'total_price'          => $procurement->winnerVendor->total_price,
+                'budget_type'          => $validated['budget_type'],
+                'reason_choose_vendor' => $validated['reason_choose_vendor'],
+                'accounting_mgr_name'  => $validated['accounting_mgr_name'] ?? null,
+                'cfo_name'             => $validated['cfo_name'] ?? null,
+                'ceo_name'             => $validated['ceo_name'] ?? null,
+                'is_selected'          => 1,
+                'status'               => 'pending_review_final',
             ]);
 
             if ($isAdmin && !empty($validated['final_number'])) {
@@ -219,7 +215,6 @@ class VendorComparisonController extends Controller
 
             $finalData->save();
 
-            // 3. Logika Cash Advance
             if ($procurement->procurement_method === 'cash_advance') {
                 $existingCa = CashAdvance::where('procurement_request_id', $procurement->id)->first();
 
@@ -249,7 +244,6 @@ class VendorComparisonController extends Controller
                 }
             }
 
-            // 4. Notifikasi WA
             $this->notifyAdminsFinalPrCreated($procurement, $finalData);
             $this->notifyUserFinalPrCreated($procurement, $finalData);
 
@@ -259,7 +253,7 @@ class VendorComparisonController extends Controller
                 ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('success', 'Final PR saved. Waiting for Admin format review.');
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Store Final PR Error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Failed to save Final PR: ' . $e->getMessage());
@@ -282,7 +276,7 @@ class VendorComparisonController extends Controller
                     );
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notify admins failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
     }
@@ -305,7 +299,7 @@ class VendorComparisonController extends Controller
             $pesan .= "Silakan pantau terus sistem untuk melihat perkembangan statusnya.";
 
             $wa->send($user->phone_number, $pesan);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notify user (Final PR) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
     }
@@ -329,7 +323,7 @@ class VendorComparisonController extends Controller
                     $existsInFinal = ProcurementComparison::where('final_number', $fullNumber)
                         ->where('procurement_request_id', '!=', $procurement->id)
                         ->exists();
-                    
+
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
@@ -402,7 +396,7 @@ class VendorComparisonController extends Controller
             $pesan .= "Silakan ambil dokumen fisiknya di Admin untuk ditandatangani Manajer.";
 
             $wa->send($user->phone_number, $pesan);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notify user (Format Approved) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
     }
@@ -444,9 +438,14 @@ class VendorComparisonController extends Controller
             $pesan .= "Admin akan segera memproses ke tahap PO. Tunggu informasi lebih lanjut.";
 
             $wa->send($user->phone_number, $pesan);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notify user (Final Approved) failed for PR #' . $procurement->id . ': ' . $e->getMessage());
         }
+    }
+
+    public function scanShopee(Request $request, ProcurementRequest $procurement)
+    {
+        return $this->processScan($request, $procurement, 'shopee');
     }
 
     public function scanMonotaro(Request $request, ProcurementRequest $procurement)
@@ -464,49 +463,90 @@ class VendorComparisonController extends Controller
         return $this->processScan($request, $procurement, 'auto');
     }
 
-    private function processScan(Request $request, ProcurementRequest $procurement, string $mode)
+    private function processScan(Request $request, ProcurementRequest $procurement, string $mode = 'others')
     {
+        $requestedMode = strtolower(trim((string) $request->input('scan_mode', $mode)));
+        if ($requestedMode === 'shopee') {
+            $mode = 'shopee';
+        }
+
         $request->validate([
             'screenshots'   => 'required|array|min:1',
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
+        DB::beginTransaction();
         try {
             $extracted = $this->ai->extractVendors($request->file('screenshots'), $mode);
 
             if (empty($extracted)) {
+                DB::rollBack();
                 return back()->with('error', 'AI did not detect vendor data from the screenshots.');
             }
 
             $groupedVendors = [];
 
-            foreach ($extracted as $item) {
-                $marketplace = strtolower(trim($item['marketplace'] ?? ''));
-                if (empty($marketplace) || $marketplace === 'auto' || $marketplace === 'others') {
-                    $marketplace = strtolower($item['vendor_name'] ?? ($mode === 'monotaro' ? 'Monotaro' : 'Others'));
+            foreach ($extracted as $index => $item) {
+                if ($mode === 'shopee') {
+                    $vendorKey = 'shopee';
+                    $displayVendorName = 'Shopee';
+                    $displayMarketplace = 'Shopee';
+                } else {
+                    $rawVendorName = trim((string) ($item['vendor_name'] ?? ''));
+                    $rawMarketplace = trim((string) ($item['marketplace'] ?? ''));
+
+                    if ($rawVendorName === '' || strtolower($rawVendorName) === 'others' || strtolower($rawVendorName) === 'auto') {
+                        $rawVendorName = $rawMarketplace !== ''
+                            ? ucfirst($rawMarketplace) . ' - Vendor ' . ($index + 1)
+                            : 'Vendor ' . ($index + 1);
+                    }
+
+                    $vendorKey = strtolower($rawVendorName);
+                    $displayVendorName = $rawVendorName;
+                    $displayMarketplace = ($rawMarketplace !== '' && strtolower($rawMarketplace) !== 'others' && strtolower($rawMarketplace) !== 'auto')
+                        ? ucfirst($rawMarketplace)
+                        : ucfirst($mode);
                 }
 
-                if (!isset($groupedVendors[$marketplace])) {
-                    $groupedVendors[$marketplace] = [
-                        'vendor_name'      => ucfirst($marketplace),
-                        'marketplace'      => ucfirst($marketplace),
+                if (!isset($groupedVendors[$vendorKey])) {
+                    $groupedVendors[$vendorKey] = [
+                        'vendor_name'      => $displayVendorName,
+                        'marketplace'      => $displayMarketplace,
                         'items'            => [],
-                        'shipping_cost'    => 0,
-                        'discount_voucher' => 0,
-                        'tax_ppn'          => 0,
+                        'shipping_cost'    => 0.0,
+                        'discount_voucher' => 0.0,
+                        'tax_ppn'          => 0.0,
                     ];
                 }
 
                 if (!empty($item['items']) && is_array($item['items'])) {
                     foreach ($item['items'] as $it) {
+                        $qty = (float) ($it['quantity'] ?? 1);
+                        $unitPrice = (float) ($it['unit_price'] ?? 0);
+                        $subtotal = isset($it['subtotal']) && is_numeric($it['subtotal'])
+                            ? (float) $it['subtotal']
+                            : ($qty * $unitPrice);
+
+                        $normalizedItem = [
+                            'product_name' => $it['product_name'] ?? '-',
+                            'variant'      => $it['variant']      ?? null,
+                            'sku'          => $it['sku']          ?? null,
+                            'image_url'    => $it['image_url']    ?? null,
+                            'quantity'     => $qty,
+                            'unit_price'   => $unitPrice,
+                            'subtotal'     => $subtotal,
+                            'stock_status' => $it['stock_status'] ?? null,
+                            'weight'       => $it['weight']       ?? null,
+                        ];
+
                         $exists = false;
-                        foreach ($groupedVendors[$marketplace]['items'] as &$existingItem) {
-                            $isSameSku  = !empty($it['sku']) && $existingItem['sku'] === $it['sku'];
-                            $isSameName = empty($it['sku']) && strtolower($existingItem['product_name']) === strtolower($it['product_name']);
+                        foreach ($groupedVendors[$vendorKey]['items'] as &$existingItem) {
+                            $isSameSku  = !empty($normalizedItem['sku']) && $existingItem['sku'] === $normalizedItem['sku'];
+                            $isSameName = empty($normalizedItem['sku']) && strtolower($existingItem['product_name']) === strtolower($normalizedItem['product_name']);
 
                             if ($isSameSku || $isSameName) {
-                                $existingItem['quantity'] += ($it['quantity'] ?? 1);
-                                $existingItem['subtotal'] += ($it['subtotal'] ?? 0);
+                                $existingItem['quantity'] += $normalizedItem['quantity'];
+                                $existingItem['subtotal'] += $normalizedItem['subtotal'];
                                 $exists = true;
                                 break;
                             }
@@ -514,29 +554,31 @@ class VendorComparisonController extends Controller
                         unset($existingItem);
 
                         if (!$exists) {
-                            $groupedVendors[$marketplace]['items'][] = $it;
+                            $groupedVendors[$vendorKey]['items'][] = $normalizedItem;
                         }
                     }
                 }
 
-                $groupedVendors[$marketplace]['shipping_cost']    += ($item['shipping_cost'] ?? 0);
-                $groupedVendors[$marketplace]['discount_voucher'] += ($item['discount_voucher'] ?? 0);
-                $groupedVendors[$marketplace]['tax_ppn']          += ($item['tax_ppn'] ?? 0);
+                $groupedVendors[$vendorKey]['shipping_cost']    += (float) ($item['shipping_cost'] ?? 0);
+                $groupedVendors[$vendorKey]['discount_voucher'] += (float) ($item['discount_voucher'] ?? 0);
+                $groupedVendors[$vendorKey]['tax_ppn']          += (float) ($item['tax_ppn'] ?? 0);
             }
 
-            foreach ($groupedVendors as $marketplaceName => $data) {
+            foreach ($groupedVendors as $data) {
                 $itemsSubtotal  = collect($data['items'])->sum('subtotal');
                 $totalBeforeTax = $itemsSubtotal + $data['shipping_cost'] - $data['discount_voucher'];
                 $totalPrice     = $totalBeforeTax + $data['tax_ppn'];
 
-                if ($mode !== 'others') {
-                    $procurement->vendors()->where('marketplace', $data['marketplace'])->delete();
-                }
-
-                $existingVendor = null;
-                if ($mode === 'others') {
-                    $existingVendor = $procurement->vendors()->where('marketplace', $data['marketplace'])->first();
-                }
+                $existingVendor = $mode === 'shopee'
+                    ? $procurement->vendors()
+                        ->where(function ($q) {
+                            $q->whereRaw('LOWER(TRIM(vendor_name)) = ?', ['shopee'])
+                              ->orWhereRaw('LOWER(TRIM(marketplace)) = ?', ['shopee']);
+                        })
+                        ->first()
+                    : $procurement->vendors()
+                        ->whereRaw('LOWER(TRIM(vendor_name)) = ?', [strtolower(trim($data['vendor_name']))])
+                        ->first();
 
                 if ($existingVendor) {
                     foreach ($data['items'] as $newItem) {
@@ -545,26 +587,26 @@ class VendorComparisonController extends Controller
                                 if (!empty($newItem['sku'])) {
                                     $q->where('sku', $newItem['sku']);
                                 } else {
-                                    $q->where('product_name', $newItem['product_name']);
+                                    $q->whereRaw('LOWER(product_name) = ?', [strtolower($newItem['product_name'])]);
                                 }
                             })->first();
 
                         if ($existingItem) {
                             $existingItem->update([
-                                'quantity' => $existingItem->quantity + ($newItem['quantity'] ?? 1),
-                                'subtotal' => $existingItem->subtotal + ($newItem['subtotal'] ?? 0),
+                                'quantity' => $existingItem->quantity + $newItem['quantity'],
+                                'subtotal' => $existingItem->subtotal + $newItem['subtotal'],
                             ]);
                         } else {
                             $existingVendor->items()->create([
-                                'product_name' => $newItem['product_name'] ?? '-',
-                                'variant'      => $newItem['variant']      ?? null,
-                                'sku'          => $newItem['sku']          ?? null,
-                                'image_url'    => $newItem['image_url']    ?? null,
-                                'quantity'     => $newItem['quantity']     ?? 1,
-                                'unit_price'   => $newItem['unit_price']   ?? 0,
-                                'subtotal'     => $newItem['subtotal']     ?? 0,
-                                'stock_status' => $newItem['stock_status'] ?? null,
-                                'weight'       => $newItem['weight']       ?? null,
+                                'product_name' => $newItem['product_name'],
+                                'variant'      => $newItem['variant'],
+                                'sku'          => $newItem['sku'],
+                                'image_url'    => $newItem['image_url'],
+                                'quantity'     => $newItem['quantity'],
+                                'unit_price'   => $newItem['unit_price'],
+                                'subtotal'     => $newItem['subtotal'],
+                                'stock_status' => $newItem['stock_status'],
+                                'weight'       => $newItem['weight'],
                                 'sort_order'   => $existingVendor->items()->count() + 1,
                             ]);
                         }
@@ -573,6 +615,8 @@ class VendorComparisonController extends Controller
                     $newSubtotal       = $existingVendor->items()->sum('subtotal');
                     $newTotalBeforeTax = $newSubtotal + $existingVendor->shipping_cost - $existingVendor->discount_voucher;
                     $existingVendor->update([
+                        'vendor_name'      => $mode === 'shopee' ? 'Shopee' : $existingVendor->vendor_name,
+                        'marketplace'      => $mode === 'shopee' ? 'Shopee' : ($existingVendor->marketplace ?: $data['marketplace']),
                         'subtotal'         => $newSubtotal,
                         'total_before_tax' => $newTotalBeforeTax,
                         'total_price'      => $newTotalBeforeTax + $existingVendor->tax_ppn,
@@ -587,20 +631,20 @@ class VendorComparisonController extends Controller
                         'tax_ppn'          => $data['tax_ppn'],
                         'total_before_tax' => $totalBeforeTax,
                         'total_price'      => $totalPrice,
-                        'sort_order'       => 1,
+                        'sort_order'       => $procurement->vendors()->count() + 1,
                     ]);
 
                     foreach ($data['items'] as $j => $item) {
                         $vendor->items()->create([
-                            'product_name' => $item['product_name'] ?? '-',
-                            'variant'      => $item['variant']      ?? null,
-                            'sku'          => $item['sku']          ?? null,
-                            'image_url'    => $item['image_url']    ?? null,
-                            'quantity'     => $item['quantity']     ?? 1,
-                            'unit_price'   => $item['unit_price']   ?? 0,
-                            'subtotal'     => $item['subtotal']     ?? 0,
-                            'stock_status' => $item['stock_status'] ?? null,
-                            'weight'       => $item['weight']       ?? null,
+                            'product_name' => $item['product_name'],
+                            'variant'      => $item['variant'],
+                            'sku'          => $item['sku'],
+                            'image_url'    => $item['image_url'],
+                            'quantity'     => $item['quantity'],
+                            'unit_price'   => $item['unit_price'],
+                            'subtotal'     => $item['subtotal'],
+                            'stock_status' => $item['stock_status'],
+                            'weight'       => $item['weight'],
                             'sort_order'   => $j + 1,
                         ]);
                     }
@@ -609,13 +653,21 @@ class VendorComparisonController extends Controller
 
             $this->autoPickWinner($procurement);
 
-            $message = count($groupedVendors) . ' marketplace(s) successfully scanned and merged into cart.';
+            DB::commit();
+
+            $itemCounts = $procurement->vendors()->withCount('items')->get()->pluck('items_count')->unique();
+            $warning = $itemCounts->count() > 1
+                ? ' Perhatian: jumlah item antar vendor belum sama, pastikan semua barang sudah di-scan.'
+                : '';
+
+            $message = count($groupedVendors) . ' vendor/kanal berhasil diproses dan digabungkan.' . $warning;
 
             return redirect()
                 ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
                 ->with('success', $message);
 
         } catch (Throwable $e) {
+            DB::rollBack();
             Log::error('AI Scan Error: ' . $e->getMessage(), [
                 'procurement_id' => $procurement->id,
                 'mode'           => $mode,
@@ -628,88 +680,102 @@ class VendorComparisonController extends Controller
     public function store(Request $request, ProcurementRequest $procurement)
     {
         $validated = $request->validate([
-            'budget_type'                      => 'nullable|in:Budgeted,Non Budgeted',
-            'vendors'                          => 'required|array|min:1',
-            'vendors.*.vendor_name'            => 'required|string|max:255',
-            'vendors.*.marketplace'            => 'nullable|string|max:100',
-            'vendors.*.company_name'           => 'nullable|string|max:255',
-            'vendors.*.payment_method'         => 'nullable|string|max:255',
-            'vendors.*.payment_bank'           => 'nullable|string|max:255',
-            'vendors.*.estimated_delivery'     => 'nullable|string|max:255',
-            'vendors.*.product_url'            => 'nullable|string',
-            'vendors.*.notes'                  => 'nullable|string',
-            'vendors.*.subtotal'               => 'nullable|numeric|min:0',
-            'vendors.*.shipping_cost'          => 'nullable|numeric|min:0',
-            'vendors.*.discount_voucher'       => 'nullable|numeric|min:0',
-            'vendors.*.tax_ppn'                => 'nullable|numeric|min:0',
-            'vendors.*.total_before_tax'       => 'nullable|numeric|min:0',
-            'vendors.*.tax_note'               => 'nullable|string|max:50',
+            'budget_type'                  => 'nullable|in:Budgeted,Non Budgeted',
+            'vendors'                      => 'required|array|min:1',
+            'vendors.*.vendor_name'        => 'required|string|max:255',
+            'vendors.*.marketplace'        => 'nullable|string|max:100',
+            'vendors.*.company_name'       => 'nullable|string|max:255',
+            'vendors.*.payment_method'     => 'nullable|string|max:255',
+            'vendors.*.payment_bank'       => 'nullable|string|max:255',
+            'vendors.*.estimated_delivery' => 'nullable|string|max:255',
+            'vendors.*.product_url'        => 'nullable|string',
+            'vendors.*.notes'              => 'nullable|string',
+            'vendors.*.subtotal'           => 'nullable|numeric|min:0',
+            'vendors.*.shipping_cost'      => 'nullable|numeric|min:0',
+            'vendors.*.discount_voucher'   => 'nullable|numeric|min:0',
+            'vendors.*.tax_ppn'            => 'nullable|numeric|min:0',
+            'vendors.*.total_before_tax'   => 'nullable|numeric|min:0',
+            'vendors.*.tax_note'           => 'nullable|string|max:50',
 
-            'vendors.*.items'                       => 'nullable|array',
-            'vendors.*.items.*.product_name'        => 'required_with:vendors.*.items|string|max:255',
-            'vendors.*.items.*.variant'             => 'nullable|string|max:255',
-            'vendors.*.items.*.sku'                 => 'nullable|string|max:100',
-            'vendors.*.items.*.quantity'            => 'required_with:vendors.*.items|numeric|min:0',
-            'vendors.*.items.*.unit_price'          => 'required_with:vendors.*.items|numeric|min:0',
-            'vendors.*.items.*.subtotal'            => 'nullable|numeric|min:0',
-            'vendors.*.items.*.stock_status'        => 'nullable|string|max:50',
-            'vendors.*.items.*.weight'              => 'nullable|numeric|min:0',
+            'vendors.*.items'                => 'nullable|array',
+            'vendors.*.items.*.product_name' => 'required_with:vendors.*.items|string|max:255',
+            'vendors.*.items.*.variant'      => 'nullable|string|max:255',
+            'vendors.*.items.*.sku'          => 'nullable|string|max:100',
+            'vendors.*.items.*.quantity'     => 'required_with:vendors.*.items|numeric|min:0',
+            'vendors.*.items.*.unit_price'   => 'required_with:vendors.*.items|numeric|min:0',
+            'vendors.*.items.*.subtotal'     => 'nullable|numeric|min:0',
+            'vendors.*.items.*.stock_status' => 'nullable|string|max:50',
+            'vendors.*.items.*.weight'       => 'nullable|numeric|min:0',
         ]);
 
-        $procurement->update([
-            'budget_type' => $validated['budget_type'] ?? null,
-        ]);
-
-        $procurement->vendors()->delete();
-
-        foreach ($validated['vendors'] as $i => $v) {
-            $subtotal    = $v['subtotal'] ?? 0;
-            $shipping    = $v['shipping_cost'] ?? 0;
-            $discount    = $v['discount_voucher'] ?? 0;
-            $tax         = $v['tax_ppn'] ?? 0;
-
-            $totalBeforeTax = $subtotal + $shipping - $discount;
-            $totalPrice     = $totalBeforeTax + $tax;
-
-            $vendor = $procurement->vendors()->create([
-                'vendor_name'        => $v['vendor_name'],
-                'marketplace'        => $v['marketplace'] ?? null,
-                'company_name'       => $v['company_name'] ?? null,
-                'payment_method'     => $v['payment_method'] ?? null,
-                'payment_bank'       => $v['payment_bank'] ?? null,
-                'estimated_delivery' => $v['estimated_delivery'] ?? null,
-                'product_url'        => $v['product_url'] ?? null,
-                'notes'              => $v['notes'] ?? null,
-                'subtotal'           => $subtotal,
-                'shipping_cost'      => $shipping,
-                'discount_voucher'   => $discount,
-                'tax_ppn'            => $tax,
-                'total_before_tax'   => $totalBeforeTax,
-                'total_price'        => $totalPrice,
-                'tax_note'           => $v['tax_note'] ?? null,
-                'sort_order'         => $i + 1,
+        DB::beginTransaction();
+        try {
+            $procurement->update([
+                'budget_type' => $validated['budget_type'] ?? null,
             ]);
 
-            foreach ($v['items'] ?? [] as $j => $item) {
-                $vendor->items()->create([
-                    'product_name' => $item['product_name'],
-                    'variant'      => $item['variant'] ?? null,
-                    'sku'          => $item['sku'] ?? null,
-                    'quantity'     => $item['quantity'] ?? 1,
-                    'unit_price'   => $item['unit_price'] ?? 0,
-                    'subtotal'     => $item['subtotal'] ?? (($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0)),
-                    'stock_status' => $item['stock_status'] ?? null,
-                    'weight'       => $item['weight'] ?? null,
-                    'sort_order'   => $j + 1,
+            $procurement->vendors()->delete();
+
+            foreach ($validated['vendors'] as $i => $v) {
+                $subtotal = (float) ($v['subtotal'] ?? 0);
+                $shipping = (float) ($v['shipping_cost'] ?? 0);
+                $discount = (float) ($v['discount_voucher'] ?? 0);
+                $tax      = (float) ($v['tax_ppn'] ?? 0);
+
+                $totalBeforeTax = $subtotal + $shipping - $discount;
+                $totalPrice     = $totalBeforeTax + $tax;
+
+                $vendor = $procurement->vendors()->create([
+                    'vendor_name'        => $v['vendor_name'],
+                    'marketplace'        => $v['marketplace'] ?? null,
+                    'company_name'       => $v['company_name'] ?? null,
+                    'payment_method'     => $v['payment_method'] ?? null,
+                    'payment_bank'       => $v['payment_bank'] ?? null,
+                    'estimated_delivery' => $v['estimated_delivery'] ?? null,
+                    'product_url'        => $v['product_url'] ?? null,
+                    'notes'              => $v['notes'] ?? null,
+                    'subtotal'           => $subtotal,
+                    'shipping_cost'      => $shipping,
+                    'discount_voucher'   => $discount,
+                    'tax_ppn'            => $tax,
+                    'total_before_tax'   => $totalBeforeTax,
+                    'total_price'        => $totalPrice,
+                    'tax_note'           => $v['tax_note'] ?? null,
+                    'sort_order'         => $i + 1,
                 ]);
+
+                foreach ($v['items'] ?? [] as $j => $item) {
+                    $qty = (float) ($item['quantity'] ?? 1);
+                    $unitPrice = (float) ($item['unit_price'] ?? 0);
+
+                    $vendor->items()->create([
+                        'product_name' => $item['product_name'],
+                        'variant'      => $item['variant'] ?? null,
+                        'sku'          => $item['sku'] ?? null,
+                        'quantity'     => $qty,
+                        'unit_price'   => $unitPrice,
+                        'subtotal'     => isset($item['subtotal']) && is_numeric($item['subtotal'])
+                            ? (float) $item['subtotal']
+                            : ($qty * $unitPrice),
+                        'stock_status' => $item['stock_status'] ?? null,
+                        'weight'       => $item['weight'] ?? null,
+                        'sort_order'   => $j + 1,
+                    ]);
+                }
             }
+
+            $this->autoPickWinner($procurement);
+
+            DB::commit();
+
+            return redirect()
+                ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
+                ->with('success', 'Vendor data saved successfully.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Store Vendor Comparison Error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Failed to save vendor data: ' . $e->getMessage());
         }
-
-        $this->autoPickWinner($procurement);
-
-        return redirect()
-            ->route('procurement.comparisons.index', ['procurement' => $procurement->id])
-            ->with('success', 'Vendor data saved successfully.');
     }
 
     public function selectVendor(ProcurementRequest $procurement, ProcurementVendor $vendor)
@@ -763,25 +829,108 @@ class VendorComparisonController extends Controller
             }
         }
 
-        $vendor->delete();
-
-        $this->autoPickWinner($procurement);
+        DB::transaction(function () use ($vendor, $procurement) {
+            $vendor->delete();
+            $this->autoPickWinner($procurement);
+        });
 
         return back()->with('success', 'Vendor deleted successfully.');
     }
 
+    /**
+     * Perhitungan pemenang berbasis metode Simple Additive Weighting (SAW).
+     * Bobot kriteria:
+     * C1 Harga (Cost)               = 0.35
+     * C2 Ongkos kirim (Cost)        = 0.15
+     * C3 Diskon/Voucher (Benefit) = 0.15
+     * C4 Estimasi hari (Cost)       = 0.15
+     * C5 Rating vendor (Benefit)    = 0.20
+     */
     private function autoPickWinner(ProcurementRequest $procurement): void
     {
+        $vendors = $procurement->vendors()->where('total_price', '>', 0)->get();
+
         $procurement->vendors()->update(['is_winner' => false]);
 
-        $winner = $procurement->vendors()
-            ->where('total_price', '>', 0)
-            ->orderBy('total_price')
-            ->first();
-
-        if ($winner) {
-            $winner->update(['is_winner' => true]);
+        if ($vendors->isEmpty()) {
+            return;
         }
+
+        if ($vendors->count() === 1) {
+            $vendors->first()->update(['is_winner' => true]);
+            return;
+        }
+
+        $weights = [
+            'c1' => 0.35, // Harga (Cost)
+            'c2' => 0.15, // Ongkos kirim (Cost)
+            'c3' => 0.15, // Diskon (Benefit)
+            'c4' => 0.15, // Estimasi pengiriman dalam hari (Cost)
+            'c5' => 0.20, // Rating vendor (Benefit)
+        ];
+
+        $matrix = [];
+        foreach ($vendors as $vendor) {
+            $matrix[$vendor->id] = [
+                'c1' => max((float) $vendor->total_price, 0.0),
+                'c2' => max((float) $vendor->shipping_cost, 0.0),
+                'c3' => max((float) $vendor->discount_voucher, 0.0),
+                'c4' => $this->extractDeliveryDays($vendor->estimated_delivery),
+                'c5' => $this->extractVendorRating($vendor),
+            ];
+        }
+
+        $minC1 = collect($matrix)->pluck('c1')->filter(fn ($v) => $v > 0)->min() ?? 0.0;
+        $minC2 = collect($matrix)->pluck('c2')->filter(fn ($v) => $v > 0)->min() ?? 0.0;
+        $maxC3 = (float) collect($matrix)->pluck('c3')->max();
+        $minC4 = collect($matrix)->pluck('c4')->filter(fn ($v) => $v > 0)->min() ?? 0.0;
+        $maxC5 = (float) collect($matrix)->pluck('c5')->max();
+
+        $bestVendorId = null;
+        $bestScore = -1.0;
+
+        foreach ($vendors as $vendor) {
+            $row = $matrix[$vendor->id];
+
+            $r1 = ($row['c1'] > 0 && $minC1 > 0) ? ($minC1 / $row['c1']) : 0.0;
+            $r2 = $row['c2'] <= 0 ? 1.0 : ($minC2 > 0 ? ($minC2 / $row['c2']) : 0.0);
+            $r3 = $maxC3 > 0 ? ($row['c3'] / $maxC3) : 1.0;
+            $r4 = $row['c4'] <= 0 ? 1.0 : ($minC4 > 0 ? ($minC4 / $row['c4']) : 0.0);
+            $r5 = $maxC5 > 0 ? ($row['c5'] / $maxC5) : 1.0;
+
+            $score = ($weights['c1'] * $r1)
+                   + ($weights['c2'] * $r2)
+                   + ($weights['c3'] * $r3)
+                   + ($weights['c4'] * $r4)
+                   + ($weights['c5'] * $r5);
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestVendorId = $vendor->id;
+            }
+        }
+
+        if ($bestVendorId) {
+            $procurement->vendors()->where('id', $bestVendorId)->update(['is_winner' => true]);
+        }
+    }
+
+    private function extractDeliveryDays(?string $estimatedDelivery): float
+    {
+        if (empty($estimatedDelivery)) {
+            return 7.0; // Nilai default estimasi jika kosong
+        }
+
+        if (preg_match('/(\d+(?:[.,]\d+)?)/', $estimatedDelivery, $matches)) {
+            return max((float) str_replace(',', '.', $matches[1]), 1.0);
+        }
+
+        return 7.0;
+    }
+
+    private function extractVendorRating(ProcurementVendor $vendor): float
+    {
+        return (float) $vendor->saw_rating;
     }
 
     private function getRomawi($number)

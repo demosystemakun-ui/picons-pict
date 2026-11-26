@@ -5,20 +5,20 @@
 
 @php
     $hasVendors = $procurement->vendors->count() > 0;
-    
+
     // ═══ AMBIL STATUS DARI MASING-MASING TABEL ═══
     $statusPR1 = $procurement->status; // PR 1 (pending, approved, processed, dll)
     $statusPR2 = $procurement->finalComparison?->status; // PR 2 (pending_review_final, dll)
-    
+
     // Cek status untuk alur
     $isPendingFinalReview = $statusPR2 === 'pending_review_final';
     $isPendingFinalSign   = $statusPR2 === 'pending_final_sign';
     $isFinalApproved      = in_array($statusPR2, ['final_approved', 'received', 'completed']);
     $isProcessed          = $statusPR1 === 'processed'; // Sudah pilih vendor, belum buat PR Final
-    
+
     // Form input hanya muncul jika status PR 1 'approved' (belum pilih vendor)
     $canShowInputForms = $statusPR1 === 'approved';
-    
+
     // Cek role admin
     $isAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Admin']);
 @endphp
@@ -68,7 +68,7 @@
         </div>
     @endif
 
-    {{-- ═══ AI SCAN SECTION ═══ --}}
+    {{-- ═══ AI SCAN & MANUAL INPUT SECTION ═══ --}}
     @if($canShowInputForms)
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-teal-50 to-emerald-50/50 dark:from-teal-900/20 dark:to-emerald-900/10 flex flex-wrap items-center justify-between gap-3">
@@ -80,11 +80,11 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Scan Vendor Screenshots with AI</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Select files, then click the scan button</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Select files, scan with AI, then review or adjust values in the form below</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-gray-800 border border-teal-200 dark:border-teal-800 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-400">
-                AI Gemini Vision
+                AI Gemini Vision + SAW
             </span>
         </header>
 
@@ -98,38 +98,139 @@
                 </div>
                 <div>
                     <p id="fileCountInfo" class="text-sm font-semibold text-gray-900 dark:text-white">Click to select screenshots</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Shopee, Tokopedia, Bukalapak, Lazada — multiple files allowed</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">JPG, JPEG, PNG, WEBP (max 5 MB/file) — multiple files allowed</p>
                 </div>
-                <input type="file" id="multiScreenshotInput" accept="image/*" multiple class="sr-only">
+                <input type="file" id="multiScreenshotInput" accept="image/jpeg,image/png,image/webp" multiple class="sr-only">
             </label>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <form action="{{ route('procurement.comparisons.scan.others', $procurement) }}" method="POST" enctype="multipart/form-data" onsubmit="return transferFiles(this, 'scanShopeeBtn')">
+                    @csrf
+                    <input type="hidden" name="scan_mode" value="shopee">
+                    <input type="file" name="screenshots[]" multiple class="hidden-file-input hidden" data-target="shopee">
+                    <button type="submit" id="scanShopeeBtn" data-default-label="Scan Shopee (Merge)" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-amber-600 transition">
+                        Scan Shopee (Merge)
+                    </button>
+                </form>
+
                 <form action="{{ route('procurement.comparisons.scan.monotaro', $procurement) }}" method="POST" enctype="multipart/form-data" onsubmit="return transferFiles(this, 'scanMonotaroBtn')">
                     @csrf
-                    <input type="file" name="screenshots[]" multiple class="hidden-file-input" data-target="monotaro">
-                    <button type="submit" id="scanMonotaroBtn" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 transition">
+                    <input type="file" name="screenshots[]" multiple class="hidden-file-input hidden" data-target="monotaro">
+                    <button type="submit" id="scanMonotaroBtn" data-default-label="Scan Monotaro" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 transition">
                         Scan Monotaro
                     </button>
                 </form>
 
                 <form action="{{ route('procurement.comparisons.scan.others', $procurement) }}" method="POST" enctype="multipart/form-data" onsubmit="return transferFiles(this, 'scanOthersBtn')">
                     @csrf
-                    <input type="file" name="screenshots[]" multiple class="hidden-file-input" data-target="others">
-                    <button type="submit" id="scanOthersBtn" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-orange-600 hover:to-rose-600 transition">
+                    <input type="hidden" name="scan_mode" value="others">
+                    <input type="file" name="screenshots[]" multiple class="hidden-file-input hidden" data-target="others">
+                    <button type="submit" id="scanOthersBtn" data-default-label="Scan Other Marketplaces" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-rose-500 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-rose-600 hover:to-pink-700 transition">
                         Scan Other Marketplaces
                     </button>
                 </form>
             </div>
+
+            {{-- Form Koreksi & Input Manual Vendor --}}
+            <form action="{{ route('procurement.comparisons.store', $procurement) }}" method="POST" class="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                @csrf
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Manual Input & Verification Form</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Add or adjust vendor criteria before saving and recalculating SAW score.</p>
+                    </div>
+                    <button type="button" onclick="addVendorRow()" class="inline-flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition">
+                        + Add Vendor Row
+                    </button>
+                </div>
+
+                <div id="vendorRowsContainer" class="space-y-3">
+                    @php
+                        $initialVendors = $procurement->vendors->count() > 0
+                            ? $procurement->vendors->map(fn ($v) => [
+                                'vendor_name'        => $v->vendor_name,
+                                'marketplace'        => $v->marketplace,
+                                'subtotal'           => (float) $v->subtotal,
+                                'shipping_cost'      => (float) $v->shipping_cost,
+                                'discount_voucher'   => (float) $v->discount_voucher,
+                                'tax_ppn'            => (float) $v->tax_ppn,
+                                'estimated_delivery' => $v->estimated_delivery,
+                            ])->toArray()
+                            : [[
+                                'vendor_name'        => '',
+                                'marketplace'        => '',
+                                'subtotal'           => 0,
+                                'shipping_cost'      => 0,
+                                'discount_voucher'   => 0,
+                                'tax_ppn'            => 0,
+                                'estimated_delivery' => '',
+                            ]];
+                    @endphp
+
+                    @foreach($initialVendors as $idx => $row)
+                        <div class="vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30">
+                            <div class="md:col-span-3">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-rose-500">*</span></label>
+                                <input type="text" name="vendors[{{ $idx }}][vendor_name]" value="{{ $row['vendor_name'] }}" required placeholder="e.g. Shopee"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace</label>
+                                <input type="text" name="vendors[{{ $idx }}][marketplace]" value="{{ $row['marketplace'] }}" placeholder="Shopee"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
+                                <input type="number" name="vendors[{{ $idx }}][subtotal]" value="{{ $row['subtotal'] }}" min="0" step="any"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir</label>
+                                <input type="number" name="vendors[{{ $idx }}][shipping_cost]" value="{{ $row['shipping_cost'] }}" min="0" step="any"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon</label>
+                                <input type="number" name="vendors[{{ $idx }}][discount_voucher]" value="{{ $row['discount_voucher'] }}" min="0" step="any"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">PPN</label>
+                                <input type="number" name="vendors[{{ $idx }}][tax_ppn]" value="{{ $row['tax_ppn'] }}" min="0" step="any"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Est. Hari</label>
+                                <input type="text" name="vendors[{{ $idx }}][estimated_delivery]" value="{{ $row['estimated_delivery'] }}" placeholder="3 hari"
+                                       class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                            </div>
+                            <div class="md:col-span-1 flex items-center justify-end">
+                                @if($idx > 0)
+                                    <button type="button" onclick="this.closest('.vendor-row').remove()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Remove Row">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 transition">
+                        Save & Calculate SAW
+                    </button>
+                </div>
+            </form>
         </div>
     </section>
     @endif
 
     {{-- ═══ TABLE VENDOR ═══ --}}
     <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex items-center justify-between">
+        <header class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-wrap items-center justify-between gap-2">
             <div>
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Comparison Recap</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered — SAW weights: Price (0.35), Shipping (0.15), Discount (0.15), Delivery (0.15), Rating (0.20)</p>
             </div>
         </header>
 
@@ -143,6 +244,7 @@
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-right">Discount</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-right">Tax</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-right">Total</th>
+                        <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-center">Est / Rating</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-center">Status</th>
                         <th class="px-5 py-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 text-right">Actions</th>
                     </tr>
@@ -151,15 +253,24 @@
                     @forelse($procurement->vendors as $vendor)
                         @php $isSelected = (bool) $vendor->is_winner; @endphp
                         <tr class="{{ $isSelected ? 'bg-teal-50/50 dark:bg-teal-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50' }}">
-                            <td class="px-5 py-4 font-semibold text-gray-900 dark:text-white">{{ $vendor->vendor_name }}</td>
+                            <td class="px-5 py-4 font-semibold text-gray-900 dark:text-white">
+                                {{ $vendor->vendor_name }}
+                                @if($vendor->marketplace)
+                                    <span class="block text-xs font-normal text-gray-400">{{ $vendor->marketplace }}</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-4 text-right text-gray-600 dark:text-gray-300">Rp {{ number_format($vendor->subtotal, 0, ',', '.') }}</td>
                             <td class="px-5 py-4 text-right text-gray-600 dark:text-gray-300">Rp {{ number_format($vendor->shipping_cost, 0, ',', '.') }}</td>
                             <td class="px-5 py-4 text-right text-rose-600 dark:text-rose-400">- Rp {{ number_format($vendor->discount_voucher, 0, ',', '.') }}</td>
                             <td class="px-5 py-4 text-right text-gray-600 dark:text-gray-300">Rp {{ number_format($vendor->tax_ppn, 0, ',', '.') }}</td>
                             <td class="px-5 py-4 text-right font-bold text-teal-600 dark:text-teal-400">Rp {{ number_format($vendor->total_price, 0, ',', '.') }}</td>
+                            <td class="px-5 py-4 text-center text-xs text-gray-600 dark:text-gray-300">
+                                <div>{{ $vendor->estimated_delivery ?: '-' }}</div>
+                                <div class="font-semibold text-amber-600 dark:text-amber-400">★ {{ number_format($vendor->saw_rating, 1) }}</div>
+                            </td>
                             <td class="px-5 py-4 text-center">
                                 @if($isSelected)
-                                    <span class="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Selected</span>
+                                    <span class="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">SAW Recommended</span>
                                 @elseif($statusPR1 === 'approved')
                                     <form action="{{ route('procurement.comparisons.select', [$procurement, $vendor]) }}" method="POST">
                                         @csrf @method('PATCH')
@@ -181,7 +292,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-6 py-16 text-center text-gray-500 dark:text-gray-400">No comparison data yet.</td></tr>
+                        <tr><td colspan="9" class="px-6 py-16 text-center text-gray-500 dark:text-gray-400">No comparison data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -214,13 +325,9 @@
                         @endif
                     </div>
                 </div>
-                
+
                 <div class="flex flex-wrap items-center gap-2">
-                    
-                    {{-- ═══ JIKA STATUS MENUNGGU REVIEW FINAL (PENDING_REVIEW_FINAL) ═══ --}}
                     @if($isPendingFinalReview)
-                        
-                        {{-- KONDISI A: JIKA NOMOR BELUM DIISI (Hanya untuk Admin) --}}
                         @if($isAdmin && empty($procurement->finalComparison?->final_number))
                             <form action="{{ route('procurement.comparisons.update-final-number', $procurement) }}" method="POST" class="flex items-center gap-2">
                                 @csrf
@@ -237,11 +344,7 @@
                                     Simpan Nomor
                                 </button>
                             </form>
-
-                        {{-- KONDISI B: JIKA NOMOR SUDAH DIISI (Tampilkan Tombol Print Draft & Approve) --}}
                         @elseif($isAdmin && !empty($procurement->finalComparison?->final_number))
-                            
-                            {{-- TOMBOL PRINT & PDF DRAFT --}}
                             <a href="{{ route('procurement.print.final', $procurement) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                 Print Draft
@@ -250,7 +353,6 @@
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 PDF Draft
                             </a>
-                            {{-- END TOMBOL PRINT & PDF DRAFT --}}
 
                             <form action="{{ route('procurement.approve-final-format', $procurement) }}" method="POST">
                                 @csrf @method('PATCH')
@@ -259,16 +361,12 @@
                                     Approve Format
                                 </button>
                             </form>
-
-                        {{-- KONDISI C: TAMPILAN UNTUK USER BIASA --}}
                         @elseif(!$isAdmin)
                             <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-amber-200 dark:border-amber-800/50">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 Waiting for Admin to input number & review format.
                             </div>
                         @endif
-
-                    {{-- ═══ JIKA FORMAT SUDAH DI-APPROVE (MUNCUL PRINT PDF & VALIDASI TTD) ═══ --}}
                     @elseif($isPendingFinalSign)
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             Print PR Final
@@ -282,11 +380,7 @@
                                 </button>
                             </form>
                         @endif
-
-                    {{-- ═══ JIKA SUDAH FINAL APPROVED (MUNCUL TOMBOL PO, DLL) ═══ --}}
                     @elseif($isFinalApproved)
-                        
-                        {{-- Tombol Create PO/Cash Advance/Reimbursement HANYA untuk Admin, Super Admin, Admin Departemen --}}
                         @if($isAdmin)
                             @if($procurement->procurement_method === 'po')
                                 <a href="{{ route('procurement.purchases.create', $procurement) }}" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm">
@@ -302,7 +396,6 @@
                                 </a>
                             @endif
                         @else
-                            {{-- Tampilan untuk user biasa (hanya bisa lihat) --}}
                             <div class="flex items-center gap-2 text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 px-3 py-2 rounded-lg text-xs font-medium border border-teal-200 dark:border-teal-800/50">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -314,8 +407,6 @@
                         <a href="{{ route('procurement.pdf.final', $procurement) }}" target="_blank" class="rounded-lg border border-teal-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30">
                             View Final PR PDF
                         </a>
-
-                    {{-- ═══ JIKA SUDAH PILIH VENDOR (PROCESSED / APPROVED) ═══ --}}
                     @else
                         <a href="{{ route('procurement.comparisons.final-pr.create', $procurement) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 transition">
@@ -335,12 +426,14 @@
 @push('scripts')
 <script>
     let sharedFileBuffer = new DataTransfer();
+    let vendorIndex = {{ count($initialVendors ?? []) }};
 
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('multiScreenshotInput');
         if (!input) return;
 
         input.addEventListener('change', function () {
+            sharedFileBuffer = new DataTransfer();
             for (let i = 0; i < input.files.length; i++) {
                 sharedFileBuffer.items.add(input.files[i]);
             }
@@ -350,13 +443,28 @@
             const label = document.getElementById('fileCountInfo');
             if (label) {
                 if (count > 0) {
-                    label.innerText = `${count} file(s) collected (ready to process)`;
+                    label.innerText = `${count} file(s) selected (ready to scan)`;
                     label.classList.add('text-teal-600');
                 } else {
                     label.innerText = 'Click to select screenshots';
+                    label.classList.remove('text-teal-600');
                 }
             }
         });
+    });
+
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            ['scanShopeeBtn', 'scanMonotaroBtn', 'scanOthersBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = false;
+                    if (btn.dataset.defaultLabel) {
+                        btn.innerText = btn.dataset.defaultLabel;
+                    }
+                }
+            });
+        }
     });
 
     function transferFiles(form, buttonId) {
@@ -376,16 +484,17 @@
         return true;
     }
 
-    let vendorIndex = 1;
     function addVendorRow() {
         const container = document.getElementById('vendorRowsContainer');
+        if (!container) return;
+
         const newRow = document.createElement('div');
-        newRow.className = 'vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30 mt-3';
-        
+        newRow.className = 'vendor-row grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/30';
+
         newRow.innerHTML = `
             <div class="md:col-span-3">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-red-500">*</span></label>
-                <input type="text" name="vendors[${vendorIndex}][vendor_name]" required placeholder="e.g. Toko Jaya" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor Name <span class="text-rose-500">*</span></label>
+                <input type="text" name="vendors[${vendorIndex}][vendor_name]" required placeholder="e.g. Shopee" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace</label>
@@ -393,18 +502,26 @@
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Subtotal (Rp)</label>
-                <input type="number" name="vendors[${vendorIndex}][subtotal]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+                <input type="number" name="vendors[${vendorIndex}][subtotal]" value="0" min="0" step="any" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir (Rp)</label>
-                <input type="number" name="vendors[${vendorIndex}][shipping_cost]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            <div class="md:col-span-1">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ongkir</label>
+                <input type="number" name="vendors[${vendorIndex}][shipping_cost]" value="0" min="0" step="any" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
             </div>
-            <div class="md:col-span-2 flex items-center gap-2">
-                <div class="flex-1">
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon (Rp)</label>
-                    <input type="number" name="vendors[${vendorIndex}][discount_voucher]" value="0" min="0" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
-                </div>
-                <button type="button" onclick="this.closest('.vendor-row').remove()" class="mt-5 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Hapus Baris">
+            <div class="md:col-span-1">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Diskon</label>
+                <input type="number" name="vendors[${vendorIndex}][discount_voucher]" value="0" min="0" step="any" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-1">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">PPN</label>
+                <input type="number" name="vendors[${vendorIndex}][tax_ppn]" value="0" min="0" step="any" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-1">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Est. Hari</label>
+                <input type="text" name="vendors[${vendorIndex}][estimated_delivery]" placeholder="3 hari" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div class="md:col-span-1 flex items-center justify-end">
+                <button type="button" onclick="this.closest('.vendor-row').remove()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition" title="Remove Row">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
             </div>

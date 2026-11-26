@@ -706,17 +706,13 @@ class ProcurementRequestController extends Controller
         }
     }
 
-    /**
-     * ═══ AUTO-GENERATE REASON (English) ═══
-     */
+
     private function generateReasonText(ProcurementRequest $procurementRequest): string
     {
-        // 1. Jika Admin sudah mengisi reason di form, gunakan itu.
         if (!empty($procurementRequest->finalComparison?->reason_choose_vendor)) {
             return $procurementRequest->finalComparison->reason_choose_vendor;
         }
 
-        // 2. Jika kosong, buat teks otomatis dalam Bahasa Inggris.
         $winner = $procurementRequest->winnerVendor;
         if (!$winner) {
             return '—';
