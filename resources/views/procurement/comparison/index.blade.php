@@ -291,6 +291,41 @@
                                 @endif
                             </td>
                         </tr>
+
+                        {{-- LIST BARANG PER VENDOR --}}
+                        @if($vendor->items && $vendor->items->count() > 0)
+                            <tr class="bg-gray-50/70 dark:bg-gray-900/30">
+                                <td colspan="9" class="px-5 py-3">
+                                    <div class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                        Daftar Barang ({{ $vendor->items->count() }} item)
+                                    </div>
+                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <table class="w-full text-left text-xs">
+                                            <thead>
+                                                <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400">
+                                                    <th class="px-3 py-2 font-semibold">Nama Barang</th>
+                                                    <th class="px-3 py-2 font-semibold">Varian</th>
+                                                    <th class="px-3 py-2 font-semibold text-center">Qty</th>
+                                                    <th class="px-3 py-2 font-semibold text-right">Harga Satuan</th>
+                                                    <th class="px-3 py-2 font-semibold text-right">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                                @foreach($vendor->items as $item)
+                                                    <tr>
+                                                        <td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{{ $item->product_name }}</td>
+                                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ $item->variant ?: '-' }}</td>
+                                                        <td class="px-3 py-2 text-center text-gray-700 dark:text-gray-300">{{ $item->quantity }}</td>
+                                                        <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900 dark:text-white">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
                     @empty
                         <tr><td colspan="9" class="px-6 py-16 text-center text-gray-500 dark:text-gray-400">No comparison data yet.</td></tr>
                     @endforelse
