@@ -76,6 +76,11 @@ class ProcurementRequest extends Model
         return $this->hasMany(ProcurementRequestItem::class);
     }
 
+    public function attachments()
+{
+    return $this->hasMany(ProcurementComparisonAttachment::class)->orderBy('sort_order');
+}
+
     public function vendors()
     {
         return $this->hasMany(ProcurementVendor::class)->orderBy('total_price');

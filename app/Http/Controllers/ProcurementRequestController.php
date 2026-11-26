@@ -6,12 +6,14 @@ use App\Models\Department;
 use App\Models\ProcurementRequest;
 use App\Models\ConsumableRequest;
 use App\Models\ProcurementComparison;
+use App\Models\CashAdvance;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\WhatsAppService;
+use Throwable;
 
 class ProcurementRequestController extends Controller
 {
@@ -33,7 +35,7 @@ class ProcurementRequestController extends Controller
                 $query->whereDoesntHave('finalComparison')
                       ->whereIn('status', ['pending', 'approved', 'revision', 'processed']);
             } elseif ($request->stage === 'final') {
-                $query->whereHas('finalComparison', function($q) {
+                $query->whereHas('finalComparison', function ($q) {
                     $q->whereIn('status', ['pending_review_final', 'pending_final_sign', 'final_approved', 'received', 'completed']);
                 });
             }
@@ -85,8 +87,8 @@ class ProcurementRequestController extends Controller
             $rules['no'] = [
                 'required', 'string',
                 function ($attribute, $value, $fail) {
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
-                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $value)->exists();
+                    $existsInNo = ProcurementRequest::where('no', $value)->exists();
+                    $existsInFinal = ProcurementComparison::where('final_number', $value)->exists();
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
@@ -151,7 +153,7 @@ class ProcurementRequestController extends Controller
             DB::commit();
             return redirect()->route('procurement.show', $procurementRequest)->with('success', 'Procurement Request created successfully.');
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Store PR Error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Failed to create PR: ' . $e->getMessage());
@@ -170,8 +172,8 @@ class ProcurementRequestController extends Controller
             'no_prefix' => [
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($fullNumber, $procurementRequest) {
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $fullNumber)->where('id', '!=', $procurementRequest->id)->exists();
-                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $fullNumber)->exists();
+                    $existsInNo = ProcurementRequest::where('no', $fullNumber)->where('id', '!=', $procurementRequest->id)->exists();
+                    $existsInFinal = ProcurementComparison::where('final_number', $fullNumber)->exists();
                     if ($existsInNo || $existsInFinal) {
                         $fail('Nomor PR ini sudah digunakan.');
                     }
@@ -193,7 +195,7 @@ class ProcurementRequestController extends Controller
                 if ($procurementRequest->user_id !== $user->id) abort(403, 'You do not have access to this PR.');
             }
         }
-        $procurementRequest->load('items', 'vendors', 'winnerVendor', 'finalComparison');
+        $procurementRequest->load('items', 'vendors', 'winnerVendor', 'finalComparison', 'attachments');
         return view('procurement.show', compact('procurementRequest'));
     }
 
@@ -299,7 +301,7 @@ class ProcurementRequestController extends Controller
             DB::commit();
             return redirect()->route('procurement.show', $procurementRequest)->with('success', 'Procurement Request updated successfully.');
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Failed to update PR: ' . $e->getMessage());
         }
@@ -352,14 +354,14 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        
-        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
+
+        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison', 'attachments.vendor');
 
         $procurement['vendors'] = $procurementRequest->vendors()->get()->toArray();
         $winner = $procurementRequest->winnerVendor;
         $procurement['winner'] = $winner ? $winner->toArray() : null;
+        $procurement['attachments'] = $procurementRequest->attachments->toArray();
 
-        // ═══ AMBIL REASON DARI DB ATAU AUTO-GENERATE ═══
         $procurement['reason_choose_vendor'] = $this->generateReasonText($procurementRequest);
 
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
@@ -403,12 +405,26 @@ class ProcurementRequestController extends Controller
         $folder = 'procurement_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
-        $projectId = 'thlvvgolwryzhdxjgyvz';
-        $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
-        $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
+        $pdfContent = $pdf->output();
 
-        return redirect()->away($pdfUrl);
+        try {
+            Storage::disk('supabase-procurement_request')->put($filePath, $pdfContent);
+            $projectId = 'thlvvgolwryzhdxjgyvz';
+            $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+            $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
+
+            return redirect()->away($pdfUrl);
+        } catch (Throwable $e) {
+            Log::warning('Gagal upload PDF PR ke Supabase Storage, fallback ke stream langsung: ' . $e->getMessage(), [
+                'procurement_id' => $procurementRequest->id,
+                'path'           => $filePath,
+            ]);
+
+            return response($pdfContent, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            ]);
+        }
     }
 
     public function pdfFinal(ProcurementRequest $procurementRequest)
@@ -423,8 +439,8 @@ class ProcurementRequestController extends Controller
         }
 
         $procurement = $this->mapToPrintData($procurementRequest);
-        
-        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison');
+
+        $procurementRequest->load('vendors.items', 'winnerVendor', 'finalComparison', 'attachments');
 
         $procurement['vendors'] = $procurementRequest->vendors()->orderBy('total_price')->get()->map(fn ($v) => [
             'vendor_name' => $v->vendor_name,
@@ -474,8 +490,8 @@ class ProcurementRequestController extends Controller
         $procurement['ceo_name'] = $procurementRequest->finalComparison?->ceo_name;
         $procurement['cfo_name'] = $procurementRequest->finalComparison?->cfo_name;
         $procurement['final_number'] = $procurementRequest->finalComparison?->final_number;
+        $procurement['attachments'] = $procurementRequest->attachments->toArray();
 
-        // ═══ AMBIL REASON DARI DB ATAU AUTO-GENERATE ═══
         $procurement['reason_choose_vendor'] = $this->generateReasonText($procurementRequest);
 
         if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
@@ -504,12 +520,26 @@ class ProcurementRequestController extends Controller
         $folder = 'procurement_documents/' . date('Y/m');
         $filePath = $folder . '/' . $filename;
 
-        Storage::disk('supabase-procurement_request')->put($filePath, $pdf->output());
-        $projectId = 'thlvvgolwryzhdxjgyvz';
-        $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
-        $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
+        $pdfContent = $pdf->output();
 
-        return redirect()->away($pdfUrl);
+        try {
+            Storage::disk('supabase-procurement_request')->put($filePath, $pdfContent);
+            $projectId = 'thlvvgolwryzhdxjgyvz';
+            $bucket = env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request');
+            $pdfUrl = "https://{$projectId}.supabase.co/storage/v1/object/public/{$bucket}/{$filePath}";
+
+            return redirect()->away($pdfUrl);
+        } catch (Throwable $e) {
+            Log::warning('Gagal upload PDF Final PR ke Supabase Storage, fallback ke stream langsung: ' . $e->getMessage(), [
+                'procurement_id' => $procurementRequest->id,
+                'path'           => $filePath,
+            ]);
+
+            return response($pdfContent, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            ]);
+        }
     }
 
     public function validateSignature(Request $request, ProcurementRequest $procurementRequest)
@@ -529,21 +559,21 @@ class ProcurementRequestController extends Controller
             'final_number' => [
                 'required', 'string',
                 function ($attribute, $value, $fail) use ($procurementRequest) {
-                    $existsInFinal = \App\Models\ProcurementComparison::where('final_number', $value)
+                    $existsInFinal = ProcurementComparison::where('final_number', $value)
                         ->where('procurement_request_id', '!=', $procurementRequest->id)
                         ->exists();
-                    $existsInNo = \App\Models\ProcurementRequest::where('no', $value)->exists();
+                    $existsInNo = ProcurementRequest::where('no', $value)->exists();
                     if ($existsInFinal || $existsInNo) $fail('Nomor Final PR ini sudah digunakan.');
                 },
             ],
         ]);
 
         $comparison = $procurementRequest->finalComparison;
-        
+
         if (!$comparison || $comparison->status !== 'pending_final_sign') {
             return back()->with('error', 'PR Final can only be validated after Format Review is approved.');
         }
-        
+
         if (!$procurementRequest->winnerVendor) {
             return back()->with('error', 'No winning vendor. Please select a vendor first.');
         }
@@ -629,7 +659,7 @@ class ProcurementRequestController extends Controller
             }
 
             $procurementRequest->update([
-                'status' => $validated['status'], 
+                'status' => $validated['status'],
                 'review_notes' => $validated['review_notes'] ?? null
             ]);
         }
@@ -675,7 +705,7 @@ class ProcurementRequestController extends Controller
             if ($message) {
                 $wa->send($user->phone_number, $message);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notification failed for PR #' . $pr->id . ': ' . $e->getMessage());
         }
     }
@@ -686,7 +716,7 @@ class ProcurementRequestController extends Controller
             $wa = new WhatsAppService();
             $prNo = $pr->no;
             $pemohon = auth()->user()->name ?? 'Staff';
-            
+
             $admins = \App\Models\User::role(['Super Admin', 'Admin'])->get();
 
             foreach ($admins as $admin) {
@@ -701,11 +731,10 @@ class ProcurementRequestController extends Controller
                     $wa->send($admin->phone_number, $pesan);
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('WhatsApp notify admins (New PR) failed for PR #' . $pr->id . ': ' . $e->getMessage());
         }
     }
-
 
     private function generateReasonText(ProcurementRequest $procurementRequest): string
     {
@@ -720,7 +749,7 @@ class ProcurementRequestController extends Controller
 
         $allVendors = $procurementRequest->vendors()->orderBy('total_price')->get();
         $winnerPrice = $winner->total_price;
-        
+
         if ($allVendors->count() > 1) {
             $maxPrice = $allVendors->max('total_price');
             $diff = $maxPrice - $winnerPrice;
@@ -756,7 +785,6 @@ class ProcurementRequestController extends Controller
         $autoSpec = !empty($specBlocks) ? implode("\n\n", $specBlocks) : '';
         $requiredSpec = !empty($model->required_spec) ? $model->required_spec : $autoSpec;
 
-        // ═══ AMBIL TANGGAL DARI FINAL COMPARISON JIKA ADA ═══
         $printDate = $model->finalComparison?->request_date ?? $model->date;
 
         return [

@@ -232,6 +232,14 @@
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Comparison Recap</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $procurement->vendors->count() }} vendors registered — SAW weights: Price (0.35), Shipping (0.15), Discount (0.15), Delivery (0.15), Rating (0.20)</p>
             </div>
+
+            <a href="{{ route('procurement.comparisons.print-evidence', $procurement) }}" target="_blank"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-amber-600 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Cetak Bukti Gambar ({{ $procurement->attachments->count() }})
+            </a>
         </header>
 
         <div class="overflow-x-auto">

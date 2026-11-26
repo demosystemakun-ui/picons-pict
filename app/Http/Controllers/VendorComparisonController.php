@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\ProcurementRequest;
 use App\Models\ProcurementVendor;
 use App\Models\ProcurementComparison;
+use App\Models\ProcurementComparisonAttachment;
 use App\Models\CashAdvance;
 use App\Services\GeminiVisionService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class VendorComparisonController extends Controller
@@ -45,9 +47,30 @@ class VendorComparisonController extends Controller
             }
         }
 
-        $procurement->load('vendors.items', 'winnerVendor', 'finalComparison');
+        $procurement->load('vendors.items', 'winnerVendor', 'finalComparison', 'attachments.vendor');
 
         return view('procurement.comparison.index', compact('procurement'));
+    }
+
+    public function printEvidence(ProcurementRequest $procurement)
+    {
+        $user = auth()->user();
+
+        if (!$user->hasAnyRole(['Super Admin', 'Admin'])) {
+            if ($user->hasRole('Admin Departemen')) {
+                if ($procurement->department_id !== $user->department_id) {
+                    abort(403, 'You do not have access to this evidence.');
+                }
+            } else {
+                if ($procurement->user_id !== $user->id) {
+                    abort(403, 'You do not have access to this evidence.');
+                }
+            }
+        }
+
+        $procurement->load('vendors', 'winnerVendor', 'finalComparison', 'attachments.vendor');
+
+        return view('procurement.comparison.print-evidence', compact('procurement'));
     }
 
     public function globalIndex()
@@ -475,6 +498,40 @@ class VendorComparisonController extends Controller
             'screenshots.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
+        $savedAttachments = [];
+
+        foreach ($request->file('screenshots') as $order => $file) {
+            $ext      = $file->getClientOriginalExtension() ?: 'jpg';
+            $filename = time() . '_' . ($order + 1) . '_' . uniqid() . '.' . $ext;
+            $folder   = 'comparison_evidence/' . $procurement->id . '/' . date('Y/m');
+            $fullPath = $folder . '/' . $filename;
+
+            $targetDisk = 'public';
+            try {
+                if (config('filesystems.disks.supabase-procurement_request')) {
+                    Storage::disk('supabase-procurement_request')->put($fullPath, file_get_contents($file->getRealPath()));
+                    $targetDisk = 'supabase-procurement_request';
+                } else {
+                    Storage::disk('public')->putFileAs($folder, $file, $filename);
+                }
+            } catch (Throwable $e) {
+                Log::warning('Fallback simpan bukti scan ke disk public: ' . $e->getMessage(), [
+                    'procurement_id' => $procurement->id,
+                    'file'           => $fullPath,
+                ]);
+                Storage::disk('public')->putFileAs($folder, $file, $filename);
+                $targetDisk = 'public';
+            }
+
+            $savedAttachments[] = [
+                'file_path'     => $fullPath,
+                'disk'          => $targetDisk,
+                'original_name' => $file->getClientOriginalName(),
+                'mode'          => $mode,
+                'sort_order'    => $order + 1,
+            ];
+        }
+
         DB::beginTransaction();
         try {
             $extracted = $this->ai->extractVendors($request->file('screenshots'), $mode);
@@ -648,6 +705,20 @@ class VendorComparisonController extends Controller
                             'sort_order'   => $j + 1,
                         ]);
                     }
+                }
+
+                $targetVendorId = $existingVendor->id ?? $vendor->id ?? null;
+
+                foreach ($savedAttachments as $att) {
+                    ProcurementComparisonAttachment::create([
+                        'procurement_request_id' => $procurement->id,
+                        'procurement_vendor_id'  => $targetVendorId,
+                        'mode'                   => $att['mode'],
+                        'file_path'              => $att['file_path'],
+                        'disk'                   => $att['disk'],
+                        'original_name'          => $att['original_name'],
+                        'sort_order'             => $att['sort_order'],
+                    ]);
                 }
             }
 
