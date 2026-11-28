@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Consumable Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: {
+            navy: { 50:'#f3f6fa', 100:'#e1e9f3', 200:'#c3d3e7', 300:'#97b2d3', 600:'#0E4C92', 700:'#0B3A73', 800:'#0A2A52', 900:'#07192F' },
+            signal: { 500:'#D71920', 600:'#B8141A' }
+        } } } };
+    </script>
     <link rel="icon" type="image/png" href="{{ asset('logo/pict.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('logo/pict.png') }}">
 
@@ -26,9 +32,9 @@
 
         body {
             background:
-                radial-gradient(circle at 12% 18%, rgba(251, 113, 133, 0.14), transparent 40%),
-                radial-gradient(circle at 88% 82%, rgba(99, 102, 241, 0.16), transparent 42%),
-                linear-gradient(135deg, #f8fafc 0%, #eef2ff 52%, #fff1f2 100%);
+                radial-gradient(circle at 12% 18%, rgba(14, 76, 146, 0.10), transparent 40%),
+                radial-gradient(circle at 88% 82%, rgba(7, 25, 47, 0.10), transparent 42%),
+                linear-gradient(135deg, #f7f9fc 0%, #e9eff6 100%);
             min-height: 100vh;
         }
 
@@ -36,19 +42,26 @@
             box-shadow: 0 28px 65px -18px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.9);
         }
 
-        .btn-coral {
-            background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+        .btn-primary {
+            background: linear-gradient(135deg, #0E4C92 0%, #0B3A73 100%);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .btn-coral:hover:not(:disabled) {
-            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0B3A73 0%, #08284f 100%);
             transform: translateY(-1px);
-            box-shadow: 0 12px 22px -6px rgba(244, 63, 94, 0.42);
+            box-shadow: 0 12px 22px -6px rgba(11, 58, 115, 0.45);
         }
-        .btn-coral:active:not(:disabled) { transform: translateY(0); }
+        .btn-primary:active:not(:disabled) { transform: translateY(0); }
 
         .input-modern { transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease; }
-        .input-modern:focus { background-color: #fff; box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12); }
+        input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #f8fafc inset; -webkit-text-fill-color: #0f172a; }
+        .port-grid {
+            background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+            background-size: 36px 36px;
+            -webkit-mask-image: radial-gradient(ellipse at 30% 35%, #000 15%, transparent 75%);
+            mask-image: radial-gradient(ellipse at 30% 35%, #000 15%, transparent 75%);
+        }
+        .input-modern:focus { background-color: #fff; box-shadow: 0 0 0 4px rgba(14, 76, 146, 0.16); }
 
         /* ===== Intro ===== */
         .intro { display: none; }
@@ -58,7 +71,7 @@
         /* dua panel yang membuka seperti tirai */
         .intro__half {
             position: absolute; top: 0; bottom: 0; width: 50.2%;
-            background: linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #4c1d4f 100%);
+            background: linear-gradient(160deg, #07192F 0%, #0A2A52 55%, #0E4C92 100%);
             transition: transform .95s cubic-bezier(.76, 0, .24, 1);
         }
         .intro__half--l { left: 0; }
@@ -76,12 +89,12 @@
         .intro__badge {
             width: 5rem; height: 5rem; border-radius: 1.25rem; background: #fff; padding: .9rem;
             display: grid; place-items: center; position: relative;
-            box-shadow: 0 20px 50px -10px rgba(244, 63, 94, .55);
+            box-shadow: 0 20px 50px -10px rgba(14, 76, 146, .6);
             animation: pop .8s cubic-bezier(.2, .9, .3, 1.25) both;
         }
         .intro__badge::after {
             content: ""; position: absolute; inset: -10px; border-radius: 1.75rem;
-            border: 2px solid rgba(251, 113, 133, .7);
+            border: 2px solid rgba(255, 255, 255, .55);
             animation: ring 1.6s ease-out .5s infinite;
         }
         .intro__badge img { width: 100%; height: 100%; object-fit: contain; }
@@ -99,7 +112,7 @@
         }
         .intro__bar span {
             display: block; height: 100%; border-radius: inherit; transform: scaleX(0); transform-origin: left;
-            background: linear-gradient(90deg, #fb7185, #fff);
+            background: linear-gradient(90deg, #D71920, #fff);
             animation: fill 1.2s cubic-bezier(.65, 0, .35, 1) 1.05s forwards;
         }
 
@@ -156,7 +169,7 @@
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-0 items-stretch">
 
             <!-- Left Panel -->
-            <div class="md:col-span-6 bg-gradient-to-br from-rose-50/90 via-indigo-50/75 to-blue-50/80 rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[280px] md:min-h-[540px] border border-rose-100/60">
+            <div class="md:col-span-6 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-600 text-white rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between min-h-[280px] md:min-h-[540px] border border-navy-700/40">
 
                 <div class="relative z-10 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
@@ -164,11 +177,11 @@
                             <img src="{{ asset('logo/pict.png') }}" alt="PICONS Logo" class="w-full h-full object-contain">
                         </div>
                         <div class="leading-tight">
-                            <span class="block text-sm font-bold text-slate-900 tracking-tight">PICONS</span>
-                            <span class="block text-[11px] font-medium text-rose-500">Consumable Management</span>
+                            <span class="block text-sm font-bold text-white tracking-tight">PICONS</span>
+                            <span class="block text-[11px] font-medium text-sky-300">Consumable Management</span>
                         </div>
                     </div>
-                    <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 bg-white/80 px-2.5 py-1 rounded-full border border-white">
+                    <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium text-white/90 bg-white/10 px-2.5 py-1 rounded-full border border-white/15">
                         <span class="pulse-dot w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         System Ready
                     </span>
@@ -181,16 +194,16 @@
                             <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">+<span id="countup" data-to="14.2">14.2</span>%</span>
                         </div>
                         <div class="flex items-end justify-between gap-2 h-16 px-1 pt-1">
-                            <div class="bar-grow flex-1 bg-rose-100 rounded-t-md h-7" style="--b:0"></div>
-                            <div class="bar-grow flex-1 bg-rose-200 rounded-t-md h-11" style="--b:1"></div>
-                            <div class="bar-grow flex-1 bg-indigo-200 rounded-t-md h-9" style="--b:2"></div>
-                            <div class="bar-grow flex-1 bg-rose-400 rounded-t-md h-14" style="--b:3"></div>
-                            <div class="bar-grow flex-1 bg-rose-500 rounded-t-md h-12" style="--b:4"></div>
+                            <div class="bar-grow flex-1 bg-navy-100 rounded-t-md h-7" style="--b:0"></div>
+                            <div class="bar-grow flex-1 bg-navy-200 rounded-t-md h-11" style="--b:1"></div>
+                            <div class="bar-grow flex-1 bg-navy-300 rounded-t-md h-9" style="--b:2"></div>
+                            <div class="bar-grow flex-1 bg-navy-600 rounded-t-md h-14" style="--b:3"></div>
+                            <div class="bar-grow flex-1 bg-signal-500 rounded-t-md h-12" style="--b:4"></div>
                         </div>
                     </div>
 
                     <div class="float-b mr-auto ml-1 sm:ml-3 w-44 bg-white/90 rounded-xl px-3 py-2.5 shadow-md shadow-slate-900/5 border border-white flex items-center gap-2.5" style="--r: -2deg; transform: rotate(-2deg)">
-                        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-500 flex items-center justify-center shrink-0">
+                        <div class="w-7 h-7 rounded-lg bg-navy-100 text-navy-600 flex items-center justify-center shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                             </svg>
@@ -202,28 +215,30 @@
                     </div>
                 </div>
 
-                <div class="relative z-10 bg-white/85 backdrop-blur-md rounded-2xl px-4 py-3.5 border border-white shadow-sm">
-                    <p class="text-xs font-semibold text-slate-900">Streamline Consumable Operations</p>
-                    <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                <div class="relative z-10 bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3.5 border border-white/15">
+                    <p class="text-xs font-semibold text-white">Streamline Consumable Operations</p>
+                    <p class="text-[11px] text-white/70 mt-0.5 leading-relaxed">
                         Monitor stock levels, track requests, and keep terminal supplies organized in one place.
                     </p>
                 </div>
 
-                <div class="w-52 h-52 rounded-full bg-rose-200/35 blur-3xl absolute -bottom-14 -left-14 pointer-events-none"></div>
-                <div class="w-44 h-44 rounded-full bg-indigo-200/40 blur-3xl absolute top-12 -right-12 pointer-events-none"></div>
+                <div class="port-grid absolute inset-0 pointer-events-none"></div>
+                <div class="w-52 h-52 rounded-full bg-sky-400/20 blur-3xl absolute -bottom-14 -left-14 pointer-events-none"></div>
+                <div class="w-44 h-44 rounded-full bg-blue-500/25 blur-3xl absolute top-12 -right-12 pointer-events-none"></div>
             </div>
 
             <!-- Right Panel -->
             <div class="md:col-span-6 flex flex-col justify-center px-5 sm:px-9 md:px-11 py-7 md:py-9">
                 <div class="w-full max-w-sm mx-auto">
                     <div class="reveal mb-6" style="--d: 3">
-                        <h1 class="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">Welcome back</h1>
+                        <span class="block w-8 h-1 rounded-full bg-signal-500 mb-3"></span>
+                        <h1 class="text-2xl sm:text-[28px] font-bold text-navy-900 tracking-tight">Welcome back</h1>
                         <p class="text-xs sm:text-sm text-slate-500 mt-1">Sign in to access your consumable dashboard.</p>
                     </div>
 
                     @if ($errors->any())
-                        <div role="alert" class="mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm px-3.5 py-2.5 flex items-start gap-2.5">
-                            <svg class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div role="alert" class="mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm px-3.5 py-2.5 flex items-start gap-2.5">
+                            <svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <span>{{ $errors->first() }}</span>
@@ -242,7 +257,7 @@
                                     </svg>
                                 </div>
                                 <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email" placeholder="name@company.com"
-                                       class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-rose-400 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-3.5 py-2.5 outline-none">
+                                       class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-navy-600 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-3.5 py-2.5 outline-none">
                             </div>
                         </div>
 
@@ -255,7 +270,7 @@
                                     </svg>
                                 </div>
                                 <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password"
-                                       class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-rose-400 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-10 py-2.5 outline-none">
+                                       class="input-modern w-full rounded-xl bg-slate-50/70 border border-slate-200/90 focus:border-navy-600 focus:ring-0 text-sm text-slate-900 placeholder-slate-400 pl-10 pr-10 py-2.5 outline-none">
                                 <button type="button" id="togglePasswordBtn" onclick="togglePassword()" aria-label="Toggle password visibility" aria-pressed="false"
                                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer transition-colors">
                                     <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,14 +285,14 @@
                         <div class="reveal flex items-center justify-between pt-0.5" style="--d: 6">
                             <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
                                 <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}
-                                       class="w-3.5 h-3.5 rounded border-slate-300 text-rose-500 focus:ring-rose-500/20 cursor-pointer">
+                                       class="w-3.5 h-3.5 rounded border-slate-300 text-navy-600 focus:ring-navy-600/20 cursor-pointer">
                                 <span>Remember me</span>
                             </label>
-                            <a href="{{ Route::has('password.request') ? route('password.request') : '#' }}" class="text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors">Forgot password?</a>
+                            <a href="{{ Route::has('password.request') ? route('password.request') : '#' }}" class="text-xs font-medium text-navy-600 hover:text-navy-800 transition-colors">Forgot password?</a>
                         </div>
 
                         <button id="submitBtn" type="submit"
-                                class="reveal btn-coral w-full text-white font-semibold py-2.5 rounded-xl text-sm shadow-md shadow-rose-500/25 mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                class="reveal btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm shadow-md shadow-navy-600/25 mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 style="--d: 7">
                             <svg id="spinner" class="hidden w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
                             <span id="submitText">Log In</span>
@@ -285,7 +300,7 @@
                     </form>
 
                     <p class="reveal text-center text-[11px] text-slate-400 mt-7" style="--d: 8">
-                        &copy; {{ date('Y') }} PICONS System &middot; Consumable Management
+                        &copy; {{ date('Y') }} PICONS System &middot; Patimban Port
                     </p>
                 </div>
             </div>
