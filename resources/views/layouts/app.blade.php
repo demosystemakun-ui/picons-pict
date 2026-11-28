@@ -10,11 +10,6 @@
     <link rel="icon" type="image/png" href="{{ asset('logo/pict.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('logo/pict.png') }}">
 
-    {{-- Font (sama dengan halaman login) --}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     {{-- ═══ Tailwind CDN + config ═══ --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -22,40 +17,18 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                    },
                     colors: {
-                        // Navy maritim — dipakai oleh seluruh kelas primary-* (tombol, sidebar aktif, tautan)
                         primary: {
-                            50:  '#f3f6fa',
-                            100: '#e1e9f3',
-                            200: '#c3d3e7',
-                            300: '#97b2d3',
-                            400: '#5f8bbd',
-                            500: '#2d6aae',
-                            600: '#0E4C92',  // ← warna utama tombol & sidebar active
-                            700: '#0B3A73',
-                            800: '#0A2A52',
-                            900: '#07192F',
-                        },
-                        // Alias yang dipakai dashboard baru
-                        navy: {
-                            50:  '#f3f6fa',
-                            100: '#e1e9f3',
-                            200: '#c3d3e7',
-                            300: '#97b2d3',
-                            400: '#5f8bbd',
-                            500: '#2d6aae',
-                            600: '#0E4C92',
-                            700: '#0B3A73',
-                            800: '#0A2A52',
-                            900: '#07192F',
-                        },
-                        // Merah logo PICT, untuk aksen kecil
-                        signal: {
-                            500: '#D71920',
-                            600: '#B8141A',
+                            50:  '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#1e40af',  // ← warna utama tombol & sidebar active
+                            700: '#1e3a8a',
+                            800: '#172554',
+                            900: '#0f172a',
                         },
                     },
                 },
@@ -63,20 +36,15 @@
         };
     </script>
 
-    <style>
-        [x-cloak] { display: none !important; }
-        input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #f8fafc inset; -webkit-text-fill-color: #0f172a; }
-    </style>
-
     {{-- Alpine.js --}}
-    <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     {{-- Lucide Icons --}}
-    <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     @stack('styles')
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased dark:bg-gray-900 dark:text-gray-100">
+<body class="bg-slate-50 text-slate-800 antialiased">
 
     {{-- ═══ ROOT STATE: sidebarOpen hanya untuk mobile ═══ --}}
     <div x-data="{ sidebarOpen: false }" class="min-h-screen">
@@ -107,7 +75,7 @@
             </main>
 
             @hasSection('footer')
-                <footer class="border-t border-slate-200 bg-white px-6 py-4 text-xs text-slate-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                <footer class="border-t border-slate-200 bg-white px-6 py-4 text-xs text-slate-500">
                     @yield('footer')
                 </footer>
             @endif
@@ -123,6 +91,7 @@
     {{-- Notifikasi/Alert --}}
     @include('components.flash-modal')
     @include('components.confirm-modal')
+   
 
     @stack('scripts')
 </body>
