@@ -60,39 +60,16 @@ return [
             'report' => false,
         ],
 
-        // Disk khusus untuk Bucket consumable di Supabase
-        'supabase-consumable_request' => [
+        'r2' => [
             'driver'                  => 's3',
-            'key'                     => env('SUPABASE_S3_KEY'),
-            'secret'                  => env('SUPABASE_S3_SECRET'),
-            'region'                  => env('SUPABASE_S3_REGION', 'ap-south-1'),
-            'bucket'                  => env('SUPABASE_CONSUMABLE_REQUEST_BUCKET', 'consumable_request'),
-            'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
-            
-            // TAMBAHAN: URL Publik untuk Supabase
-            'url'                     => env('SUPABASE_S3_URL') . '/' . env('SUPABASE_CONSUMABLE_REQUEST_BUCKET', 'consumable_request'),
-            
+            'key'                     => env('R2_ACCESS_KEY_ID'),
+            'secret'                  => env('R2_SECRET_ACCESS_KEY'),
+            'region'                  => env('R2_REGION', 'auto'),
+            'bucket'                  => env('R2_BUCKET', 'pict-compro-media'),
+            'endpoint'                => env('R2_ENDPOINT'),
+            'url'                     => env('R2_URL'),
             'use_path_style_endpoint' => true,
-            'visibility'              => 'public',
-            'throw'                   => true,
-            'report'                  => false,
-        ],
-
-        // Disk khusus untuk Bucket procurement_request di Supabase
-        'supabase-procurement_request' => [
-            'driver'                  => 's3',
-            'key'                     => env('SUPABASE_S3_KEY'),
-            'secret'                  => env('SUPABASE_S3_SECRET'),
-            'region'                  => env('SUPABASE_S3_REGION', 'ap-south-1'),
-            'bucket'                  => env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request'),
-            'endpoint'                => env('SUPABASE_S3_ENDPOINT'),
-            
-            // TAMBAHAN: URL Publik untuk Supabase
-            'url'                     => env('SUPABASE_S3_URL') . '/' . env('SUPABASE_PROCUREMENT_REQUEST_BUCKET', 'procurement_request'),
-            
-            'use_path_style_endpoint' => true,
-            'visibility'              => 'public',
-            'throw'                   => true,
+            'throw'                   => false,
             'report'                  => false,
         ],
 
